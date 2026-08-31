@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "kanbn-mcp": {
+      "command": "node",
+      "args": [
+        "/Users/kevin/Dev/kanbn-mcp/dist/server.js"
+      ],
+      "env": {
+        "KANBN_DEFAULT_PATH": "/Users/kevin/Dev/kanbn-mcp"
+      }
+    }
+  }
+}

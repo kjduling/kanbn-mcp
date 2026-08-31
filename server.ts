@@ -100,6 +100,30 @@ function getKanbnInstance(targetDir: string) {
     );
 }
 
+async function ensureBoardExists(kanbn: any, targetDir: string): Promise<void> {
+    try {
+        if (typeof kanbn.initialised === "function") {
+            const isInit = await kanbn.initialised();
+            if (!isInit) {
+                throw new Error(`No Kanbn board found in directory [${targetDir}].`);
+            }
+        }
+
+        if (typeof kanbn.getIndex !== "function") {
+            throw new Error(`No Kanbn board found in directory [${targetDir}].`);
+        }
+    } catch (err: any) {
+        const message = String(err?.message || "");
+        if (
+            err?.code === "ENOENT" ||
+            /not initialized|not initialised|No Kanbn board found/i.test(message)
+        ) {
+            throw new Error(`No Kanbn board found in directory [${targetDir}].`);
+        }
+        throw err;
+    }
+}
+
 const server = new Server(
     {
         name: "kanbn-mcp",
@@ -124,6 +148,57 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                         path: {
                             type: "string",
                             description: "Directory containing .kanbn (optional)"
+                        }
+                    }
+                }
+            },
+            {
+                name: "kanbn_init_board",
+                description: "Initialize a Kanbn board in the target directory.",
+                inputSchema: {
+                    type: "object",
+                    properties: {
+                        path: { type: "string", description: "Directory to initialize" },
+                        name: { type: "string", description: "Board name" },
+                        description: { type: "string", description: "Board description" },
+                        columns: {
+                            type: "array",
+                            items: { type: "string" },
+                            description: "Initial column names"
+                        }
+                    }
+                }
+            },
+            {
+                name: "kanbn_initialize_board",
+                description: "Alias for kanbn_init_board.",
+                inputSchema: {
+                    type: "object",
+                    properties: {
+                        path: { type: "string", description: "Directory to initialize" },
+                        name: { type: "string", description: "Board name" },
+                        description: { type: "string", description: "Board description" },
+                        columns: {
+                            type: "array",
+                            items: { type: "string" },
+                            description: "Initial column names"
+                        }
+                    }
+                }
+            },
+            {
+                name: "kanbn_ensure_board",
+                description: "Ensure a Kanbn board exists in the target directory; initialize it if missing.",
+                inputSchema: {
+                    type: "object",
+                    properties: {
+                        path: { type: "string", description: "Directory to check or initialize" },
+                        name: { type: "string", description: "Board name" },
+                        description: { type: "string", description: "Board description" },
+                        columns: {
+                            type: "array",
+                            items: { type: "string" },
+                            description: "Initial column names"
                         }
                     }
                 }
@@ -230,7 +305,102 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 }
             }
 
+            case "kanbn_init_board":
+            case "kanbn_initialize_board": {
+                const {
+                    name: boardName,
+                    description,
+                    columns
+                } = args as {
+                    name?: string;
+                    description?: string;
+                    columns?: string[];
+                };
+
+                const options: Record<string, any> = {};
+                if (boardName) options.name = boardName;
+                if (description) options.description = description;
+                if (columns && Array.isArray(columns) && columns.length > 0) options.columns = columns;
+
+                if (typeof kanbn.initialised === "function") {
+                    const isInit = await kanbn.initialised();
+                    if (isInit) {
+                        return {
+                            content: [
+                                {
+                                    type: "text",
+                                    text: `A Kanbn board is already initialized in directory [${targetDir}].`
+                                }
+                            ]
+                        };
+                    }
+                }
+
+                if (typeof kanbn.initialise !== "function") {
+                    throw new Error("This Kanbn version does not support board initialization.");
+                }
+
+                await kanbn.initialise(options);
+
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: `Initialized Kanbn board in directory [${targetDir}]${boardName ? ` with name "${boardName}"` : ""}.`
+                        }
+                    ]
+                };
+            }
+
+            case "kanbn_ensure_board": {
+                const {
+                    name: boardName,
+                    description,
+                    columns
+                } = args as {
+                    name?: string;
+                    description?: string;
+                    columns?: string[];
+                };
+
+                if (typeof kanbn.initialised === "function") {
+                    const isInit = await kanbn.initialised();
+                    if (isInit) {
+                        return {
+                            content: [
+                                {
+                                    type: "text",
+                                    text: `Kanbn board already exists in directory [${targetDir}].`
+                                }
+                            ]
+                        };
+                    }
+                }
+
+                if (typeof kanbn.initialise !== "function") {
+                    throw new Error("This Kanbn version does not support board initialization.");
+                }
+
+                const options: Record<string, any> = {};
+                if (boardName) options.name = boardName;
+                if (description) options.description = description;
+                if (columns && Array.isArray(columns) && columns.length > 0) options.columns = columns;
+
+                await kanbn.initialise(options);
+
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: `Ensured Kanbn board exists in directory [${targetDir}]${boardName ? ` with name "${boardName}"` : ""}.`
+                        }
+                    ]
+                };
+            }
+
             case "kanbn_create_task": {
+                await ensureBoardExists(kanbn, targetDir);
+
                 const {
                     name: taskName,
                     column,
@@ -269,6 +439,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             }
 
             case "kanbn_move_task": {
+                await ensureBoardExists(kanbn, targetDir);
+
                 const { taskId, column } = args as { taskId: string; column: string };
                 await kanbn.moveTask(taskId, column);
 
