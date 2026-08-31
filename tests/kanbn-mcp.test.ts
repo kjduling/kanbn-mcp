@@ -69,6 +69,34 @@ describe("buildTaskDataFromArgs", () => {
         assert.equal(taskData.metadata.customField, "custom-value");
         assert.equal(taskData.metadata.extraFlag, true);
     });
+
+    test("includes subTasks and comments when provided", () => {
+        const taskData = buildTaskDataFromArgs({
+            name: "Validate fields",
+            description: "Task description",
+            subTasks: [
+                { text: "Verify the fields are populated", completed: false }
+            ],
+            comments: [
+                {
+                    author: "Gemma",
+                    date: "2026-08-31T05:34:33.333Z",
+                    text: "this task was created via the kanbn_mcp by Gemma",
+                }
+            ],
+        });
+
+        assert.deepStrictEqual(taskData.subTasks, [
+            { text: "Verify the fields are populated", completed: false }
+        ]);
+        assert.deepStrictEqual(taskData.comments, [
+            {
+                author: "Gemma",
+                date: new Date("2026-08-31T05:34:33.333Z"),
+                text: "this task was created via the kanbn_mcp by Gemma",
+            }
+        ]);
+    });
 });
 
 describe("kanbn_status", () => {

@@ -212,6 +212,31 @@ export const toolDefinitions = [
                     items: { type: "string" },
                     description: "List of tags"
                 },
+                subTasks: {
+                    type: "array",
+                    description: "List of sub-tasks in the form [{ text, completed }]",
+                    items: {
+                        type: "object",
+                        properties: {
+                            text: { type: "string" },
+                            completed: { type: "boolean" }
+                        },
+                        required: ["text"]
+                    }
+                },
+                comments: {
+                    type: "array",
+                    description: "List of comments in the form [{ author, date, text }]",
+                    items: {
+                        type: "object",
+                        properties: {
+                            author: { type: "string" },
+                            date: { type: "string" },
+                            text: { type: "string" }
+                        },
+                        required: ["text"]
+                    }
+                },
                 metadata: {
                     type: "object",
                     description: "Additional Kanbn metadata fields to set as top-level task properties",
@@ -269,7 +294,9 @@ export function buildTaskDataFromArgs(args: Record<string, any> | undefined): Re
         created,
         updated,
         tags,
-        metadata
+        metadata,
+        subTasks,
+        comments,
     } = payload;
 
     const taskData: Record<string, any> = {
@@ -292,6 +319,33 @@ export function buildTaskDataFromArgs(args: Record<string, any> | undefined): Re
     if (created) taskData.metadata.created = coerceDate(created);
     if (updated) taskData.metadata.updated = coerceDate(updated);
     if (tags && Array.isArray(tags)) taskData.metadata.tags = tags;
+
+    if (Array.isArray(subTasks)) {
+        taskData.subTasks = subTasks.map((subTask: any) => {
+            if (subTask && typeof subTask === "object") {
+                return {
+                    text: String(subTask.text ?? ""),
+                    completed: Boolean(subTask.completed),
+                };
+            }
+
+            return { text: String(subTask), completed: false };
+        });
+    }
+
+    if (Array.isArray(comments)) {
+        taskData.comments = comments.map((comment: any) => {
+            if (comment && typeof comment === "object") {
+                return {
+                    author: String(comment.author ?? ""),
+                    date: coerceDate(comment.date),
+                    text: String(comment.text ?? ""),
+                };
+            }
+
+            return { text: String(comment), author: "", date: new Date() };
+        });
+    }
 
     return taskData;
 }
@@ -391,7 +445,7 @@ export async function handleToolCall(name: string, args: Record<string, any> | u
                 }
 
                 if (typeof kanbn.initialise !== "function") {
-                    throw new Error("This Kanbn version does not support board initialization.");
+                    throw new TypeError("This Kanbn version does not support board initialization.");
                 }
 
                 await kanbn.initialise(options);
@@ -610,6 +664,31 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                             items: { type: "string" },
                             description: "List of tags"
                         },
+                        subTasks: {
+                            type: "array",
+                            description: "List of sub-tasks in the form [{ text, completed }]",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    text: { type: "string" },
+                                    completed: { type: "boolean" }
+                                },
+                                required: ["text"]
+                            }
+                        },
+                        comments: {
+                            type: "array",
+                            description: "List of comments in the form [{ author, date, text }]",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    author: { type: "string" },
+                                    date: { type: "string" },
+                                    text: { type: "string" }
+                                },
+                                required: ["text"]
+                            }
+                        },
                         metadata: {
                             type: "object",
                             description: "Additional Kanbn metadata fields to set as top-level task properties",
@@ -811,7 +890,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     created,
                     updated,
                     tags,
-                    metadata
+                    metadata,
+                    subTasks,
+                    comments,
                 } = args as {
                     name: string;
                     column: string;
@@ -827,27 +908,27 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     updated?: string;
                     tags?: string[];
                     metadata?: Record<string, any>;
+                    subTasks?: Array<{ text: string; completed?: boolean }>;
+                    comments?: Array<{ author?: string; date?: string | Date; text: string }>;
                 };
 
-                const taskData: Record<string, any> = {
+                const taskData = buildTaskDataFromArgs({
                     name: taskName,
-                    description: description || ""
-                };
-
-                if (metadata && typeof metadata === "object") {
-                    Object.assign(taskData, metadata);
-                }
-
-                if (assigned) taskData.assigned = assigned;
-                if (due) taskData.due = due;
-                if (started) taskData.started = started;
-                if (completed) taskData.completed = completed;
-                if (typeof progress === "number") taskData.progress = progress;
-                if (plannedStart) taskData.plannedStart = plannedStart;
-                if (plannedFinish) taskData.plannedFinish = plannedFinish;
-                if (created) taskData.created = created;
-                if (updated) taskData.updated = updated;
-                if (tags && Array.isArray(tags)) taskData.tags = tags;
+                    description,
+                    assigned,
+                    due,
+                    started,
+                    completed,
+                    progress,
+                    plannedStart,
+                    plannedFinish,
+                    created,
+                    updated,
+                    tags,
+                    metadata,
+                    subTasks,
+                    comments,
+                });
 
                 const taskId = await kanbn.createTask(taskData, column);
 

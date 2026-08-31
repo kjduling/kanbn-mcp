@@ -9,6 +9,10 @@ completedColumns:
 
 Default board
 
+## backlog
+
+- [validate-fields](tasks/validate-fields.md)
+
 ## todo
 
 ## in progress
