@@ -117,7 +117,7 @@ Together, they provide a consistent Kanbn workflow across terminal, editor, and 
 
 ## License
 
-ISC
+MIT
 
 ## Repository links
 
