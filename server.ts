@@ -812,7 +812,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 }
 
                 if (typeof kanbn.initialise !== "function") {
-                    throw new Error("This Kanbn version does not support board initialization.");
+                    throw new TypeError("This Kanbn version does not support board initialization.");
                 }
 
                 await kanbn.initialise(options);
@@ -853,7 +853,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 }
 
                 if (typeof kanbn.initialise !== "function") {
-                    throw new Error("This Kanbn version does not support board initialization.");
+                    throw new TypeError("This Kanbn version does not support board initialization.");
                 }
 
                 const options: Record<string, any> = {};

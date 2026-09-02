@@ -5,6 +5,8 @@ created: 2026-08-31T05:59:54.615Z
 tags:
   - Test
   - Validation
+updated: 2026-09-02T00:57:11.881Z
+completed: 2026-09-02T00:57:11.881Z
 ---
 
 # Validate fields
@@ -29,3 +31,7 @@ this task is for validating the various fields are filled out when creating a ta
   fromProgress: 0
   toProgress: 0
   author: Kevin J. Duling
+- type: moved
+  date: 2026-09-02T00:57:11.881Z
+  fromColumn: Backlog
+  toColumn: Done
