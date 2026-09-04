@@ -20,5 +20,8 @@
   "dependencies": {
     "@basementuniverse/kanbn": "^2.5.1",
     "@modelcontextprotocol/sdk": "^1.30.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
   }
 }

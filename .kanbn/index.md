@@ -9,9 +9,7 @@ completedColumns:
 
 ## Backlog
 
-- [refactor-tool-handler-logic](tasks/refactor-tool-handler-logic.md)
 - [unify-module-system-esm-cjs](tasks/unify-module-system-esm-cjs.md)
-- [simplify-task-argument-mapping](tasks/simplify-task-argument-mapping.md)
 
 ## Todo
 
@@ -19,7 +17,9 @@ completedColumns:
 
 ## Done
 
-- [initialize-kanbn-board](tasks/initialize-kanbn-board.md)
+- [simplify-task-argument-mapping](tasks/simplify-task-argument-mapping.md)
 - [validate-fields](tasks/validate-fields.md)
+- [refactor-tool-handler-logic](tasks/refactor-tool-handler-logic.md)
+- [initialize-kanbn-board](tasks/initialize-kanbn-board.md)
 
 ## Blocked

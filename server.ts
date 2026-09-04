@@ -110,7 +110,7 @@ async function ensureBoardExists(kanbn: any, targetDir: string): Promise<void> {
         }
 
         if (typeof kanbn.getIndex !== "function") {
-            throw new Error(`No Kanbn board found in directory [${targetDir}].`);
+            throw new TypeError(`No Kanbn board found in directory [${targetDir}].`);
         }
     } catch (err: any) {
         const message = String(err?.message || "");
@@ -282,8 +282,8 @@ function coerceDate(value: any): any {
 export function buildTaskDataFromArgs(args: Record<string, any> | undefined): Record<string, any> {
     const payload = args ?? {};
     const {
-        name: taskName,
-        description,
+        name, // renamed from taskName for simplicity in destructuring
+        description = "",
         assigned,
         due,
         started,
@@ -300,8 +300,8 @@ export function buildTaskDataFromArgs(args: Record<string, any> | undefined): Re
     } = payload;
 
     const taskData: Record<string, any> = {
-        name: taskName,
-        description: description || "",
+        name: name,
+        description: description,
         metadata: {}
     };
 
@@ -350,6 +350,9 @@ export function buildTaskDataFromArgs(args: Record<string, any> | undefined): Re
     return taskData;
 }
 
+/**
+ * Single source of truth for tool execution logic.
+ */
 export async function handleToolCall(name: string, args: Record<string, any> | undefined) {
     const rawPath = args?.path as string | undefined;
     const targetDir = resolveProjectPath(rawPath);
@@ -414,32 +417,16 @@ export async function handleToolCall(name: string, args: Record<string, any> | u
             }
 
             case "kanbn_init_board":
-            case "kanbn_initialize_board": {
-                const {
-                    name: boardName,
-                    description,
-                    columns
-                } = args as {
-                    name?: string;
-                    description?: string;
-                    columns?: string[];
-                };
-
-                const options: Record<string, any> = {};
-                if (boardName) options.name = boardName;
-                if (description) options.description = description;
-                if (columns && Array.isArray(columns) && columns.length > 0) options.columns = columns;
+            case "kanbn_initialize_board":
+            case "kanbn_ensure_board": {
+                const isEnsure = name === "kanbn_ensure_board";
+                const { name: boardName, description, columns } = args || {};
 
                 if (typeof kanbn.initialised === "function") {
                     const isInit = await kanbn.initialised();
                     if (isInit) {
                         return {
-                            content: [
-                                {
-                                    type: "text",
-                                    text: `A Kanbn board is already initialized in directory [${targetDir}].`
-                                }
-                            ]
+                            content: [{ type: "text", text: `Kanbn board ${isEnsure ? 'already exists' : 'already initialized'} in [${targetDir}].` }]
                         };
                     }
                 }
@@ -448,97 +435,39 @@ export async function handleToolCall(name: string, args: Record<string, any> | u
                     throw new TypeError("This Kanbn version does not support board initialization.");
                 }
 
-                await kanbn.initialise(options);
-
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: `Initialized Kanbn board in directory [${targetDir}]${boardName ? ` with name "${boardName}"` : ""}.`
-                        }
-                    ]
-                };
-            }
-
-            case "kanbn_ensure_board": {
-                const {
-                    name: boardName,
-                    description,
-                    columns
-                } = args as {
-                    name?: string;
-                    description?: string;
-                    columns?: string[];
-                };
-
-                if (typeof kanbn.initialised === "function") {
-                    const isInit = await kanbn.initialised();
-                    if (isInit) {
-                        return {
-                            content: [
-                                {
-                                    type: "text",
-                                    text: `Kanbn board already exists in directory [${targetDir}].`
-                                }
-                            ]
-                        };
-                    }
-                }
-
-                if (typeof kanbn.initialise !== "function") {
-                    throw new Error("This Kanbn version does not support board initialization.");
-                }
-
                 const options: Record<string, any> = {};
                 if (boardName) options.name = boardName;
                 if (description) options.description = description;
-                if (columns && Array.isArray(columns) && columns.length > 0) options.columns = columns;
+                if (columns?.length > 0) options.columns = columns;
 
                 await kanbn.initialise(options);
 
                 return {
-                    content: [
-                        {
-                            type: "text",
-                            text: `Ensured Kanbn board exists in directory [${targetDir}]${boardName ? ` with name "${boardName}"` : ""}.`
-                        }
-                    ]
+                    content: [{
+                        type: "text",
+                        text: `${isEnsure ? 'Ensured Kanbn board exists' : 'Initialized Kanbn board'} in [${targetDir}]${boardName ? ` with name "${boardName}"` : ""}.`
+                    }]
                 };
             }
 
             case "kanbn_create_task": {
                 await ensureBoardExists(kanbn, targetDir);
-
-                const payload = args ?? {};
-                const taskName = payload.name as string;
-                const column = payload.column as string;
-                const taskData = buildTaskDataFromArgs(payload);
-
-                const taskId = await kanbn.createTask(taskData, column);
+                const taskId = await kanbn.createTask(buildTaskDataFromArgs(args), args?.column as string);
 
                 return {
-                    content: [
-                        {
-                            type: "text",
-                            text: `Created task "${taskName}" (${taskId}) in column "${column}".`
-                        }
-                    ]
+                    content: [{
+                        type: "text",
+                        text: `Created task "${args?.name}" (${taskId}) in column "${args?.column}".`
+                    }]
                 };
             }
 
             case "kanbn_move_task": {
                 await ensureBoardExists(kanbn, targetDir);
-
-                const { taskId, column } = args as { taskId: string; column: string };
+                const { taskId, column } = args || {};
                 await kanbn.moveTask(taskId, column);
-
                 return {
-                    content: [
-                        {
-                            type: "text",
-                            text: `Moved task "${taskId}" to column "${column}".`
-                        }
-                    ]
+                    content: [{ type: "text", text: `Moved task "${taskId}" to column "${column}".` }]
                 };
             }
 
@@ -548,430 +477,25 @@ export async function handleToolCall(name: string, args: Record<string, any> | u
     } catch (error: any) {
         return {
             isError: true,
-            content: [
-                {
-                    type: "text",
-                    text: `Kanbn error operating in [${targetDir}]: ${error?.message || String(error)}`
-                }
-            ]
+            content: [{ type: "text", text: `Kanbn error in [${targetDir}]: ${error?.message || String(error)}` }]
         };
     }
 }
-
 export async function listTools() {
     return { tools: toolDefinitions };
 }
 
-const server = new Server(
-    {
-        name: "kanbn-mcp",
-        version: "1.0.0",
-    },
-    {
-        capabilities: {
-            tools: {},
-        },
-    }
-);
+const server = new Server({ name: "kanbn-mcp", version: "1.0.0" }, { capabilities: { tools: {} } });
 
+// REFACTORED HANDLERS
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return {
-        tools: [
-            {
-                name: "kanbn_status",
-                description: "Get current board status.",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        path: {
-                            type: "string",
-                            description: "Directory containing .kanbn (optional)"
-                        }
-                    }
-                }
-            },
-            {
-                name: "kanbn_init_board",
-                description: "Initialize a Kanbn board in the target directory.",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        path: { type: "string", description: "Directory to initialize" },
-                        name: { type: "string", description: "Board name" },
-                        description: { type: "string", description: "Board description" },
-                        columns: {
-                            type: "array",
-                            items: { type: "string" },
-                            description: "Initial column names"
-                        }
-                    }
-                }
-            },
-            {
-                name: "kanbn_initialize_board",
-                description: "Alias for kanbn_init_board.",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        path: { type: "string", description: "Directory to initialize" },
-                        name: { type: "string", description: "Board name" },
-                        description: { type: "string", description: "Board description" },
-                        columns: {
-                            type: "array",
-                            items: { type: "string" },
-                            description: "Initial column names"
-                        }
-                    }
-                }
-            },
-            {
-                name: "kanbn_ensure_board",
-                description: "Ensure a Kanbn board exists in the target directory; initialize it if missing.",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        path: { type: "string", description: "Directory to check or initialize" },
-                        name: { type: "string", description: "Board name" },
-                        description: { type: "string", description: "Board description" },
-                        columns: {
-                            type: "array",
-                            items: { type: "string" },
-                            description: "Initial column names"
-                        }
-                    }
-                }
-            },
-            {
-                name: "kanbn_create_task",
-                description: "Create a new task on the Kanbn board with optional metadata.",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        name: { type: "string", description: "Task title" },
-                        column: { type: "string", description: "Target column name" },
-                        description: { type: "string", description: "Task body description" },
-                        assigned: { type: "string", description: "Username or name of assignee" },
-                        due: { type: "string", description: "Due date/deadline (e.g. YYYY-MM-DD or ISO string)" },
-                        started: { type: "string", description: "Start date/time" },
-                        completed: { type: "string", description: "Completion date/time" },
-                        progress: { type: "number", description: "Completion progress between 0 and 1" },
-                        plannedStart: { type: "string", description: "Planned start date/time" },
-                        plannedFinish: { type: "string", description: "Planned finish date/time" },
-                        created: { type: "string", description: "Creation date/time" },
-                        updated: { type: "string", description: "Last updated date/time" },
-                        tags: {
-                            type: "array",
-                            items: { type: "string" },
-                            description: "List of tags"
-                        },
-                        subTasks: {
-                            type: "array",
-                            description: "List of sub-tasks in the form [{ text, completed }]",
-                            items: {
-                                type: "object",
-                                properties: {
-                                    text: { type: "string" },
-                                    completed: { type: "boolean" }
-                                },
-                                required: ["text"]
-                            }
-                        },
-                        comments: {
-                            type: "array",
-                            description: "List of comments in the form [{ author, date, text }]",
-                            items: {
-                                type: "object",
-                                properties: {
-                                    author: { type: "string" },
-                                    date: { type: "string" },
-                                    text: { type: "string" }
-                                },
-                                required: ["text"]
-                            }
-                        },
-                        metadata: {
-                            type: "object",
-                            description: "Additional Kanbn metadata fields to set as top-level task properties",
-                            additionalProperties: true
-                        },
-                        path: { type: "string", description: "Target project directory path" }
-                    },
-                    required: ["name", "column"]
-                }
-            },
-            {
-                name: "kanbn_move_task",
-                description: "Move a task to another column.",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        taskId: { type: "string", description: "Task ID or filename" },
-                        column: { type: "string", description: "Destination column name" },
-                        path: { type: "string", description: "Target project directory path" }
-                    },
-                    required: ["taskId", "column"]
-                }
-            }
-        ]
-    };
+    return { tools: toolDefinitions }; // Use the array!
 });
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-    const rawPath = args?.path as string | undefined;
-    const targetDir = resolveProjectPath(rawPath);
-
-    try {
-        const kanbn = getKanbnInstance(targetDir);
-
-        switch (name) {
-            case "kanbn_status": {
-                try {
-                    if (typeof kanbn.initialised === "function") {
-                        const isInit = await kanbn.initialised();
-                        if (!isInit) {
-                            return {
-                                content: [
-                                    {
-                                        type: "text",
-                                        text: `No Kanbn board found in directory [${targetDir}]. You can initialize one first.`
-                                    }
-                                ]
-                            };
-                        }
-                    }
-
-                    if (typeof kanbn.getIndex !== "function") {
-                        return {
-                            content: [
-                                {
-                                    type: "text",
-                                    text: `No Kanbn board found in directory [${targetDir}].`
-                                }
-                            ]
-                        };
-                    }
-
-                    const index = await kanbn.getIndex();
-                    return {
-                        content: [
-                            {
-                                type: "text",
-                                text: JSON.stringify(index, null, 2)
-                            }
-                        ]
-                    };
-                } catch (err: any) {
-                    const message = String(err?.message || "");
-                    if (
-                        err?.code === "ENOENT" ||
-                        /not initialized|not initialised|No Kanbn board found/i.test(message)
-                    ) {
-                        return {
-                            content: [
-                                {
-                                    type: "text",
-                                    text: `No Kanbn board found in directory [${targetDir}].`
-                                }
-                            ]
-                        };
-                    }
-                    throw err;
-                }
-            }
-
-            case "kanbn_init_board":
-            case "kanbn_initialize_board": {
-                const {
-                    name: boardName,
-                    description,
-                    columns
-                } = args as {
-                    name?: string;
-                    description?: string;
-                    columns?: string[];
-                };
-
-                const options: Record<string, any> = {};
-                if (boardName) options.name = boardName;
-                if (description) options.description = description;
-                if (columns && Array.isArray(columns) && columns.length > 0) options.columns = columns;
-
-                if (typeof kanbn.initialised === "function") {
-                    const isInit = await kanbn.initialised();
-                    if (isInit) {
-                        return {
-                            content: [
-                                {
-                                    type: "text",
-                                    text: `A Kanbn board is already initialized in directory [${targetDir}].`
-                                }
-                            ]
-                        };
-                    }
-                }
-
-                if (typeof kanbn.initialise !== "function") {
-                    throw new TypeError("This Kanbn version does not support board initialization.");
-                }
-
-                await kanbn.initialise(options);
-
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: `Initialized Kanbn board in directory [${targetDir}]${boardName ? ` with name "${boardName}"` : ""}.`
-                        }
-                    ]
-                };
-            }
-
-            case "kanbn_ensure_board": {
-                const {
-                    name: boardName,
-                    description,
-                    columns
-                } = args as {
-                    name?: string;
-                    description?: string;
-                    columns?: string[];
-                };
-
-                if (typeof kanbn.initialised === "function") {
-                    const isInit = await kanbn.initialised();
-                    if (isInit) {
-                        return {
-                            content: [
-                                {
-                                    type: "text",
-                                    text: `Kanbn board already exists in directory [${targetDir}].`
-                                }
-                            ]
-                        };
-                    }
-                }
-
-                if (typeof kanbn.initialise !== "function") {
-                    throw new TypeError("This Kanbn version does not support board initialization.");
-                }
-
-                const options: Record<string, any> = {};
-                if (boardName) options.name = boardName;
-                if (description) options.description = description;
-                if (columns && Array.isArray(columns) && columns.length > 0) options.columns = columns;
-
-                await kanbn.initialise(options);
-
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: `Ensured Kanbn board exists in directory [${targetDir}]${boardName ? ` with name "${boardName}"` : ""}.`
-                        }
-                    ]
-                };
-            }
-
-            case "kanbn_create_task": {
-                await ensureBoardExists(kanbn, targetDir);
-
-                const {
-                    name: taskName,
-                    column,
-                    description,
-                    assigned,
-                    due,
-                    started,
-                    completed,
-                    progress,
-                    plannedStart,
-                    plannedFinish,
-                    created,
-                    updated,
-                    tags,
-                    metadata,
-                    subTasks,
-                    comments,
-                } = args as {
-                    name: string;
-                    column: string;
-                    description?: string;
-                    assigned?: string;
-                    due?: string;
-                    started?: string;
-                    completed?: string;
-                    progress?: number;
-                    plannedStart?: string;
-                    plannedFinish?: string;
-                    created?: string;
-                    updated?: string;
-                    tags?: string[];
-                    metadata?: Record<string, any>;
-                    subTasks?: Array<{ text: string; completed?: boolean }>;
-                    comments?: Array<{ author?: string; date?: string | Date; text: string }>;
-                };
-
-                const taskData = buildTaskDataFromArgs({
-                    name: taskName,
-                    description,
-                    assigned,
-                    due,
-                    started,
-                    completed,
-                    progress,
-                    plannedStart,
-                    plannedFinish,
-                    created,
-                    updated,
-                    tags,
-                    metadata,
-                    subTasks,
-                    comments,
-                });
-
-                const taskId = await kanbn.createTask(taskData, column);
-
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: `Created task "${taskName}" (${taskId}) in column "${column}".`
-                        }
-                    ]
-                };
-            }
-
-            case "kanbn_move_task": {
-                await ensureBoardExists(kanbn, targetDir);
-
-                const { taskId, column } = args as { taskId: string; column: string };
-                await kanbn.moveTask(taskId, column);
-
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: `Moved task "${taskId}" to column "${column}".`
-                        }
-                    ]
-                };
-            }
-
-            default:
-                throw new Error(`Unknown tool: ${name}`);
-        }
-    } catch (error: any) {
-        return {
-            isError: true,
-            content: [
-                {
-                    type: "text",
-                    text: `Kanbn error operating in [${targetDir}]: ${error?.message || String(error)}`
-                }
-            ]
-        };
-    }
+    // Simply delegate to the single source of truth
+    return await handleToolCall(name, args);
 });
 
 async function main() {
