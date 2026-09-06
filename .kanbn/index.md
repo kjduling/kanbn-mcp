@@ -10,6 +10,9 @@ completedColumns:
 ## Backlog
 
 - [unify-module-system-esm-cjs](tasks/unify-module-system-esm-cjs.md)
+- [kanbn-get-task](tasks/kanbn-get-task.md)
+- [kanbn-delete-task](tasks/kanbn-delete-task.md)
+- [fix-race-condition-on-index-md-during-rapid-task-creation](tasks/fix-race-condition-on-index-md-during-rapid-task-creation.md)
 
 ## Todo
 
