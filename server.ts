@@ -5,7 +5,7 @@ import {
     ListToolsRequestSchema,
     Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import path from "path";
+import path from "node:path";
 
 function getKanbnInstance(boardPath: string): any {
     let mod: any;
@@ -201,7 +201,7 @@ export async function handleKanbnInitBoard(args: Record<string, any>) {
 
     const initFn = instance.initialise || instance.init || instance.initialize || instance.initBoard;
     if (typeof initFn !== "function") {
-        throw new Error(`No initialization method found on Kanbn instance`);
+        throw new TypeError(`No initialization method found on Kanbn instance`);
     }
 
     try {
@@ -425,7 +425,7 @@ async function main() {
     await server.connect(transport);
 }
 
-if (process.argv[1] && process.argv[1].endsWith("server.js")) {
+if (process.argv[1]?.endsWith("server.js")) {
     main().catch((err) => {
         console.error("Fatal error starting kanbn-mcp server:", err);
         process.exit(1);
