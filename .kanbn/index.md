@@ -19,7 +19,6 @@ completedColumns:
 - [fix-shared-global-operation-queue-breaking-across-sessions](tasks/fix-shared-global-operation-queue-breaking-across-sessions.md)
 - [add-required-fields-to-kanbn-create-task-tool-schema](tasks/add-required-fields-to-kanbn-create-task-tool-schema.md)
 - [make-main-entry-check-more-robust](tasks/make-main-entry-check-more-robust.md)
-- [fix-kanbn-mcp-kanbn-create-task-subtasks-rendering-as-undefined](tasks/fix-kanbn-mcp-kanbn-create-task-subtasks-rendering-as-undefined.md)
 - [fix-silent-column-fallback-in-handle-kanbn-create-task](tasks/fix-silent-column-fallback-in-handle-kanbn-create-task.md)
 - [improve-is-board-initialized-method-detection](tasks/improve-is-board-initialized-method-detection.md)
 - [fix-build-task-data-from-args-mutating-input-objects](tasks/fix-build-task-data-from-args-mutating-input-objects.md)
@@ -38,5 +37,6 @@ completedColumns:
 - [validate-fields](tasks/validate-fields.md)
 - [refactor-tool-handler-logic](tasks/refactor-tool-handler-logic.md)
 - [initialize-kanbn-board](tasks/initialize-kanbn-board.md)
+- [fix-kanbn-mcp-kanbn-create-task-subtasks-rendering-as-undefined](tasks/fix-kanbn-mcp-kanbn-create-task-subtasks-rendering-as-undefined.md)
 
 ## Blocked

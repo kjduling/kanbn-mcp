@@ -1,6 +1,14 @@
 ---
 created: 2026-09-07T18:19:25.844Z
-updated: 2026-09-07T18:32:14.178Z
+updated: 2026-09-07T21:47:45.352Z
+assigned: Kevin
+progress: 0.95
+tags:
+  - Bug
+  - Regression
+  - 'High Priority'
+started: 2026-09-07T21:13:00.427Z
+completed: 2026-09-07T07:00:00.000Z
 ---
 
 # Fix kanbn_mcp_kanbn_create_task subtasks rendering as 'undefined'
@@ -17,7 +25,7 @@ updated: 2026-09-07T18:32:14.178Z
 
 ## Sub-tasks
 
-- [ ] Create a unit test to verify
+- [x] Create a unit test to verify
 
 ## History
 
@@ -31,4 +39,19 @@ updated: 2026-09-07T18:32:14.178Z
   date: 2026-09-07T18:32:14.178Z
   fromColumn: Todo
   toColumn: Backlog
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-07T21:13:00.427Z
+  fromColumn: Backlog
+  toColumn: In Progress
+  author: Kevin J. Duling
+- type: progress
+  date: 2026-09-07T21:13:57.162Z
+  fromProgress: 0
+  toProgress: 0.95
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-07T21:47:45.352Z
+  fromColumn: In Progress
+  toColumn: Done
   author: Kevin J. Duling

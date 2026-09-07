@@ -191,7 +191,7 @@ describe("task creation and movement", () => {
             const taskIdMatch = result.content[0].text.match(/Created task "Metadata task" \(([^)]+)\)/);
             assert.ok(taskIdMatch, "Task ID should be returned in the creation message");
 
-            const task = await getTaskForDir(dir, taskIdMatch[1]);
+            const task = await getTaskForDir(dir, taskIdMatch![1]);
 
             assert.equal(task.name, "Metadata task");
             assert.equal(task.description, "Task description body");
@@ -235,7 +235,7 @@ describe("task creation and movement", () => {
             const taskIdMatch = result.content[0].text.match(/Created task "Task with subtasks" \(([^)]+)\)/);
             assert.ok(taskIdMatch, "Task ID should be returned in the creation message");
 
-            const task = await getTaskForDir(dir, taskIdMatch[1]);
+            const task = await getTaskForDir(dir, taskIdMatch![1]);
 
             assert.ok(task.subTasks, "Task should have subTasks array");
             assert.equal(task.subTasks.length, 2, "Task should have 2 subtasks");
@@ -277,14 +277,14 @@ describe("task creation and movement", () => {
 
             const moved = await handleToolCall("kanbn_move_task", {
                 path: dir,
-                taskId: taskIdMatch[1],
+                taskId: taskIdMatch![1],
                 column: "Done",
             });
 
             assert.match(moved.content[0].text, /Moved task .* to column "Done"/i);
 
             const index = await new KanbnClass(dir).getIndex();
-            assert.ok(index.columns.Done.includes(taskIdMatch[1]));
+            assert.ok(index.columns.Done.includes(taskIdMatch![1]));
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }

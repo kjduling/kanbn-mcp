@@ -32,7 +32,7 @@ function getKanbnInstance(boardPath: string): any {
 export const server = new Server(
     {
         name: "kanbn-mcp",
-        version: "0.0.2",
+        version: "0.0.3",
     },
     {
         capabilities: {
@@ -257,7 +257,7 @@ export async function handleKanbnCreateTask(args: Record<string, any>) {
 
     const createFn = instance.createTask || instance.create || instance.addTask;
     if (typeof createFn !== "function") {
-        throw new Error(`No createTask method found on Kanbn instance`);
+        throw new TypeError(`No createTask method found on Kanbn instance`);
     }
 
     let createdTaskId: any;
