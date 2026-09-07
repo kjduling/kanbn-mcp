@@ -225,8 +225,8 @@ describe("task creation and movement", () => {
                 column: "Backlog",
                 description: "Has proper subtasks",
                 subTasks: [
-                    { name: "First subtask", completed: false },
-                    { name: "Second subtask", completed: true },
+                    { text: "First subtask", completed: false },
+                    { text: "Second subtask", completed: true },
                 ],
             });
 
