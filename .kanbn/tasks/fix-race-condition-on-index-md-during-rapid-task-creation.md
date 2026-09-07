@@ -1,11 +1,15 @@
 ---
+created: 2026-09-06T22:08:33.866Z
+updated: 2026-09-07T00:44:03.202Z
+assigned: Kevin
 tags:
   - bug
   - concurrency
   - race-condition
   - kanbn
   - index.md
-created: 2026-09-06T22:08:33.866Z
+started: 2026-09-07T00:41:57.928Z
+completed: 2026-09-07T00:44:03.202Z
 ---
 
 # Fix race condition on index.md during rapid task creation
@@ -32,6 +36,12 @@ function enqueueKanbnOperation<T>(op: () => Promise<T>): Promise<T> {
 
 Apply to `createTask`, `moveTask`, and any other board mutation handlers.
 
+## Comments
+
+- author: Kevin J. Duling
+  date: 2026-09-07T00:42:27.945Z
+  Added logic to enqueue commands, fixed issues stemming from regression testing.
+
 ## History
 
 - type: created
@@ -39,4 +49,14 @@ Apply to `createTask`, `moveTask`, and any other board mutation handlers.
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-07T00:41:57.928Z
+  fromColumn: Backlog
+  toColumn: In Progress
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-07T00:44:03.202Z
+  fromColumn: In Progress
+  toColumn: Done
   author: Kevin J. Duling
