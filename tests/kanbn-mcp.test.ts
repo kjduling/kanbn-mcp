@@ -209,6 +209,53 @@ describe("task creation and movement", () => {
         }
     });
 
+    test("kanbn_create_task stores subTasks correctly", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Subtask Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const result = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Task with subtasks",
+                column: "Backlog",
+                description: "Has proper subtasks",
+                subTasks: [
+                    { name: "First subtask", completed: false },
+                    { name: "Second subtask", completed: true },
+                ],
+            });
+
+            assert.match(result.content[0].text, /Created task "Task with subtasks"/i);
+
+            const taskIdMatch = result.content[0].text.match(/Created task "Task with subtasks" \(([^)]+)\)/);
+            assert.ok(taskIdMatch, "Task ID should be returned in the creation message");
+
+            const task = await getTaskForDir(dir, taskIdMatch[1]);
+
+            assert.ok(task.subTasks, "Task should have subTasks array");
+            assert.equal(task.subTasks.length, 2, "Task should have 2 subtasks");
+            assert.equal(task.subTasks[0].text, "First subtask");
+            assert.equal(task.subTasks[0].completed, false);
+            assert.equal(task.subTasks[1].text, "Second subtask");
+            assert.equal(task.subTasks[1].completed, true);
+
+            // Ensure no subtask text is garbage like 'undefined'
+            for (const subtask of task.subTasks) {
+                assert.ok(
+                    subtask.text && subtask.text !== "undefined" && subtask.text.trim() !== "",
+                    `Subtask text should be a valid string, got: ${subtask.text}`
+                );
+            }
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
     test("kanbn_move_task moves a task to the target column", async () => {
         const dir = makeTempDir();
 
