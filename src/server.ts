@@ -79,7 +79,7 @@ function convertDatesInObject(obj: Record<string, any>): Record<string, any> {
     for (const key of Object.keys(obj)) {
         if (dateKeys.has(key) && typeof obj[key] === "string") {
             const parsed = new Date(obj[key]);
-            if (!isNaN(parsed.getTime())) {
+            if (!Number.isNaN(parsed.getTime())) {
                 obj[key] = parsed;
             }
         }
@@ -153,6 +153,18 @@ export function buildTaskDataFromArgs(args: Record<string, any>): Record<string,
                 return { ...comment, date: new Date(comment.date) };
             }
             return comment;
+        });
+    }
+
+    if (Array.isArray(taskData.subTasks)) {
+        taskData.subTasks = taskData.subTasks.map((sub: any) => {
+            if (typeof sub === "string") {
+                return { text: sub, completed: false };
+            }
+            return {
+                text: String(sub?.text ?? sub?.name ?? sub?.description ?? ""),
+                completed: Boolean(sub?.completed),
+            };
         });
     }
 
@@ -283,6 +295,111 @@ export async function handleKanbnCreateTask(args: Record<string, any>) {
     };
 }
 
+export async function handleKanbnDeleteTask(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+
+    const taskId = args.taskId as string;
+    if (!taskId) {
+        throw new Error(`Missing required parameter: taskId`);
+    }
+
+    const force = Boolean(args.force);
+
+    const deleteFn = instance.deleteTask || instance.removeTask || instance.delete;
+    if (typeof deleteFn !== "function") {
+        throw new TypeError(`No deleteTask method found on Kanbn instance`);
+    }
+
+    await deleteFn.call(instance, taskId, force);
+
+    return {
+        content: [
+            {
+                type: "text",
+                text: `Deleted task "${taskId}"${force ? " (forced)" : ""}`,
+            },
+        ],
+    };
+}
+
+export async function handleKanbnArchiveTask(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+
+    const taskId = args.taskId as string;
+    if (!taskId) {
+        throw new Error(`Missing required parameter: taskId`);
+    }
+
+    const archiveFn = instance.archiveTask || instance.archive || instance.prchive;
+    if (typeof archiveFn !== "function") {
+        throw new TypeError(`No archiveTask method found on Kanbn instance`);
+    }
+
+    await archiveFn.call(instance, taskId);
+
+    return {
+        content: [
+            {
+                type: "text",
+                text: `Archived task "${taskId}"`,
+            },
+        ],
+    };
+}
+
+export async function handleKanbnGetTask(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+
+    const taskId = args.taskId as string;
+    if (!taskId) {
+        throw new Error(`Missing required parameter: taskId`);
+    }
+
+    const getFn = instance.getTask || instance.get || instance.fetchTask;
+    if (typeof getFn !== "function") {
+        throw new TypeError(`No getTask method found on Kanbn instance`);
+    }
+
+    const task = await getFn.call(instance, taskId);
+
+    return {
+        content: [
+            {
+                type: "text",
+                text: JSON.stringify(task, null, 2),
+            },
+        ],
+    };
+}
+
+export async function handleKanbnDeleteBoard(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const fs = await import("node:fs");
+    if (!fs.existsSync(boardPath)) {
+        return {
+            content: [{ type: "text", text: `Board directory does not exist: ${boardPath}` }],
+        };
+    }
+
+    fs.rmSync(boardPath, { recursive: true, force: true });
+
+    return {
+        content: [{ type: "text", text: `Deleted board at: ${boardPath}` }],
+    };
+}
+
 export async function handleKanbnMoveTask(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -367,8 +484,29 @@ export const TOOLS: Tool[] = [
                 name: { type: "string", description: "Task title" },
                 description: { type: "string", description: "Task detailed description" },
                 assigned: { type: "string", description: "Assignee" },
-                subTasks: { type: "array", items: { type: "object" } },
-                comments: { type: "array", items: { type: "object" } },
+                subTasks: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            text: { type: "string", description: "Sub-task text" },
+                            name: { type: "string", description: "Alias for text" },
+                            description: { type: "string", description: "Alias for text" },
+                            completed: { type: "boolean", description: "Whether the sub-task is completed" },
+                        },
+                    },
+                },
+                comments: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            author: { type: "string", description: "Comment author" },
+                            date: { type: "string", description: "Comment date (ISO string)" },
+                            text: { type: "string", description: "Comment text" },
+                        },
+                    },
+                },
             },
         },
     },

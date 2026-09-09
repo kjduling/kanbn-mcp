@@ -1,6 +1,6 @@
 ---
 created: 2026-09-07T18:19:25.844Z
-updated: 2026-09-09T00:44:23.744Z
+updated: 2026-09-09T22:49:06.314Z
 assigned: Kevin
 tags:
   - Bug
@@ -19,8 +19,6 @@ completed: 2026-09-07T07:00:00.000Z
 **Impact:** Any task creation via the MCP tool that relies on subtasks loses all useful information. All 11 tasks created in the previous review session are affected.
 
 **Suspected cause:** The MCP tool's `kanbn_mcp_kanbn_create_task` implementation likely doesn't correctly map the `name` field from the `subTasks` input objects to the underlying Kanbn task subtask representation.
-
-**Note:** Do NOT add subtasks to this task — the bug prevents them from rendering correctly.
 
 ## Sub-tasks
 
@@ -69,4 +67,9 @@ completed: 2026-09-07T07:00:00.000Z
   date: 2026-09-09T00:44:23.737Z
   fromProgress: 0.95
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-09T22:49:06.314Z
+  fromColumn: Todo
+  toColumn: Done
   author: Kevin J. Duling

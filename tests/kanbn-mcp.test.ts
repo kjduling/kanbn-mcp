@@ -97,6 +97,22 @@ describe("buildTaskDataFromArgs", () => {
             }
         ]);
     });
+
+    test("handles loose or malformed subTasks input gracefully", () => {
+        const taskData = buildTaskDataFromArgs({
+            name: "Edge case task",
+            description: "Testing loose subtask shapes",
+            subTasks: [
+                "Raw string subtask",
+                { invalidKey: "missing text property" } as any,
+            ],
+        });
+
+        assert.deepStrictEqual(taskData.subTasks, [
+            { text: "Raw string subtask", completed: false },
+            { text: "", completed: false },
+        ]);
+    });
 });
 
 describe("kanbn_status", () => {

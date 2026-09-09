@@ -27,13 +27,12 @@ completedColumns:
 
 ## Todo
 
-- [fix-kanbn-mcp-kanbn-create-task-subtasks-rendering-as-undefined](tasks/fix-kanbn-mcp-kanbn-create-task-subtasks-rendering-as-undefined.md)
-
 ## In Progress
 
 ## Done
 
 - [simplify-task-argument-mapping](tasks/simplify-task-argument-mapping.md)
+- [fix-kanbn-mcp-kanbn-create-task-subtasks-rendering-as-undefined](tasks/fix-kanbn-mcp-kanbn-create-task-subtasks-rendering-as-undefined.md)
 - [unify-module-system-esm-cjs](tasks/unify-module-system-esm-cjs.md)
 - [fix-race-condition-on-index-md-during-rapid-task-creation](tasks/fix-race-condition-on-index-md-during-rapid-task-creation.md)
 - [validate-fields](tasks/validate-fields.md)
