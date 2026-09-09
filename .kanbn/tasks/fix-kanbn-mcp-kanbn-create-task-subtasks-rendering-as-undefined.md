@@ -1,8 +1,7 @@
 ---
 created: 2026-09-07T18:19:25.844Z
-updated: 2026-09-07T21:47:45.352Z
+updated: 2026-09-09T00:44:23.744Z
 assigned: Kevin
-progress: 0.95
 tags:
   - Bug
   - Regression
@@ -26,6 +25,12 @@ completed: 2026-09-07T07:00:00.000Z
 ## Sub-tasks
 
 - [x] Create a unit test to verify
+
+## Comments
+
+- author: Kevin J. Duling
+  date: 2026-09-09T00:43:31.512Z
+  Re-opened.  Just added another task and got 'undefined' again as a subtask.
 
 ## History
 
@@ -54,4 +59,14 @@ completed: 2026-09-07T07:00:00.000Z
   date: 2026-09-07T21:47:45.352Z
   fromColumn: In Progress
   toColumn: Done
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-09T00:43:22.655Z
+  fromColumn: Done
+  toColumn: Todo
+  author: Kevin J. Duling
+- type: progress
+  date: 2026-09-09T00:44:23.737Z
+  fromProgress: 0.95
+  toProgress: 0
   author: Kevin J. Duling

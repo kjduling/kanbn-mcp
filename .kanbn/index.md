@@ -27,6 +27,8 @@ completedColumns:
 
 ## Todo
 
+- [fix-kanbn-mcp-kanbn-create-task-subtasks-rendering-as-undefined](tasks/fix-kanbn-mcp-kanbn-create-task-subtasks-rendering-as-undefined.md)
+
 ## In Progress
 
 ## Done
@@ -37,6 +39,6 @@ completedColumns:
 - [validate-fields](tasks/validate-fields.md)
 - [refactor-tool-handler-logic](tasks/refactor-tool-handler-logic.md)
 - [initialize-kanbn-board](tasks/initialize-kanbn-board.md)
-- [fix-kanbn-mcp-kanbn-create-task-subtasks-rendering-as-undefined](tasks/fix-kanbn-mcp-kanbn-create-task-subtasks-rendering-as-undefined.md)
+- [source-tree-cleanup](tasks/source-tree-cleanup.md)
 
 ## Blocked

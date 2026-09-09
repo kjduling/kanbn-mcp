@@ -6,7 +6,11 @@
   "scripts": {
     "test": "tsx --test tests/**/*.test.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "clean": "rm -rf dist docs",
+    "nuke": "rm -rf dist docs node_modules package-lock.json && npm cache clean --force",
+    "docs": "echo '(typedoc --entryPointStrategy expand src) not yet supported in TypeScript7'",
+    "docs:serve": "echo '(typedoc --entryPointStrategy expand src && python -m http.server 8080 --directory docs) not yet supported in TypeScript7'"
   },
   "keywords": [],
   "author": "",

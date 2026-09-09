@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { describe } from "node:test";
 
-import { buildTaskDataFromArgs, handleToolCall, listTools } from "../server";
+import { buildTaskDataFromArgs, handleToolCall, listTools } from "../src/server";
 
 const KanbnClass = require("@basementuniverse/kanbn/src/main.js")?.Kanbn;
 
