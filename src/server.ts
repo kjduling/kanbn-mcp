@@ -32,7 +32,7 @@ function getKanbnInstance(boardPath: string): any {
 export const server = new Server(
     {
         name: "kanbn-mcp",
-        version: "0.0.3",
+        version: "0.1.0",
     },
     {
         capabilities: {
@@ -536,6 +536,40 @@ export const TOOLS: Tool[] = [
             required: ["taskId"],
         },
     },
+    {
+        name: "kanbn_archive_task",
+        description: "Archive a task on the Kanbn board.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                taskId: { type: "string", description: "ID or filename of the task to archive" },
+            },
+            required: ["taskId"],
+        },
+    },
+    {
+        name: "kanbn_get_task",
+        description: "Retrieve details of a specific task from the Kanbn board.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                taskId: { type: "string", description: "ID or filename of the task to retrieve" },
+            },
+            required: ["taskId"],
+        },
+    },
+    {
+        name: "kanbn_delete_board",
+        description: "Delete an entire Kanbn board directory.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the board directory to delete" },
+            },
+        },
+    },
 ];
 
 export function listTools() {
@@ -558,6 +592,12 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
                 return handleKanbnMoveTask(args);
             case "kanbn_delete_task":
                 return handleKanbnDeleteTask(args);
+            case "kanbn_archive_task":
+                return handleKanbnArchiveTask(args);
+            case "kanbn_get_task":
+                return handleKanbnGetTask(args);
+            case "kanbn_delete_board":
+                return handleKanbnDeleteBoard(args);
             default:
                 throw new Error(`Unknown tool requested: ${name}`);
         }

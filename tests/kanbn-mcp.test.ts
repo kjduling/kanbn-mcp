@@ -29,7 +29,10 @@ describe("MCP tool listing", () => {
             "kanbn_ensure_board",
             "kanbn_create_task",
             "kanbn_move_task",
-            "kanbn_delete_task"
+            "kanbn_delete_task",
+            "kanbn_archive_task",
+            "kanbn_get_task",
+            "kanbn_delete_board",
         ]);
     });
 });
@@ -362,6 +365,168 @@ describe("task creation and movement", () => {
             );
         } finally {
             rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("kanbn_archive_task", () => {
+    test("archives a task on the board", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Archive Test Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Archive me",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            const archived = await handleToolCall("kanbn_archive_task", {
+                path: dir,
+                taskId: taskId,
+            });
+
+            assert.match(archived.content[0].text, /Archived task/i);
+            assert.match(archived.content[0].text, new RegExp(taskId));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("throws when task does not exist", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Archive Sad Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            await assert.rejects(
+                handleToolCall("kanbn_archive_task", {
+                    path: dir,
+                    taskId: "nonexistent-task-id",
+                }),
+                Error
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("kanbn_get_task", () => {
+    test("retrieves a task by id", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Get Task Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Fetch me",
+                column: "Backlog",
+                description: "Task to fetch",
+                assigned: "bob",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            const retrieved = await handleToolCall("kanbn_get_task", {
+                path: dir,
+                taskId: taskId,
+            });
+
+            const task = JSON.parse(retrieved.content[0].text);
+            assert.equal(task.name, "Fetch me");
+            assert.equal(task.description, "Task to fetch");
+            assert.equal(task.metadata.assigned, "bob");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("throws when task does not exist", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Get Task Sad Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            await assert.rejects(
+                handleToolCall("kanbn_get_task", {
+                    path: dir,
+                    taskId: "nonexistent-task-id",
+                }),
+                Error
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("kanbn_delete_board", () => {
+    test("deletes the board directory", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Delete Board Test",
+                columns: ["Backlog", "Done"],
+            });
+
+            const deleted = await handleToolCall("kanbn_delete_board", {
+                path: dir,
+            });
+
+            assert.match(deleted.content[0].text, /Deleted board/i);
+        } finally {
+            try {
+                rmSync(dir, { recursive: true, force: true });
+            } catch {
+                // already deleted
+            }
+        }
+    });
+
+    test("returns gracefully when directory does not exist", async () => {
+        const dir = makeTempDir();
+
+        try {
+            rmSync(dir, { recursive: true, force: true });
+
+            const deleted = await handleToolCall("kanbn_delete_board", {
+                path: dir,
+            });
+
+            assert.match(deleted.content[0].text, /does not exist/i);
+        } finally {
+            try {
+                rmSync(dir, { recursive: true, force: true });
+            } catch {
+                // already deleted
+            }
         }
     });
 });

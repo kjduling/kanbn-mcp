@@ -1,6 +1,6 @@
 ---
 created: 2026-09-07T18:00:58.224Z
-updated: 2026-09-07T18:31:31.650Z
+updated: 2026-09-10T04:58:18.783Z
 ---
 
 # Add required fields to kanbn_create_task tool schema
@@ -16,8 +16,6 @@ Without `required` fields, LLM callers may omit essential parameters and produce
 
 ## Sub-tasks
 
-- [ ] undefined
-- [ ] undefined
 - [ ] Create a unit test to verify
 
 ## History

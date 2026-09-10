@@ -4,6 +4,8 @@ tags:
   - kanbn-wrapper
   - feature
 created: 2026-09-06T20:33:47.256Z
+updated: 2026-09-10T04:55:50.256Z
+completed: 2026-09-10T04:55:50.256Z
 ---
 
 # kanbn_get_task
@@ -33,4 +35,9 @@ The tool should:
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-10T04:55:50.256Z
+  fromColumn: Backlog
+  toColumn: Done
   author: Kevin J. Duling

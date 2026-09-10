@@ -2,7 +2,7 @@
 
 A Model Context Protocol (MCP) server for working with Kanbn boards from AI assistants and other MCP clients.
 
-This project wraps the Kanbn task and board APIs so tools like an LLM agent can inspect board state, initialize boards, create tasks, and move tasks between columns without requiring direct shell access.
+This project wraps the Kanbn task and board APIs so tools like an LLM agent can inspect board state, initialize boards, create, delete, and archive tasks, and move tasks between columns without requiring direct shell access.
 
 ## Why this exists
 
@@ -33,10 +33,14 @@ The MCP server currently exposes tools for:
 - ensuring a board exists
 - creating tasks with Kanbn metadata
 - moving tasks between columns
+- deleting tasks
+- archiving tasks
+- retrieving individual task details
+- deleting entire boards
 
 ## Project structure
 
-- `server.ts` — the MCP server implementation and tool handlers
+- `src/server.ts` — the MCP server implementation and tool handlers
 - `kanbn.d.ts` — type declarations for the Kanbn dependency
 - `tests/kanbn-mcp.test.ts` — unit tests covering commands and task field handling
 
@@ -85,6 +89,21 @@ This should be the directory that contains the `.kanbn` subfolder. In other word
 ```bash
 npm test
 ```
+
+## Available tools
+
+| Tool | Description |
+|------|-------------|
+| `kanbn_status` | Check the current status of the Kanbn board |
+| `kanbn_init_board` | Initialize a new Kanbn board |
+| `kanbn_initialize_board` | Alias for `kanbn_init_board` |
+| `kanbn_ensure_board` | Ensure a Kanbn board exists, initializing if absent |
+| `kanbn_create_task` | Create a new task with metadata |
+| `kanbn_delete_task` | Delete a task from the board (supports `force` flag) |
+| `kanbn_archive_task` | Archive a task on the board |
+| `kanbn_get_task` | Retrieve details of a specific task |
+| `kanbn_move_task` | Move a task between columns |
+| `kanbn_delete_board` | Delete an entire board directory |
 
 ## Example task metadata supported
 
