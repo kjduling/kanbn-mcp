@@ -1,9 +1,11 @@
 ---
+created: 2026-09-06T20:33:47.290Z
+updated: 2026-09-10T02:05:30.421Z
 tags:
   - mcp-tool
   - kanbn-wrapper
   - feature
-created: 2026-09-06T20:33:47.290Z
+completed: 2026-09-10T01:57:02.804Z
 ---
 
 # kanbn_delete_task
@@ -20,12 +22,12 @@ The tool should:
 
 ## Sub-tasks
 
-- [ ] Implement kanbn_delete_task tool definition in server.ts (inputSchema with taskId, optional force, path)
-- [ ] Implement handler function that calls kanbn.deleteTask(taskId, force) and returns result
-- [ ] Add routing in the CallToolRequest handler to dispatch to kanbn_delete_task
-- [ ] Acceptance test: Create a task, delete it, verify it no longer appears in board status
-- [ ] Unit test: Write unit test for kanbn_delete_task handler with mock Kanbn instance
-- [ ] Acceptance test: Verify error is thrown when deleting a non-existent task
+- [x] Implement kanbn_delete_task tool definition in server.ts (inputSchema with taskId, optional force, path)
+- [x] Implement handler function that calls kanbn.deleteTask(taskId, force) and returns result
+- [x] Add routing in the CallToolRequest handler to dispatch to kanbn_delete_task
+- [x] Acceptance test: Create a task, delete it, verify it no longer appears in board status
+- [x] Unit test: Write unit test for kanbn_delete_task handler with mock Kanbn instance
+- [x] Acceptance test: Verify error is thrown when deleting a non-existent task
 
 ## History
 
@@ -34,4 +36,9 @@ The tool should:
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-10T01:57:02.804Z
+  fromColumn: Backlog
+  toColumn: Done
   author: Kevin J. Duling

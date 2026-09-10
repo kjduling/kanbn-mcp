@@ -12,7 +12,6 @@ completedColumns:
 - [kanbn-get-task](tasks/kanbn-get-task.md)
 - [kanbn-edit-task](tasks/kanbn-edit-task.md)
 - [kanbn-archive-task](tasks/kanbn-archive-task.md)
-- [kanbn-delete-task](tasks/kanbn-delete-task.md)
 - [fix-silent-error-swallowing-in-enqueue-kanbn-operation](tasks/fix-silent-error-swallowing-in-enqueue-kanbn-operation.md)
 - [fix-handle-kanbn-init-board-silent-failure-on-both-init-attempts](tasks/fix-handle-kanbn-init-board-silent-failure-on-both-init-attempts.md)
 - [add-input-validation-to-handle-kanbn-move-task](tasks/add-input-validation-to-handle-kanbn-move-task.md)
@@ -39,5 +38,6 @@ completedColumns:
 - [refactor-tool-handler-logic](tasks/refactor-tool-handler-logic.md)
 - [initialize-kanbn-board](tasks/initialize-kanbn-board.md)
 - [source-tree-cleanup](tasks/source-tree-cleanup.md)
+- [kanbn-delete-task](tasks/kanbn-delete-task.md)
 
 ## Blocked

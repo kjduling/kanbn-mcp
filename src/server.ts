@@ -523,6 +523,19 @@ export const TOOLS: Tool[] = [
             required: ["taskId", "targetColumn"],
         },
     },
+    {
+        name: "kanbn_delete_task",
+        description: "Delete a task from the Kanbn board.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                taskId: { type: "string", description: "ID or filename of the task to delete" },
+                force: { type: "boolean", description: "Force deletion without confirmation" },
+            },
+            required: ["taskId"],
+        },
+    },
 ];
 
 export function listTools() {
@@ -543,6 +556,8 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
                 return handleKanbnCreateTask(args);
             case "kanbn_move_task":
                 return handleKanbnMoveTask(args);
+            case "kanbn_delete_task":
+                return handleKanbnDeleteTask(args);
             default:
                 throw new Error(`Unknown tool requested: ${name}`);
         }

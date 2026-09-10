@@ -29,6 +29,7 @@ describe("MCP tool listing", () => {
             "kanbn_ensure_board",
             "kanbn_create_task",
             "kanbn_move_task",
+            "kanbn_delete_task"
         ]);
     });
 });
@@ -301,6 +302,64 @@ describe("task creation and movement", () => {
 
             const index = await new KanbnClass(dir).getIndex();
             assert.ok(index.columns.Done.includes(taskIdMatch![1]));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_delete_task removes a task from the board", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Delete Test Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Delete me",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            const deleted = await handleToolCall("kanbn_delete_task", {
+                path: dir,
+                taskId: taskId,
+            });
+
+            assert.match(deleted.content[0].text, /Deleted task/i);
+
+            const index = await new KanbnClass(dir).getIndex();
+            assert.ok(
+                !index.columns.Backlog.includes(taskId) && !index.columns.Done.includes(taskId),
+                "Task should no longer be in any column"
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+    test("kanbn_delete_task throws when task does not exist", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Sad Path Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            await assert.rejects(
+                handleToolCall("kanbn_delete_task", {
+                    path: dir,
+                    taskId: "nonexistent-task-id",
+                }),
+                Error
+            );
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }
