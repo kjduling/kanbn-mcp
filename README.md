@@ -36,6 +36,7 @@ The MCP server currently exposes tools for:
 - moving tasks between columns
 - deleting tasks
 - archiving tasks
+- unarchiving tasks
 - retrieving individual task details
 - deleting entire boards
 
@@ -106,6 +107,8 @@ npm test
 | `kanbn_edit_task` | Edit an existing task on the board |
 | `kanbn_move_task` | Move a task between columns |
 | `kanbn_delete_board` | Delete an entire board directory |
+| `kanbn_unarchive_task` | Unarchive a task on the board |
+| `kanbn_restore_task` | Alias for `kanbn_unarchive_task` |
 
 ## Example task metadata supported
 

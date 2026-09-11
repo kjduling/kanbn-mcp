@@ -72,6 +72,8 @@ describe("MCP tool listing", () => {
             "kanbn_get_task",
             "kanbn_edit_task",
             "kanbn_delete_board",
+            "kanbn_unarchive_task",
+            "kanbn_restore_task",
         ]);
     });
 });
@@ -1146,6 +1148,106 @@ describe("kanbn_delete_board", () => {
             } catch {
                 // already deleted
             }
+        }
+    });
+});
+
+describe("kanbn_unarchive_task", () => {
+    test("unarchives a task on the board", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Unarchive Test Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Unarchive me",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await handleToolCall("kanbn_archive_task", {
+                path: dir,
+                taskId: taskId,
+            });
+
+            const unarchived = await handleToolCall("kanbn_unarchive_task", {
+                path: dir,
+                taskId: taskId,
+            });
+
+            assert.match(unarchived.content[0].text, /Unarchived task/i);
+            assert.match(unarchived.content[0].text, new RegExp(taskId));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("throws when task does not exist", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Unarchive Sad Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            await assert.rejects(
+                handleToolCall("kanbn_unarchive_task", {
+                    path: dir,
+                    taskId: "nonexistent-task-id",
+                }),
+                Error
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("kanbn_restore_task", () => {
+    test("works as an alias for kanbn_unarchive_task", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Restore Alias Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Restore me",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await handleToolCall("kanbn_archive_task", {
+                path: dir,
+                taskId: taskId,
+            });
+
+            const restored = await handleToolCall("kanbn_restore_task", {
+                path: dir,
+                taskId: taskId,
+            });
+
+            assert.match(restored.content[0].text, /Unarchived task/i);
+            assert.match(restored.content[0].text, new RegExp(taskId));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
         }
     });
 });

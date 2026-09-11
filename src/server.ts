@@ -355,6 +355,35 @@ export async function handleKanbnArchiveTask(args: Record<string, any>) {
     };
 }
 
+export async function handleKanbnUnarchiveTask(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+
+    const taskId = args.taskId as string;
+    if (!taskId) {
+        throw new Error(`Missing required parameter: taskId`);
+    }
+
+    const restoreFn = instance.restoreTask || instance.restore || instance.unarchiveTask;
+    if (typeof restoreFn !== "function") {
+        throw new TypeError(`No restoreTask method found on Kanbn instance`);
+    }
+
+    await restoreFn.call(instance, taskId);
+
+    return {
+        content: [
+            {
+                type: "text",
+                text: `Unarchived task "${taskId}"`,
+            },
+        ],
+    };
+}
+
 export async function handleKanbnGetTask(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -704,6 +733,30 @@ export const TOOLS: Tool[] = [
             },
         },
     },
+    {
+        name: "kanbn_unarchive_task",
+        description: "Unarchive a task on the Kanbn board.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                taskId: { type: "string", description: "ID or filename of the task to unarchive" },
+            },
+            required: ["taskId"],
+        },
+    },
+    {
+        name: "kanbn_restore_task",
+        description: "Alias for kanbn_unarchive_task.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                taskId: { type: "string", description: "ID or filename of the task to unarchive" },
+            },
+            required: ["taskId"],
+        },
+    },
 ];
 
 export function listTools() {
@@ -734,6 +787,9 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
                 return handleKanbnEditTask(args);
             case "kanbn_delete_board":
                 return handleKanbnDeleteBoard(args);
+            case "kanbn_unarchive_task":
+            case "kanbn_restore_task":
+                return handleKanbnUnarchiveTask(args);
             default:
                 throw new Error(`Unknown tool requested: ${name}`);
         }
