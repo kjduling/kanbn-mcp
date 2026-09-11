@@ -1,5 +1,8 @@
 ---
 created: 2026-09-10T04:30:19.062Z
+updated: 2026-09-11T21:30:23.905Z
+started: 2026-09-11T21:17:15.156Z
+completed: 2026-09-11T21:30:23.905Z
 ---
 
 # CRITICAL: handleKanbnInitBoard silently discards errors from both init attempts
@@ -33,16 +36,15 @@ If *both* calls throw an error, the second `catch` block is never entered (the s
 
 ## Sub-tasks
 
-- [ ] Wrap both initFn calls in a single try/catch block
-- [ ] Re-throw error if both init attempts fail
-- [ ] Add unit test for failed init propagating error
-- [ ] Add unit test for successful first-attempt init
+- [x] Wrap both initFn calls in a single try/catch block
+- [x] Re-throw error if both init attempts fail
+- [x] Add unit test for failed init propagating error
+- [x] Add unit test for successful first-attempt init
 
 ## History
 
-- type: created
-  date: 2026-09-10T04:30:19.062Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
+- type: moved
+  date: 2026-09-11T21:30:23.905Z
+  fromColumn: In Progress
+  toColumn: Done
   author: Kevin J. Duling

@@ -1,5 +1,6 @@
 ---
 created: 2026-09-07T18:00:58.125Z
+updated: 2026-09-11T21:14:49.559Z
 ---
 
 # Add input validation to handleKanbnMoveTask
@@ -22,10 +23,10 @@ No check that `taskId` is non-empty or that `targetColumn` exists. The underlyin
 
 ## Sub-tasks
 
-- [ ] undefined
-- [ ] undefined
-- [ ] undefined
-- [ ] undefined
+- [ ] Validate that taskId is provided and non-empty
+- [ ] Validate that targetColumn is provided and non-empty
+- [ ] Return a clear validation error response if either is missing
+- [ ] Add the required constraint to the tool schema if not already present
 
 ## History
 

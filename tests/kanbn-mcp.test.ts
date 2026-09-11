@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { describe } from "node:test";
 
-import { buildTaskDataFromArgs, getKanbnInstance, handleToolCall, listTools } from "../src/server";
+import { buildTaskDataFromArgs, getKanbnInstance, handleKanbnInitBoard, handleToolCall, listTools } from "../src/server";
 
 const KanbnClass = require("@basementuniverse/kanbn/src/main.js")?.Kanbn;
 
@@ -1353,6 +1353,20 @@ describe("getKanbnInstance", () => {
         try {
             const instance = getKanbnInstance(dir);
             assert.ok(instance !== null && instance !== undefined, "should return a non-null instance");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("handleKanbnInitBoard error handling", () => {
+    test("returns success on first-attempt init", async () => {
+        const dir = makeTempDir();
+        try {
+            await handleKanbnInitBoard({ path: dir, name: "First Try Board", columns: ["Backlog", "Done"] });
+            const status = await handleToolCall("kanbn_status", { path: dir });
+            assert.match(status.content[0].text, /Backlog/i);
+            assert.match(status.content[0].text, /Done/i);
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }

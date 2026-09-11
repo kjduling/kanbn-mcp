@@ -1,5 +1,7 @@
 ---
 created: 2026-09-07T18:00:58.101Z
+updated: 2026-09-11T21:03:28.218Z
+column: Backlog
 ---
 
 # Fix handleKanbnInitBoard silent failure on both init attempts
@@ -22,11 +24,9 @@ If both calls throw, the error is swallowed and a misleading success message is 
 - Include the last error message in the thrown error for debugging
 - Return an error response instead of silently succeeding
 
-## Sub-tasks
+## Relations
 
-- [ ] undefined
-- [ ] undefined
-- [ ] undefined
+- [Duplicate critical-handle-kanbn-init-board-silently-discards-errors-from-both-init-attempts](critical-handle-kanbn-init-board-silently-discards-errors-from-both-init-attempts.md)
 
 ## History
 
@@ -35,4 +35,8 @@ If both calls throw, the error is swallowed and a misleading success message is 
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-11T21:05:05.222Z
+  fromColumn: Backlog
   author: Kevin J. Duling

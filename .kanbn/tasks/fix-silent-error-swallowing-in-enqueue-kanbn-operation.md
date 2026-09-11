@@ -1,5 +1,6 @@
 ---
 created: 2026-09-07T18:00:58.055Z
+updated: 2026-09-11T21:13:52.158Z
 ---
 
 # Fix silent error swallowing in enqueueKanbnOperation
@@ -19,12 +20,6 @@ Any error from a Kanbn operation is silently swallowed. A failed task creation w
 - Add proper error logging or re-throw in the failure handler
 - Consider logging errors to stderr or returning an error response
 - Ensure the promise chain doesn't lose error context
-
-## Sub-tasks
-
-- [ ] undefined
-- [ ] undefined
-- [ ] undefined
 
 ## History
 
