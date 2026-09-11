@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { describe } from "node:test";
@@ -1141,7 +1141,7 @@ describe("kanbn_delete_board", () => {
                 path: dir,
             });
 
-            assert.match(deleted.content[0].text, /does not exist/i);
+            assert.match(deleted.content[0].text, /Not a Kanbn board directory/i);
         } finally {
             try {
                 rmSync(dir, { recursive: true, force: true });
@@ -1248,6 +1248,67 @@ describe("kanbn_restore_task", () => {
             assert.match(restored.content[0].text, new RegExp(taskId));
         } finally {
             rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("kanbn_delete_board", () => {
+    test("deletes a valid board directory", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Delete Test Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const fs = await import("node:fs");
+            assert.ok(fs.existsSync(path.join(dir, ".kanbn")));
+
+            const result = await handleToolCall("kanbn_delete_board", {
+                path: dir,
+            });
+
+            assert.match(result.content[0].text, /Deleted board/i);
+            assert.ok(!fs.existsSync(dir));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("rejects deletion of a non-board directory", async () => {
+        const dir = makeTempDir();
+
+        try {
+            const result = await handleToolCall("kanbn_delete_board", {
+                path: dir,
+            });
+
+            assert.match(result.content[0].text, /Not a Kanbn board directory/i);
+            assert.ok(existsSync(dir));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("rejects deletion when KANBN_DEFAULT_PATH points to non-board directory", async () => {
+        const dir = makeTempDir();
+        const originalEnv = process.env.KANBN_DEFAULT_PATH;
+
+        try {
+            process.env.KANBN_DEFAULT_PATH = dir;
+
+            const result = await handleToolCall("kanbn_delete_board", {});
+
+            assert.match(result.content[0].text, /Not a Kanbn board directory/i);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            if (originalEnv !== undefined) {
+                process.env.KANBN_DEFAULT_PATH = originalEnv;
+            } else {
+                delete process.env.KANBN_DEFAULT_PATH;
+            }
         }
     });
 });

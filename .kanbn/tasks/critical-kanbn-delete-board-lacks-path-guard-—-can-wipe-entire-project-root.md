@@ -1,5 +1,9 @@
 ---
 created: 2026-09-10T04:30:19.006Z
+updated: 2026-09-11T18:19:35.470Z
+progress: 1
+started: 2026-09-11T18:00:47.833Z
+completed: 2026-09-11T18:15:28.688Z
 ---
 
 # CRITICAL: kanbn_delete_board lacks path guard — can wipe entire project root
@@ -37,10 +41,10 @@ This **wipes the entire working directory** with no guard, no confirmation, and 
 
 ## Sub-tasks
 
-- [ ] Add path validation: reject if target does not contain '.kanbn'
-- [ ] Add unit test for happy path — valid board deletion
-- [ ] Add unit test for guard — non-board directory rejection
-- [ ] Add unit test for misconfigured KANBN_DEFAULT_PATH
+- [x] Add path validation: reject if target does not contain '.kanbn'
+- [x] Add unit test for happy path — valid board deletion
+- [x] Add unit test for guard — non-board directory rejection
+- [x] Add unit test for misconfigured KANBN_DEFAULT_PATH
 
 ## History
 
@@ -49,4 +53,19 @@ This **wipes the entire working directory** with no guard, no confirmation, and 
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-11T18:00:47.833Z
+  fromColumn: Backlog
+  toColumn: In Progress
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-11T18:15:28.688Z
+  fromColumn: In Progress
+  toColumn: Done
+  author: Kevin J. Duling
+- type: progress
+  date: 2026-09-11T18:19:35.462Z
+  fromProgress: 0
+  toProgress: 1
   author: Kevin J. Duling

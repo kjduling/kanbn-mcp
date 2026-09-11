@@ -29,10 +29,12 @@ function getKanbnInstance(boardPath: string): any {
     return null;
 }
 
-export const server = new Server(
+export const { version } = require("../package.json");
+
+const server = new Server(
     {
         name: "kanbn-mcp",
-        version: "0.1.0",
+        version: version,
     },
     {
         capabilities: {
@@ -505,9 +507,17 @@ export async function handleKanbnEditTask(args: Record<string, any>) {
 export async function handleKanbnDeleteBoard(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const fs = await import("node:fs");
-    if (!fs.existsSync(boardPath)) {
+
+    if (!boardPath || boardPath === "/") {
         return {
-            content: [{ type: "text", text: `Board directory does not exist: ${boardPath}` }],
+            content: [{ type: "text", text: "Cannot delete root directory." }],
+        };
+    }
+
+    const kanbnDir = path.join(boardPath, ".kanbn");
+    if (!fs.existsSync(kanbnDir)) {
+        return {
+            content: [{ type: "text", text: `Not a Kanbn board directory: ${boardPath} (no .kanbn folder found)` }],
         };
     }
 
@@ -731,6 +741,7 @@ export const TOOLS: Tool[] = [
             properties: {
                 path: { type: "string", description: "Path to the board directory to delete" },
             },
+            required: ["path"],
         },
     },
     {

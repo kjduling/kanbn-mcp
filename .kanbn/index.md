@@ -18,7 +18,6 @@ completedColumns:
 - [improve-is-board-initialized-method-detection](tasks/improve-is-board-initialized-method-detection.md)
 - [fix-build-task-data-from-args-mutating-input-objects](tasks/fix-build-task-data-from-args-mutating-input-objects.md)
 - [add-size-limit-to-kanbn-status-response](tasks/add-size-limit-to-kanbn-status-response.md)
-- [critical-kanbn-delete-board-lacks-path-guard-—-can-wipe-entire-project-root](tasks/critical-kanbn-delete-board-lacks-path-guard-—-can-wipe-entire-project-root.md)
 - [critical-handle-kanbn-init-board-silently-discards-errors-from-both-init-attempts](tasks/critical-handle-kanbn-init-board-silently-discards-errors-from-both-init-attempts.md)
 - [critical-get-kanbn-instance-returns-inconsistent-types-instance-module-null](tasks/critical-get-kanbn-instance-returns-inconsistent-types-instance-module-null.md)
 - [medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion](tasks/medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion.md)
@@ -50,5 +49,6 @@ completedColumns:
 - [kanbn-get-task](tasks/kanbn-get-task.md)
 - [kanbn-archive-task](tasks/kanbn-archive-task.md)
 - [kanbn-edit-task](tasks/kanbn-edit-task.md)
+- [critical-kanbn-delete-board-lacks-path-guard-—-can-wipe-entire-project-root](tasks/critical-kanbn-delete-board-lacks-path-guard-—-can-wipe-entire-project-root.md)
 
 ## Blocked
