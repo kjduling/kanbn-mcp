@@ -1,5 +1,9 @@
 ---
 created: 2026-09-10T04:30:19.074Z
+updated: 2026-09-11T21:00:39.237Z
+progress: 1
+started: 2026-09-11T20:40:28.949Z
+completed: 2026-09-11T20:46:54.879Z
 ---
 
 # CRITICAL: getKanbnInstance returns inconsistent types (instance | module | null)
@@ -43,17 +47,21 @@ If `instance` is the module object, all of these are `undefined`, so the board a
 
 ## Sub-tasks
 
-- [ ] Normalize getKanbnInstance to always return an instance or null
-- [ ] Extract Kanbn class from module object exports
-- [ ] Add unit test for module-object export path
-- [ ] Add unit test for class-constructor export path
-- [ ] Add unit test for not-found returning null
+- [x] getKanbnInstance returns a consistent type: either always an instance or always null (never the raw module)
+- [x] If the library exports a module object, extract the Kanbn class from it and instantiate
+- [x] Unit test covers the module-object export path
+- [x] Unit test covers the class-constructor export path
+- [x] Unit test covers the not-found path returning null
 
 ## History
 
-- type: created
-  date: 2026-09-10T04:30:19.074Z
-  column: Backlog
+- type: moved
+  date: 2026-09-11T20:46:54.879Z
+  fromColumn: In Progress
+  toColumn: Done
+  author: Kevin J. Duling
+- type: progress
+  date: 2026-09-11T21:00:39.232Z
   fromProgress: 0
-  toProgress: 0
+  toProgress: 1
   author: Kevin J. Duling

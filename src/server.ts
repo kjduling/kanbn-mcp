@@ -7,7 +7,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import path from "node:path";
 
-function getKanbnInstance(boardPath: string): any {
+export function getKanbnInstance(boardPath: string): any {
     let mod: any;
     try {
         mod = require("@basementuniverse/kanbn/src/main.js");
@@ -22,9 +22,6 @@ function getKanbnInstance(boardPath: string): any {
     const Kanbn = mod?.Kanbn || mod?.default?.Kanbn || (typeof mod === "function" ? mod : mod?.default);
     if (typeof Kanbn === "function") {
         return new Kanbn(boardPath);
-    }
-    if (mod && typeof mod === "object") {
-        return mod;
     }
     return null;
 }

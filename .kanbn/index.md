@@ -19,7 +19,6 @@ completedColumns:
 - [fix-build-task-data-from-args-mutating-input-objects](tasks/fix-build-task-data-from-args-mutating-input-objects.md)
 - [add-size-limit-to-kanbn-status-response](tasks/add-size-limit-to-kanbn-status-response.md)
 - [critical-handle-kanbn-init-board-silently-discards-errors-from-both-init-attempts](tasks/critical-handle-kanbn-init-board-silently-discards-errors-from-both-init-attempts.md)
-- [critical-get-kanbn-instance-returns-inconsistent-types-instance-module-null](tasks/critical-get-kanbn-instance-returns-inconsistent-types-instance-module-null.md)
 - [medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion](tasks/medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion.md)
 - [medium-operation-queue-swallows-errors-and-corrupts-subsequent-queued-operations](tasks/medium-operation-queue-swallows-errors-and-corrupts-subsequent-queued-operations.md)
 - [medium-handle-kanbn-archive-task-has-dead-code-typo-prchive-in-method-chain](tasks/medium-handle-kanbn-archive-task-has-dead-code-typo-prchive-in-method-chain.md)
@@ -50,5 +49,6 @@ completedColumns:
 - [kanbn-archive-task](tasks/kanbn-archive-task.md)
 - [kanbn-edit-task](tasks/kanbn-edit-task.md)
 - [critical-kanbn-delete-board-lacks-path-guard-—-can-wipe-entire-project-root](tasks/critical-kanbn-delete-board-lacks-path-guard-—-can-wipe-entire-project-root.md)
+- [critical-get-kanbn-instance-returns-inconsistent-types-instance-module-null](tasks/critical-get-kanbn-instance-returns-inconsistent-types-instance-module-null.md)
 
 ## Blocked
