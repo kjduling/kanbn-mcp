@@ -464,7 +464,7 @@ export async function handleKanbnEditTask(args: Record<string, any>) {
                 const cols = index?.columns || index;
                 if (typeof cols === "object" && !Array.isArray(cols)) {
                     for (const colTasks of Object.values(cols)) {
-                        const taskIds = Array.isArray(colTasks) ? colTasks : (colTasks?.tasks || []);
+                        const taskIds = Array.isArray(colTasks) ? colTasks : (colTasks as any)?.tasks || [];
                         if (Array.isArray(taskIds)) {
                             for (const id of taskIds) {
                                 if (typeof id === "string" && id.toLowerCase() === taskData.name.toLowerCase().replace(/\s+/g, "-")) {
