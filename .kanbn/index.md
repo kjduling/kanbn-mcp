@@ -9,7 +9,6 @@ completedColumns:
 
 ## Backlog
 
-- [kanbn-edit-task](tasks/kanbn-edit-task.md)
 - [fix-silent-error-swallowing-in-enqueue-kanbn-operation](tasks/fix-silent-error-swallowing-in-enqueue-kanbn-operation.md)
 - [fix-handle-kanbn-init-board-silent-failure-on-both-init-attempts](tasks/fix-handle-kanbn-init-board-silent-failure-on-both-init-attempts.md)
 - [add-input-validation-to-handle-kanbn-move-task](tasks/add-input-validation-to-handle-kanbn-move-task.md)
@@ -19,7 +18,6 @@ completedColumns:
 - [improve-is-board-initialized-method-detection](tasks/improve-is-board-initialized-method-detection.md)
 - [fix-build-task-data-from-args-mutating-input-objects](tasks/fix-build-task-data-from-args-mutating-input-objects.md)
 - [add-size-limit-to-kanbn-status-response](tasks/add-size-limit-to-kanbn-status-response.md)
-- [implement-missing-mcp-tools-get-task-edit-task-delete-task-archive-task](tasks/implement-missing-mcp-tools-get-task-edit-task-delete-task-archive-task.md)
 - [critical-kanbn-delete-board-lacks-path-guard-—-can-wipe-entire-project-root](tasks/critical-kanbn-delete-board-lacks-path-guard-—-can-wipe-entire-project-root.md)
 - [critical-handle-kanbn-init-board-silently-discards-errors-from-both-init-attempts](tasks/critical-handle-kanbn-init-board-silently-discards-errors-from-both-init-attempts.md)
 - [critical-get-kanbn-instance-returns-inconsistent-types-instance-module-null](tasks/critical-get-kanbn-instance-returns-inconsistent-types-instance-module-null.md)
@@ -51,5 +49,6 @@ completedColumns:
 - [kanbn-delete-task](tasks/kanbn-delete-task.md)
 - [kanbn-get-task](tasks/kanbn-get-task.md)
 - [kanbn-archive-task](tasks/kanbn-archive-task.md)
+- [kanbn-edit-task](tasks/kanbn-edit-task.md)
 
 ## Blocked

@@ -1,6 +1,7 @@
 ---
 created: 2026-09-07T18:00:58.113Z
 updated: 2026-09-07T18:34:47.066Z
+column: Backlog
 ---
 
 # Implement missing MCP tools: getTask, editTask, deleteTask, archiveTask
@@ -43,4 +44,8 @@ The `TOOLS` array in `server.ts` only lists 6 tools, none of which cover these o
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-11T00:24:46.898Z
+  fromColumn: Backlog
   author: Kevin J. Duling
