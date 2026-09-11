@@ -14,7 +14,45 @@ function makeTempDir(): string {
 
 function getTaskForDir(dir: string, taskId: string) {
     const instance = new KanbnClass(dir);
-    return instance.getTask(taskId);
+    const initFn = instance.initialised || instance.initialized || instance.isInitialized || instance.isInitialised;
+    
+    const tryGetTask = () => {
+        return instance.getTask ? instance.getTask(taskId) : Promise.resolve(null);
+    };
+    
+    const fallbackGetTask = async () => {
+        const fs = await import("node:fs");
+        const taskPath = path.join(dir, ".kanbn", "tasks");
+        if (fs.existsSync(taskPath)) {
+            const files = fs.readdirSync(taskPath).filter((f: string) => f.endsWith(".md"));
+            for (const file of files) {
+                const content = fs.readFileSync(path.join(taskPath, file), "utf-8");
+                const nameMatch = content.match(/^name:\s*(.+)$/m);
+                if (nameMatch) {
+                    const taskName = nameMatch[1].trim();
+                    const fileBase = file.replace(/\.md$/, "");
+                    if (taskName === taskId || fileBase === taskId) {
+                        return instance.getTask ? instance.getTask(fileBase) : null;
+                    }
+                }
+            }
+        }
+        return null;
+    };
+    
+    if (typeof initFn === "function") {
+        return initFn.call(instance).then(async () => {
+            try {
+                return await tryGetTask();
+            } catch (err: any) {
+                if (err.message && err.message.includes("No task file found")) {
+                    return await fallbackGetTask();
+                }
+                throw err;
+            }
+        });
+    }
+    return tryGetTask();
 }
 
 describe("MCP tool listing", () => {
@@ -32,6 +70,7 @@ describe("MCP tool listing", () => {
             "kanbn_delete_task",
             "kanbn_archive_task",
             "kanbn_get_task",
+            "kanbn_edit_task",
             "kanbn_delete_board",
         ]);
     });
@@ -478,6 +517,586 @@ describe("kanbn_get_task", () => {
                     taskId: "nonexistent-task-id",
                 }),
                 Error
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("kanbn_edit_task", () => {
+    test("edits task name", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Edit Name Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Original Name",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            const edited = await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: taskId,
+                name: "New Name",
+            });
+
+            assert.match(edited.content[0].text, /Edited task/i);
+
+            const task = await getTaskForDir(dir, "new-name");
+            assert.equal(task.name, "New Name");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("edits task description", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Edit Desc Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Desc Task",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: taskId,
+                description: "Updated description body",
+            });
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.equal(task.description, "Updated description body");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("edits task assignee", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Edit Assignee Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Assignee Task",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: taskId,
+                assigned: "charlie",
+            });
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.equal(task.metadata.assigned, "charlie");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("edits task due date", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Edit Due Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Due Task",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: taskId,
+                due: "2027-12-31T00:00:00.000Z",
+            });
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.equal(new Date(task.metadata.due).toISOString(), new Date("2027-12-31T00:00:00.000Z").toISOString());
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("edits task started date", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Edit Started Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Started Task",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: taskId,
+                started: "2027-01-15T00:00:00.000Z",
+            });
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.equal(new Date(task.metadata.started).toISOString(), new Date("2027-01-15T00:00:00.000Z").toISOString());
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("edits task completed date", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Edit Completed Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Completed Task",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: taskId,
+                completed: "2027-06-15T00:00:00.000Z",
+            });
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.equal(new Date(task.metadata.completed).toISOString(), new Date("2027-06-15T00:00:00.000Z").toISOString());
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("edits task progress", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Edit Progress Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Progress Task",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: taskId,
+                progress: 0.75,
+            });
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.equal(task.metadata.progress, 0.75);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("edits task planned start date", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Edit PlannedStart Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "PlannedStart Task",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: taskId,
+                plannedStart: "2027-03-01T00:00:00.000Z",
+            });
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.equal(new Date(task.metadata.plannedStart).toISOString(), new Date("2027-03-01T00:00:00.000Z").toISOString());
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("edits task planned finish date", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Edit PlannedFinish Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "PlannedFinish Task",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: taskId,
+                plannedFinish: "2027-09-30T00:00:00.000Z",
+            });
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.equal(new Date(task.metadata.plannedFinish).toISOString(), new Date("2027-09-30T00:00:00.000Z").toISOString());
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("edits task tags", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Edit Tags Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Tags Task",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: taskId,
+                tags: ["updated", "tagged", "revised"],
+            });
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.deepStrictEqual(task.metadata.tags, ["updated", "tagged", "revised"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("edits task subTasks", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Edit Subtasks Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Subtasks Task",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: taskId,
+                subTasks: [
+                    { text: "New subtask one", completed: true },
+                    { text: "New subtask two", completed: false },
+                ],
+            });
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.ok(task.subTasks, "Task should have subTasks array");
+            assert.equal(task.subTasks.length, 2);
+            assert.equal(task.subTasks[0].text, "New subtask one");
+            assert.equal(task.subTasks[0].completed, true);
+            assert.equal(task.subTasks[1].text, "New subtask two");
+            assert.equal(task.subTasks[1].completed, false);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("edits task comments", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Edit Comments Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Comments Task",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: taskId,
+                comments: [
+                    {
+                        author: "dave",
+                        date: "2027-04-01T12:00:00.000Z",
+                        text: "Updated comment",
+                    },
+                ],
+            });
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.ok(task.comments, "Task should have comments array");
+            assert.equal(task.comments.length, 1);
+            assert.equal(task.comments[0].author, "dave");
+            assert.equal(task.comments[0].text, "Updated comment");
+            assert.equal(new Date(task.comments[0].date).toISOString(), new Date("2027-04-01T12:00:00.000Z").toISOString());
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("edits multiple fields in a single call", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Multi Edit Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Original",
+                column: "Backlog",
+                description: "Old desc",
+                assigned: "eve",
+                progress: 0.1,
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: taskId,
+                name: "Updated",
+                description: "New desc body",
+                assigned: "frank",
+                progress: 0.9,
+                due: "2028-01-01T00:00:00.000Z",
+                tags: ["multi", "edit"],
+            });
+
+            const task = await getTaskForDir(dir, "updated");
+            assert.equal(task.name, "Updated");
+            assert.equal(task.description, "New desc body");
+            assert.equal(task.metadata.assigned, "frank");
+            assert.equal(task.metadata.progress, 0.9);
+            assert.equal(new Date(task.metadata.due).toISOString(), new Date("2028-01-01T00:00:00.000Z").toISOString());
+            assert.deepStrictEqual(task.metadata.tags, ["multi", "edit"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("throws when taskId is missing", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Sad Edit Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            await assert.rejects(
+                handleToolCall("kanbn_edit_task", {
+                    path: dir,
+                    name: "No taskId",
+                }),
+                /Missing required parameter: taskId/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("throws when no fields are provided to edit", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Sad Edit Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Empty Edit",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await assert.rejects(
+                handleToolCall("kanbn_edit_task", {
+                    path: dir,
+                    taskId: taskId,
+                }),
+                /No fields provided to edit/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("throws when editing nonexistent task", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Sad Edit Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            await assert.rejects(
+                handleToolCall("kanbn_edit_task", {
+                    path: dir,
+                    taskId: "nonexistent-task-id",
+                    name: "Ghost",
+                }),
+                Error
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("throws when renaming to a name that already exists", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Conflict Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Unique Name",
+                column: "Backlog",
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Target Name",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await assert.rejects(
+                handleToolCall("kanbn_edit_task", {
+                    path: dir,
+                    taskId: taskId,
+                    name: "Unique Name",
+                }),
+                /Cannot rename task.*already exists/i
             );
         } finally {
             rmSync(dir, { recursive: true, force: true });

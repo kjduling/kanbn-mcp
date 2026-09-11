@@ -32,6 +32,7 @@ The MCP server currently exposes tools for:
 - initializing a board
 - ensuring a board exists
 - creating tasks with Kanbn metadata
+- editing existing tasks
 - moving tasks between columns
 - deleting tasks
 - archiving tasks
@@ -102,6 +103,7 @@ npm test
 | `kanbn_delete_task` | Delete a task from the board (supports `force` flag) |
 | `kanbn_archive_task` | Archive a task on the board |
 | `kanbn_get_task` | Retrieve details of a specific task |
+| `kanbn_edit_task` | Edit an existing task on the board |
 | `kanbn_move_task` | Move a task between columns |
 | `kanbn_delete_board` | Delete an entire board directory |
 

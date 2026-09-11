@@ -384,6 +384,95 @@ export async function handleKanbnGetTask(args: Record<string, any>) {
     };
 }
 
+export async function handleKanbnEditTask(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+
+    const taskId = args.taskId as string;
+    if (!taskId) {
+        throw new Error(`Missing required parameter: taskId`);
+    }
+
+    const taskData = buildTaskDataFromArgs(args);
+    if (Object.keys(taskData).length === 0) {
+        throw new Error(`No fields provided to edit`);
+    }
+
+    const getFn = instance.getTask || instance.get || instance.fetchTask;
+    if (typeof getFn === "function") {
+        try {
+            const existingTask = await getFn.call(instance, taskId);
+            if (existingTask && typeof existingTask === "object") {
+                if (!taskData.name && existingTask.name) {
+                    taskData.name = existingTask.name;
+                }
+                if (!taskData.description && existingTask.description) {
+                    taskData.description = existingTask.description;
+                }
+                if (!taskData.metadata) {
+                    taskData.metadata = {};
+                }
+                const existingMeta = existingTask.metadata || {};
+                for (const key of Object.keys(existingMeta)) {
+                    if (taskData.metadata[key] === undefined) {
+                        taskData.metadata[key] = existingMeta[key];
+                    }
+                }
+            }
+        } catch {
+            // Task may not exist yet; proceed with provided fields
+        }
+    }
+
+    if (taskData.name) {
+        const getIndexFn = instance.getIndex || instance.index || instance.loadIndex;
+        if (typeof getIndexFn === "function") {
+            try {
+                const index = await getIndexFn.call(instance);
+                const cols = index?.columns || index;
+                if (typeof cols === "object" && !Array.isArray(cols)) {
+                    for (const colTasks of Object.values(cols)) {
+                        const taskIds = Array.isArray(colTasks) ? colTasks : (colTasks?.tasks || []);
+                        if (Array.isArray(taskIds)) {
+                            for (const id of taskIds) {
+                                if (typeof id === "string" && id.toLowerCase() === taskData.name.toLowerCase().replace(/\s+/g, "-")) {
+                                    if (id !== taskId) {
+                                        throw new Error(`Cannot rename task: a task with name "${taskData.name}" already exists`);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (err: any) {
+                if (err.message && err.message.startsWith("Cannot rename task:")) {
+                    throw err;
+                }
+                // Index error is non-fatal; let editTask handle it
+            }
+        }
+    }
+
+    const editFn = instance.editTask || instance.updateTask || instance.edit || instance.update;
+    if (typeof editFn !== "function") {
+        throw new TypeError(`No editTask method found on Kanbn instance`);
+    }
+
+    await editFn.call(instance, taskId, taskData);
+
+    return {
+        content: [
+            {
+                type: "text",
+                text: `Edited task "${taskId}"`,
+            },
+        ],
+    };
+}
+
 export async function handleKanbnDeleteBoard(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const fs = await import("node:fs");
@@ -561,6 +650,51 @@ export const TOOLS: Tool[] = [
         },
     },
     {
+        name: "kanbn_edit_task",
+        description: "Edit an existing task on the Kanbn board.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                taskId: { type: "string", description: "ID or filename of the task to edit" },
+                name: { type: "string", description: "Task title" },
+                description: { type: "string", description: "Task detailed description" },
+                assigned: { type: "string", description: "Assignee" },
+                due: { type: "string", description: "Due date (ISO string)" },
+                started: { type: "string", description: "Start date (ISO string)" },
+                completed: { type: "string", description: "Completion date (ISO string)" },
+                progress: { type: "number", description: "Progress (0-1)" },
+                plannedStart: { type: "string", description: "Planned start date (ISO string)" },
+                plannedFinish: { type: "string", description: "Planned finish date (ISO string)" },
+                tags: { type: "array", items: { type: "string" }, description: "Tags array" },
+                subTasks: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            text: { type: "string", description: "Sub-task text" },
+                            name: { type: "string", description: "Alias for text" },
+                            description: { type: "string", description: "Alias for text" },
+                            completed: { type: "boolean", description: "Whether the sub-task is completed" },
+                        },
+                    },
+                },
+                comments: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            author: { type: "string", description: "Comment author" },
+                            date: { type: "string", description: "Comment date (ISO string)" },
+                            text: { type: "string", description: "Comment text" },
+                        },
+                    },
+                },
+            },
+            required: ["taskId"],
+        },
+    },
+    {
         name: "kanbn_delete_board",
         description: "Delete an entire Kanbn board directory.",
         inputSchema: {
@@ -596,6 +730,8 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
                 return handleKanbnArchiveTask(args);
             case "kanbn_get_task":
                 return handleKanbnGetTask(args);
+            case "kanbn_edit_task":
+                return handleKanbnEditTask(args);
             case "kanbn_delete_board":
                 return handleKanbnDeleteBoard(args);
             default:
