@@ -75,6 +75,12 @@ describe("MCP tool listing", () => {
             "kanbn_delete_board",
             "kanbn_unarchive_task",
             "kanbn_restore_task",
+            "kanbn_find_simple_tasks",
+            "kanbn_get_simple_task",
+            "kanbn_move_simple_task",
+            "kanbn_move_simple_task_to_board",
+            "kanbn_delete_simple_task",
+            "kanbn_promote_simple_task",
         ]);
     });
 });
@@ -1755,5 +1761,272 @@ describe("enqueueKanbnOperation error resilience", () => {
         await assert.rejects(a, errA);
         await assert.rejects(b, errB);
         assert.equal(await c, "naughtyc");
+    });
+});
+
+describe("kanbn_simple_tasks", () => {
+    async function seedSimpleTasks(dir: string, tasks: Record<string, string[]>) {
+        const instance = new KanbnClass(dir);
+        const index = await instance.getIndex();
+        index.columnContent = {};
+        for (const [columnName, texts] of Object.entries(tasks)) {
+            index.columnContent[columnName] = texts.map((text, i) => ({
+                text,
+                raw: `- ${text}`,
+                position: i,
+                block: false,
+            }));
+        }
+        await instance.saveIndex(index);
+    }
+
+    function simpleTaskTexts(index: Record<string, any>, columnName: string): string[] {
+        return ((index.columnContent && index.columnContent[columnName]) || []).map((e: any) => e.text);
+    }
+
+    test("find_simple_tasks returns matches by title and all without input", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Simple Board",
+                columns: ["Backlog", "Done"],
+            });
+            await seedSimpleTasks(dir, { Backlog: ["Buy milk", "Walk dog"], Done: ["Walk dog"] });
+
+            const byTitle = await handleToolCall("kanbn_find_simple_tasks", {
+                path: dir,
+                input: "Buy milk",
+            });
+            const parsed = JSON.parse(byTitle.content[0].text);
+            assert.equal(parsed.length, 1);
+            assert.equal(parsed[0].text, "Buy milk");
+            assert.equal(parsed[0].column, "Backlog");
+
+            const all = await handleToolCall("kanbn_find_simple_tasks", { path: dir });
+            assert.equal(JSON.parse(all.content[0].text).length, 3);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("get_simple_task resolves exactly one simple task", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Simple Board",
+                columns: ["Backlog", "Done"],
+            });
+            await seedSimpleTasks(dir, { Backlog: ["Unique task"] });
+
+            const got = await handleToolCall("kanbn_get_simple_task", {
+                path: dir,
+                input: "Unique task",
+            });
+            assert.equal(JSON.parse(got.content[0].text).text, "Unique task");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("get_simple_task throws on ambiguous and missing matches", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Simple Board",
+                columns: ["Backlog", "Pending", "Done"],
+            });
+            await seedSimpleTasks(dir, { Backlog: ["Sprint review"], Pending: ["Sprint review"], Done: [] });
+
+            await assert.rejects(
+                handleToolCall("kanbn_get_simple_task", { path: dir, input: "Sprint review" }),
+                /matches 2 simple tasks/
+            );
+            await assert.rejects(
+                handleToolCall("kanbn_get_simple_task", { path: dir, input: "Ghost line" }),
+                /No simple task found/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("move_simple_task moves the line to another column", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Simple Board",
+                columns: ["Backlog", "Done"],
+            });
+            await seedSimpleTasks(dir, { Backlog: ["Move me"] });
+
+            const moved = await handleToolCall("kanbn_move_simple_task", {
+                path: dir,
+                input: "Move me",
+                column: "Done",
+            });
+            assert.match(moved.content[0].text, /Moved simple task "Move me" to column "Done"/);
+
+            const index = await new KanbnClass(dir).getIndex();
+            assert.deepStrictEqual(simpleTaskTexts(index, "Done"), ["Move me"]);
+            assert.deepStrictEqual(simpleTaskTexts(index, "Backlog"), []);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("move_simple_task throws for a missing column", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Simple Board",
+                columns: ["Backlog", "Done"],
+            });
+            await seedSimpleTasks(dir, { Backlog: ["Move me"] });
+
+            await assert.rejects(
+                handleToolCall("kanbn_move_simple_task", { path: dir, input: "Move me", column: "Nope" }),
+                /doesn't exist/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("move_simple_task_to_board moves the line onto another board", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Main Board",
+                columns: ["Backlog"],
+            });
+            await seedSimpleTasks(dir, { Backlog: ["Cross over"] });
+            await new KanbnClass(dir).board("secondary").initialise({
+                name: "Secondary Board",
+                columns: ["Todo"],
+            });
+
+            const moved = await handleToolCall("kanbn_move_simple_task_to_board", {
+                path: dir,
+                input: "Cross over",
+                targetSlug: "secondary",
+            });
+            assert.match(moved.content[0].text, /to board "secondary" column "Todo"/);
+
+            const mainIndex = await new KanbnClass(dir).getIndex();
+            assert.deepStrictEqual(simpleTaskTexts(mainIndex, "Backlog"), []);
+
+            const otherIndex = await new KanbnClass(dir).board("secondary").getIndex();
+            assert.deepStrictEqual(simpleTaskTexts(otherIndex, "Todo"), ["Cross over"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("move_simple_task_to_board throws for a missing target board", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Main Board",
+                columns: ["Backlog"],
+            });
+            await seedSimpleTasks(dir, { Backlog: ["Cross over"] });
+
+            await assert.rejects(
+                handleToolCall("kanbn_move_simple_task_to_board", {
+                    path: dir,
+                    input: "Cross over",
+                    targetSlug: "ghost-board",
+                }),
+                /doesn't exist/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("delete_simple_task removes the line", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Simple Board",
+                columns: ["Backlog", "Done"],
+            });
+            await seedSimpleTasks(dir, { Backlog: ["Delete me", "Keep me"] });
+
+            const deleted = await handleToolCall("kanbn_delete_simple_task", {
+                path: dir,
+                input: "Delete me",
+            });
+            assert.match(deleted.content[0].text, /Deleted simple task "Delete me"/);
+
+            const index = await new KanbnClass(dir).getIndex();
+            assert.deepStrictEqual(simpleTaskTexts(index, "Backlog"), ["Keep me"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("promote_simple_task converts the line into a real task", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Simple Board",
+                columns: ["Backlog", "Done"],
+            });
+            await seedSimpleTasks(dir, { Backlog: ["Big idea"] });
+
+            const promoted = await handleToolCall("kanbn_promote_simple_task", {
+                path: dir,
+                input: "Big idea",
+            });
+            assert.match(promoted.content[0].text, /id: big-idea/);
+
+            const fetched = await handleToolCall("kanbn_get_task", { path: dir, taskId: "big-idea" });
+            assert.match(fetched.content[0].text, /"name": "Big idea"/);
+
+            const index = await new KanbnClass(dir).getIndex();
+            assert.deepStrictEqual(simpleTaskTexts(index, "Backlog"), []);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("promote_simple_task throws when the resulting task id exists", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Simple Board",
+                columns: ["Backlog"],
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+            await seedSimpleTasks(dir, { Backlog: ["Alpha"] });
+
+            await assert.rejects(
+                handleToolCall("kanbn_promote_simple_task", { path: dir, input: "Alpha" }),
+                /already exists/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
     });
 });

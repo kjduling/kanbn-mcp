@@ -233,11 +233,11 @@ export async function handleKanbnInitBoard(args: Record<string, any>) {
     let lastError: Error | null = null;
 
     try {
-        await initFn.call(instance, boardName, columns);
+        await initFn.call(instance, { name: boardName, columns });
     } catch (e) {
         lastError = e instanceof Error ? e : new Error(String(e));
         try {
-            await initFn.call(instance, { name: boardName, columns });
+            await initFn.call(instance, boardName, columns);
         } catch (e2) {
             lastError = e2 instanceof Error ? e2 : new Error(String(e2));
         }
@@ -624,6 +624,184 @@ export async function handleKanbnRenameTask(args: Record<string, any>) {
     };
 }
 
+export async function handleKanbnFindSimpleTasks(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+
+    const findFn = instance.findSimpleTasks || instance.listSimpleTasks;
+    if (typeof findFn !== "function") {
+        throw new TypeError(`No findSimpleTasks method found on Kanbn instance`);
+    }
+
+    const input = args.input as string | undefined;
+    const tasks = input ? await findFn.call(instance, input) : await findFn.call(instance, null);
+
+    return {
+        content: [
+            {
+                type: "text",
+                text: JSON.stringify(tasks, null, 2),
+            },
+        ],
+    };
+}
+
+export async function handleKanbnGetSimpleTask(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+
+    const input = args.input as string;
+    if (!input) {
+        throw new Error(`Missing required parameter: input`);
+    }
+
+    const getFn = instance.getSimpleTask;
+    if (typeof getFn !== "function") {
+        throw new TypeError(`No getSimpleTask method found on Kanbn instance`);
+    }
+
+    const task = await getFn.call(instance, input);
+
+    return {
+        content: [
+            {
+                type: "text",
+                text: JSON.stringify(task, null, 2),
+            },
+        ],
+    };
+}
+
+export async function handleKanbnMoveSimpleTask(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+
+    const input = args.input as string;
+    if (!input) {
+        throw new Error(`Missing required parameter: input`);
+    }
+    const column = args.column as string;
+    if (!column) {
+        throw new Error(`Missing required parameter: column`);
+    }
+
+    const moveFn = instance.moveSimpleTask;
+    if (typeof moveFn !== "function") {
+        throw new TypeError(`No moveSimpleTask method found on Kanbn instance`);
+    }
+
+    const moved = await moveFn.call(instance, input, column, args.position ?? null);
+
+    return {
+        content: [
+            {
+                type: "text",
+                text: `Moved simple task "${moved.text}" to column "${moved.toColumn}"`,
+            },
+        ],
+    };
+}
+
+export async function handleKanbnMoveSimpleTaskToBoard(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+
+    const input = args.input as string;
+    if (!input) {
+        throw new Error(`Missing required parameter: input`);
+    }
+    const targetSlug = args.targetSlug as string;
+    if (!targetSlug) {
+        throw new Error(`Missing required parameter: targetSlug`);
+    }
+
+    const moveFn = instance.moveSimpleTaskToBoard;
+    if (typeof moveFn !== "function") {
+        throw new TypeError(`No moveSimpleTaskToBoard method found on Kanbn instance`);
+    }
+
+    const moved = await moveFn.call(instance, input, targetSlug, args.column ?? null, args.position ?? null);
+
+    return {
+        content: [
+            {
+                type: "text",
+                text: `Moved simple task "${moved.text}" to board "${moved.toBoard}" column "${moved.toColumn}"`,
+            },
+        ],
+    };
+}
+
+export async function handleKanbnDeleteSimpleTask(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+
+    const input = args.input as string;
+    if (!input) {
+        throw new Error(`Missing required parameter: input`);
+    }
+
+    const deleteFn = instance.deleteSimpleTask;
+    if (typeof deleteFn !== "function") {
+        throw new TypeError(`No deleteSimpleTask method found on Kanbn instance`);
+    }
+
+    const removed = await deleteFn.call(instance, input);
+
+    return {
+        content: [
+            {
+                type: "text",
+                text: `Deleted simple task "${removed.text}"`,
+            },
+        ],
+    };
+}
+
+export async function handleKanbnPromoteSimpleTask(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+
+    const input = args.input as string;
+    if (!input) {
+        throw new Error(`Missing required parameter: input`);
+    }
+
+    const promoteFn = instance.promoteSimpleTask;
+    if (typeof promoteFn !== "function") {
+        throw new TypeError(`No promoteSimpleTask method found on Kanbn instance`);
+    }
+
+    const taskId = await promoteFn.call(instance, input, args.column ?? null);
+
+    return {
+        content: [
+            {
+                type: "text",
+                text: `Promoted simple task "${input}" to task (id: ${taskId})`,
+            },
+        ],
+    };
+}
+
 export const TOOLS: Tool[] = [
     {
         name: "kanbn_status",
@@ -853,6 +1031,83 @@ export const TOOLS: Tool[] = [
             required: ["taskId"],
         },
     },
+    {
+        name: "kanbn_find_simple_tasks",
+        description: "Find simple tasks (non-file column lines) by title, or all on the board.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                input: { type: "string", description: "Title to match, or omit for every simple task" },
+            },
+        },
+    },
+    {
+        name: "kanbn_get_simple_task",
+        description: "Resolve exactly one simple task by title, or throw.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                input: { type: "string", description: "Title to match" },
+            },
+            required: ["input"],
+        },
+    },
+    {
+        name: "kanbn_move_simple_task",
+        description: "Move a simple task to another column.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                input: { type: "string", description: "Title to match" },
+                column: { type: "string", description: "Column to move the simple task into" },
+                position: { type: "number", description: "Position within the target column" },
+            },
+            required: ["input", "column"],
+        },
+    },
+    {
+        name: "kanbn_move_simple_task_to_board",
+        description: "Move a simple task onto another board.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                input: { type: "string", description: "Title to match" },
+                targetSlug: { type: "string", description: "Board slug to move the simple task to" },
+                column: { type: "string", description: "Column on the target board (defaults to its first column)" },
+                position: { type: "number", description: "Position within the target column" },
+            },
+            required: ["input", "targetSlug"],
+        },
+    },
+    {
+        name: "kanbn_delete_simple_task",
+        description: "Remove a simple task from the board.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                input: { type: "string", description: "Title to match" },
+            },
+            required: ["input"],
+        },
+    },
+    {
+        name: "kanbn_promote_simple_task",
+        description: "Convert a simple task into a real task file.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                input: { type: "string", description: "Title to match" },
+                column: { type: "string", description: "Column to create the task in (defaults to its own column)" },
+            },
+            required: ["input"],
+        },
+    },
 ];
 
 export function listTools() {
@@ -888,6 +1143,18 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
             case "kanbn_unarchive_task":
             case "kanbn_restore_task":
                 return handleKanbnUnarchiveTask(args);
+            case "kanbn_find_simple_tasks":
+                return handleKanbnFindSimpleTasks(args);
+            case "kanbn_get_simple_task":
+                return handleKanbnGetSimpleTask(args);
+            case "kanbn_move_simple_task":
+                return handleKanbnMoveSimpleTask(args);
+            case "kanbn_move_simple_task_to_board":
+                return handleKanbnMoveSimpleTaskToBoard(args);
+            case "kanbn_delete_simple_task":
+                return handleKanbnDeleteSimpleTask(args);
+            case "kanbn_promote_simple_task":
+                return handleKanbnPromoteSimpleTask(args);
             default:
                 throw new Error(`Unknown tool requested: ${name}`);
         }
@@ -934,7 +1201,10 @@ TOOLS
   kanbn_create_task, kanbn_edit_task, kanbn_move_task, kanbn_rename_task,
   kanbn_delete_task,
   kanbn_archive_task, kanbn_unarchive_task, kanbn_restore_task,
-  kanbn_get_task, kanbn_delete_board
+  kanbn_get_task, kanbn_delete_board,
+  kanbn_find_simple_tasks, kanbn_get_simple_task, kanbn_move_simple_task,
+  kanbn_move_simple_task_to_board, kanbn_delete_simple_task,
+  kanbn_promote_simple_task
 
 MCP CLIENT CONFIGURATION
 

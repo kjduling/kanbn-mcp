@@ -112,6 +112,12 @@ npm test
 | `kanbn_delete_board`     | Delete an entire board directory                     |
 | `kanbn_unarchive_task`   | Unarchive a task on the board                        |
 | `kanbn_restore_task`     | Alias for `kanbn_unarchive_task`                     |
+| `kanbn_find_simple_tasks`| Find simple tasks by title (or all on the board)     |
+| `kanbn_get_simple_task`  | Resolve exactly one simple task by title             |
+| `kanbn_move_simple_task` | Move a simple task to another column                 |
+| `kanbn_move_simple_task_to_board` | Move a simple task onto another board        |
+| `kanbn_delete_simple_task` | Remove a simple task from the board               |
+| `kanbn_promote_simple_task` | Convert a simple task into a real task file      |
 
 ## Example task metadata supported
 

@@ -27,7 +27,6 @@ completedColumns:
 - [kanbn-archived-tasks-—-list-and-load-archived-tasks](tasks/kanbn-archived-tasks-—-list-and-load-archived-tasks.md)
 - [kanbn-contributors-—-contributor-management](tasks/kanbn-contributors-—-contributor-management.md)
 - [kanbn-config-—-get-save-config-action-rules-validation](tasks/kanbn-config-—-get-save-config-action-rules-validation.md)
-- [kanbn-simple-tasks-—-simple-task-non-file-operations](tasks/kanbn-simple-tasks-—-simple-task-non-file-operations.md)
 - [kanbn-comment-—-dedicated-comment-endpoint](tasks/kanbn-comment-—-dedicated-comment-endpoint.md)
 - [kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board](tasks/kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board.md)
 - [add-jsdoc-for-all-methods](tasks/add-jsdoc-for-all-methods.md)
@@ -44,5 +43,6 @@ completedColumns:
 - [medium-handle-kanbn-archive-task-has-dead-code-typo-prchive-in-method-chain](tasks/medium-handle-kanbn-archive-task-has-dead-code-typo-prchive-in-method-chain.md)
 - [make-main-entry-check-more-robust](tasks/make-main-entry-check-more-robust.md)
 - [kanbn-task-rename-—-rename-a-task](tasks/kanbn-task-rename-—-rename-a-task.md)
+- [kanbn-simple-tasks-—-simple-task-non-file-operations](tasks/kanbn-simple-tasks-—-simple-task-non-file-operations.md)
 
 ## Blocked
