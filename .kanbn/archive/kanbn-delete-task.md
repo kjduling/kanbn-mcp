@@ -6,6 +6,7 @@ tags:
   - kanbn-wrapper
   - feature
 completed: 2026-09-10T01:57:02.804Z
+column: Done
 ---
 
 # kanbn_delete_task
@@ -41,4 +42,8 @@ The tool should:
   date: 2026-09-10T01:57:02.804Z
   fromColumn: Backlog
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-12T01:54:09.328Z
+  fromColumn: Done
   author: Kevin J. Duling

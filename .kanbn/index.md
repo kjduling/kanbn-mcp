@@ -30,20 +30,4 @@ completedColumns:
 
 ## Done
 
-- [simplify-task-argument-mapping](tasks/simplify-task-argument-mapping.md)
-- [fix-kanbn-mcp-kanbn-create-task-subtasks-rendering-as-undefined](tasks/fix-kanbn-mcp-kanbn-create-task-subtasks-rendering-as-undefined.md)
-- [unify-module-system-esm-cjs](tasks/unify-module-system-esm-cjs.md)
-- [fix-race-condition-on-index-md-during-rapid-task-creation](tasks/fix-race-condition-on-index-md-during-rapid-task-creation.md)
-- [validate-fields](tasks/validate-fields.md)
-- [refactor-tool-handler-logic](tasks/refactor-tool-handler-logic.md)
-- [initialize-kanbn-board](tasks/initialize-kanbn-board.md)
-- [source-tree-cleanup](tasks/source-tree-cleanup.md)
-- [kanbn-delete-task](tasks/kanbn-delete-task.md)
-- [kanbn-get-task](tasks/kanbn-get-task.md)
-- [kanbn-archive-task](tasks/kanbn-archive-task.md)
-- [kanbn-edit-task](tasks/kanbn-edit-task.md)
-- [critical-kanbn-delete-board-lacks-path-guard-—-can-wipe-entire-project-root](tasks/critical-kanbn-delete-board-lacks-path-guard-—-can-wipe-entire-project-root.md)
-- [critical-get-kanbn-instance-returns-inconsistent-types-instance-module-null](tasks/critical-get-kanbn-instance-returns-inconsistent-types-instance-module-null.md)
-- [critical-handle-kanbn-init-board-silently-discards-errors-from-both-init-attempts](tasks/critical-handle-kanbn-init-board-silently-discards-errors-from-both-init-attempts.md)
-
 ## Blocked

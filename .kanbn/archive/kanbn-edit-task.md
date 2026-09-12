@@ -9,6 +9,7 @@ tags:
   - feature
 started: 2026-09-10T07:00:00.000Z
 completed: 2026-09-11T00:18:43.378Z
+column: Done
 ---
 
 # kanbn_edit_task
@@ -49,4 +50,8 @@ The tool should:
   date: 2026-09-11T00:21:54.201Z
   fromProgress: 0
   toProgress: 1
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-12T01:54:12.230Z
+  fromColumn: Done
   author: Kevin J. Duling

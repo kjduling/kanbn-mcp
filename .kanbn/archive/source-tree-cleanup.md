@@ -4,6 +4,7 @@ updated: 2026-09-09T00:42:44.252Z
 assigned: Kevin
 started: 2026-09-09T00:41:51.788Z
 completed: 2026-09-09T00:42:44.252Z
+column: Done
 ---
 
 # Source Tree Cleanup
@@ -31,4 +32,8 @@ The source code should live in a `src/` subdir and not off the main root of the 
   date: 2026-09-09T00:42:44.252Z
   fromColumn: In Progress
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-12T01:54:08.211Z
+  fromColumn: Done
   author: Kevin J. Duling

@@ -6,6 +6,7 @@ tags:
 created: 2026-09-06T20:33:47.256Z
 updated: 2026-09-10T04:55:50.256Z
 completed: 2026-09-10T04:55:50.256Z
+column: Done
 ---
 
 # kanbn_get_task
@@ -40,4 +41,8 @@ The tool should:
   date: 2026-09-10T04:55:50.256Z
   fromColumn: Backlog
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-12T01:54:10.312Z
+  fromColumn: Done
   author: Kevin J. Duling

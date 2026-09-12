@@ -7,6 +7,7 @@ tags:
   - Validation
 updated: 2026-09-02T00:57:11.881Z
 completed: 2026-09-02T00:57:11.881Z
+column: Done
 ---
 
 # Validate fields
@@ -35,3 +36,7 @@ this task is for validating the various fields are filled out when creating a ta
   date: 2026-09-02T00:57:11.881Z
   fromColumn: Backlog
   toColumn: Done
+- type: archived
+  date: 2026-09-12T01:54:05.764Z
+  fromColumn: Done
+  author: Kevin J. Duling

@@ -8,6 +8,7 @@ tags:
   - 'High Priority'
 started: 2026-09-07T21:13:00.427Z
 completed: 2026-09-07T07:00:00.000Z
+column: Done
 ---
 
 # Fix kanbn_mcp_kanbn_create_task subtasks rendering as 'undefined'
@@ -72,4 +73,8 @@ completed: 2026-09-07T07:00:00.000Z
   date: 2026-09-09T22:49:06.314Z
   fromColumn: Todo
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-12T01:54:03.130Z
+  fromColumn: Done
   author: Kevin J. Duling

@@ -10,6 +10,7 @@ tags:
   - index.md
 started: 2026-09-07T00:41:57.928Z
 completed: 2026-09-07T00:44:03.202Z
+column: Done
 ---
 
 # Fix race condition on index.md during rapid task creation
@@ -59,4 +60,8 @@ Apply to `createTask`, `moveTask`, and any other board mutation handlers.
   date: 2026-09-07T00:44:03.202Z
   fromColumn: In Progress
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-12T01:54:04.928Z
+  fromColumn: Done
   author: Kevin J. Duling

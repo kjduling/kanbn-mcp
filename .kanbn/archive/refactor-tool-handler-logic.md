@@ -4,6 +4,7 @@ updated: 2026-09-04T01:11:35.485Z
 assigned: Kevin
 started: 2026-09-03T15:16:48.565Z
 completed: 2026-09-03T07:00:00.000Z
+column: Done
 ---
 
 # Refactor tool handler logic
@@ -38,4 +39,8 @@ As a developer, I want to eliminate duplicate switch-case logic between handleTo
   date: 2026-09-04T01:11:35.485Z
   fromColumn: In Progress
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-12T01:54:06.563Z
+  fromColumn: Done
   author: Kevin J. Duling

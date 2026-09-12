@@ -4,6 +4,7 @@ updated: 2026-09-07T00:45:54.483Z
 assigned: Kevin
 started: 2026-09-07T00:45:48.855Z
 completed: 2026-09-07T00:45:54.483Z
+column: Done
 ---
 
 # Unify module system (ESM/CJS)
@@ -38,4 +39,8 @@ As a developer, I want to use consistent ES modules throughout the file so that 
   date: 2026-09-07T00:45:54.483Z
   fromColumn: In Progress
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-12T01:54:04.015Z
+  fromColumn: Done
   author: Kevin J. Duling

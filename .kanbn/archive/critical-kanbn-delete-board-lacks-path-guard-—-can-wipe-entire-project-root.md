@@ -4,6 +4,7 @@ updated: 2026-09-11T18:19:35.470Z
 progress: 1
 started: 2026-09-11T18:00:47.833Z
 completed: 2026-09-11T18:15:28.688Z
+column: Done
 ---
 
 # CRITICAL: kanbn_delete_board lacks path guard — can wipe entire project root
@@ -68,4 +69,8 @@ This **wipes the entire working directory** with no guard, no confirmation, and 
   date: 2026-09-11T18:19:35.462Z
   fromProgress: 0
   toProgress: 1
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-12T01:54:13.128Z
+  fromColumn: Done
   author: Kevin J. Duling

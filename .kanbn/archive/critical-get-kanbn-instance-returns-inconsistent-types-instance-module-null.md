@@ -4,6 +4,7 @@ updated: 2026-09-11T21:00:39.237Z
 progress: 1
 started: 2026-09-11T20:40:28.949Z
 completed: 2026-09-11T20:46:54.879Z
+column: Done
 ---
 
 # CRITICAL: getKanbnInstance returns inconsistent types (instance | module | null)
@@ -64,4 +65,8 @@ If `instance` is the module object, all of these are `undefined`, so the board a
   date: 2026-09-11T21:00:39.232Z
   fromProgress: 0
   toProgress: 1
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-12T01:54:14.244Z
+  fromColumn: Done
   author: Kevin J. Duling
