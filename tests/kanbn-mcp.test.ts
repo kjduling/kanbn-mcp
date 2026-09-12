@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { describe } from "node:test";
 
-import { buildTaskDataFromArgs, enqueueKanbnOperation, getKanbnInstance, handleKanbnInitBoard, handleToolCall, listTools, resetOperationQueue } from "../src/server";
+import { buildTaskDataFromArgs, enqueueKanbnOperation, getArchiveMethod, getKanbnInstance, handleKanbnInitBoard, handleToolCall, listTools, resetOperationQueue } from "../src/server";
 
 const KanbnClass = require("@basementuniverse/kanbn/src/main.js")?.Kanbn;
 
@@ -157,6 +157,63 @@ describe("buildTaskDataFromArgs", () => {
             { text: "Raw string subtask", completed: false },
             { text: "", completed: false },
         ]);
+    });
+
+    test("is idempotent: same args twice yield equivalent output and input is unmutated", () => {
+        const args = {
+            name: "Plan the launch",
+            due: "2026-09-15T00:00:00.000Z",
+            metadata: {
+                created: "2026-08-29T00:00:00.000Z",
+                customField: "custom-value",
+            },
+        };
+
+        const first = buildTaskDataFromArgs(args);
+        const second = buildTaskDataFromArgs(args);
+
+        assert.deepStrictEqual(first, second);
+        assert.equal(typeof args.due, "string");
+        assert.equal(typeof args.metadata.created, "string");
+        assert.equal(args.metadata.customField, "custom-value");
+    });
+
+    test("converts date fields to Date objects with correct ISO output", () => {
+        const taskData = buildTaskDataFromArgs({
+            name: "Timed task",
+            due: "2026-09-15T00:00:00.000Z",
+            metadata: {
+                created: "2026-08-29T00:00:00.000Z",
+            },
+        });
+
+        assert.ok(taskData.metadata.due instanceof Date);
+        assert.equal(taskData.metadata.due.toISOString(), "2026-09-15T00:00:00.000Z");
+        assert.ok(taskData.metadata.created instanceof Date);
+        assert.equal(taskData.metadata.created.toISOString(), "2026-08-29T00:00:00.000Z");
+    });
+
+    test("deep-copies nested values so output shares no references with input", () => {
+        const args = {
+            relations: [{ type: "parent", taskId: "abc" }],
+            tags: ["launch", "beta"],
+            metadata: {
+                nested: { deep: "value" },
+                tags: ["inner"],
+            },
+        };
+
+        const taskData = buildTaskDataFromArgs(args);
+
+        assert.notStrictEqual(taskData.metadata, args.metadata);
+        assert.notStrictEqual(taskData.metadata.tags, args.metadata.tags);
+        assert.notStrictEqual(taskData.metadata.nested, args.metadata.nested);
+        assert.notStrictEqual(taskData.relations, args.relations);
+
+        args.tags.push("mutated-after");
+        args.metadata.nested.deep = "mutated-after";
+        assert.deepStrictEqual(taskData.metadata.tags, ["launch", "beta"]);
+        assert.deepStrictEqual(taskData.metadata.nested, { deep: "value" });
     });
 });
 
@@ -463,6 +520,32 @@ describe("kanbn_archive_task", () => {
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }
+    });
+});
+
+describe("getArchiveMethod", () => {
+    test("primary path: prefers archiveTask when present", () => {
+        const archiveTask = () => Promise.resolve();
+        const archive = () => Promise.resolve();
+
+        assert.equal(getArchiveMethod({ archiveTask, archive }), archiveTask);
+    });
+
+    test("fallback path: uses archive when archiveTask is absent", () => {
+        const archive = () => Promise.resolve();
+
+        assert.equal(getArchiveMethod({ archive }), archive);
+    });
+
+    test("removed dead code: a bare prchive stub is not resolved", () => {
+        const prchive = () => Promise.resolve();
+
+        assert.equal(getArchiveMethod({ prchive }), undefined);
+    });
+
+    test("returns undefined when no archive method exists", () => {
+        assert.equal(getArchiveMethod({}), undefined);
+        assert.equal(getArchiveMethod(null), undefined);
     });
 });
 
@@ -1405,5 +1488,59 @@ describe("operationQueue session isolation", () => {
 
     test("sad path: concurrent sessions would interfere (documented limitation)", async () => {
         assert.match(require("../src/server.ts").HELP_TEXT, /Limitation/i);
+    });
+});
+
+describe("enqueueKanbnOperation error resilience", () => {
+    test("sad path: failure in one operation propagates to its caller", async () => {
+        resetOperationQueue();
+
+        const err = new Error("boom1");
+        await assert.rejects(enqueueKanbnOperation(() => Promise.reject(err)), err);
+    });
+
+    test("sad path: a later failure surfaces its own error, not a stale one", async () => {
+        resetOperationQueue();
+
+        const err1 = new Error("boom1");
+        const err2 = new Error("boom2");
+        const first = enqueueKanbnOperation(() => Promise.reject(err1));
+        const second = enqueueKanbnOperation(() => Promise.reject(err2));
+
+        await assert.rejects(first, err1);
+        await assert.rejects(second, err2);
+    });
+
+    test("happy path: queue recovers and later ops still run after a failure", async () => {
+        resetOperationQueue();
+
+        const err = new Error("boom1");
+        const first = enqueueKanbnOperation(() => Promise.reject(err));
+        const second = enqueueKanbnOperation(() => Promise.resolve("second"));
+        const third = enqueueKanbnOperation(() => Promise.resolve("third"));
+
+        await assert.rejects(first, err);
+        assert.equal(await second, "second");
+        assert.equal(await third, "third");
+    });
+
+    test("sad path: ops queued before a failure settles are not discarded", async () => {
+        resetOperationQueue();
+
+        let release: (() => void) | undefined;
+        const gate = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+
+        const errA = new Error("boomA");
+        const errB = new Error("boomB");
+        const a = enqueueKanbnOperation(() => gate.then(() => Promise.reject(errA)));
+        const b = enqueueKanbnOperation(() => Promise.reject(errB));
+        const c = enqueueKanbnOperation(() => Promise.resolve("naughtyc"));
+
+        release?.();
+        await assert.rejects(a, errA);
+        await assert.rejects(b, errB);
+        assert.equal(await c, "naughtyc");
     });
 });

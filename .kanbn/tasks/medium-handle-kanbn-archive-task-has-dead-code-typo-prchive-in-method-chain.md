@@ -1,6 +1,7 @@
 ---
 created: 2026-09-10T04:30:19.113Z
-updated: 2026-09-12T18:11:37.170Z
+updated: 2026-09-12T21:37:21.121Z
+completed: 2026-09-12T21:37:21.121Z
 ---
 
 # MEDIUM: handleKanbnArchiveTask has dead-code typo 'prchive' in method chain
@@ -29,20 +30,14 @@ const archiveFn = instance.archiveTask || instance.archive || instance.prchive;
 
 ## Sub-tasks
 
-- [ ] Remove dead-code 'prchive' from method chain
-- [ ] Add unit test for archive fallback path
-- [ ] Add unit test for archiveTask primary path
+- [x] Remove dead-code 'prchive' from method chain
+- [x] Add unit test for archive fallback path
+- [x] Add unit test for archiveTask primary path
 
 ## History
 
-- type: created
-  date: 2026-09-10T04:30:19.113Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
-  author: Kevin J. Duling
 - type: moved
-  date: 2026-09-12T18:11:37.170Z
-  fromColumn: Backlog
-  toColumn: Todo
+  date: 2026-09-12T21:37:21.121Z
+  fromColumn: Todo
+  toColumn: Done
   author: Kevin J. Duling

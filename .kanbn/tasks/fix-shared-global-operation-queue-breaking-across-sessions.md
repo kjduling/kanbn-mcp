@@ -1,7 +1,10 @@
 ---
 created: 2026-09-07T18:00:58.142Z
-updated: 2026-09-12T18:55:13.345Z
+updated: 2026-09-12T21:22:02.636Z
+assigned: Kevin
+progress: 1
 started: 2026-09-12T18:55:13.345Z
+completed: 2026-09-12T07:00:00.000Z
 ---
 
 # Fix shared global operationQueue breaking across sessions
@@ -39,4 +42,14 @@ This causes issues:
   date: 2026-09-12T18:55:13.345Z
   fromColumn: Todo
   toColumn: In Progress
+  author: Kevin J. Duling
+- type: progress
+  date: 2026-09-12T21:22:02.626Z
+  fromProgress: 0
+  toProgress: 1
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-12T21:22:02.636Z
+  fromColumn: In Progress
+  toColumn: Done
   author: Kevin J. Duling

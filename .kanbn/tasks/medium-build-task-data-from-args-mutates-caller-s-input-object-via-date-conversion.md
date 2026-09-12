@@ -1,6 +1,7 @@
 ---
 created: 2026-09-10T04:30:19.085Z
-updated: 2026-09-12T18:11:35.220Z
+updated: 2026-09-12T21:33:34.977Z
+completed: 2026-09-12T21:33:34.977Z
 ---
 
 # MEDIUM: buildTaskDataFromArgs mutates caller's input object via Date conversion
@@ -39,20 +40,14 @@ Since `metadata` is a shallow copy of `source.metadata`, and `source` is a shall
 
 ## Sub-tasks
 
-- [ ] Deep-copy metadata before mutating date values
-- [ ] Add unit test for double-call idempotency on same args
-- [ ] Add unit test verifying Date output correctness after call
+- [x] Deep-copy metadata before mutating date values
+- [x] Add unit test for double-call idempotency on same args
+- [x] Add unit test verifying Date output correctness after call
 
 ## History
 
-- type: created
-  date: 2026-09-10T04:30:19.085Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
-  author: Kevin J. Duling
 - type: moved
-  date: 2026-09-12T18:11:35.220Z
-  fromColumn: Backlog
-  toColumn: Todo
+  date: 2026-09-12T21:33:34.977Z
+  fromColumn: Todo
+  toColumn: Done
   author: Kevin J. Duling

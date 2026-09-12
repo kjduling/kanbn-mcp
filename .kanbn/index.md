@@ -36,14 +36,13 @@ completedColumns:
 
 ## Todo
 
+## In Progress
+
+## Done
+
+- [fix-shared-global-operation-queue-breaking-across-sessions](tasks/fix-shared-global-operation-queue-breaking-across-sessions.md)
 - [medium-operation-queue-swallows-errors-and-corrupts-subsequent-queued-operations](tasks/medium-operation-queue-swallows-errors-and-corrupts-subsequent-queued-operations.md)
 - [medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion](tasks/medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion.md)
 - [medium-handle-kanbn-archive-task-has-dead-code-typo-prchive-in-method-chain](tasks/medium-handle-kanbn-archive-task-has-dead-code-typo-prchive-in-method-chain.md)
-
-## In Progress
-
-- [fix-shared-global-operation-queue-breaking-across-sessions](tasks/fix-shared-global-operation-queue-breaking-across-sessions.md)
-
-## Done
 
 ## Blocked

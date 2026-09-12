@@ -1,6 +1,8 @@
 ---
 created: 2026-09-10T04:30:19.097Z
-updated: 2026-09-12T18:11:33.537Z
+updated: 2026-09-12T21:28:52.048Z
+started: 2026-09-12T21:23:53.135Z
+completed: 2026-09-12T21:28:52.048Z
 ---
 
 # MEDIUM: operationQueue swallows errors and corrupts subsequent queued operations
@@ -42,20 +44,14 @@ There is no way to recover — the queue is now a dead chain that discards every
 
 ## Sub-tasks
 
-- [ ] Re-throw errors in the result.then() chain to prevent queue corruption
-- [ ] Add unit test for error propagation from one operation
-- [ ] Add unit test verifying subsequent operations after error
+- [x] Re-throw errors in the result.then() chain to prevent queue corruption
+- [x] Add unit test for error propagation from one operation
+- [x] Add unit test verifying subsequent operations after error
 
 ## History
 
-- type: created
-  date: 2026-09-10T04:30:19.097Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
-  author: Kevin J. Duling
 - type: moved
-  date: 2026-09-12T18:11:33.537Z
-  fromColumn: Backlog
-  toColumn: Todo
+  date: 2026-09-12T21:28:52.048Z
+  fromColumn: In Progress
+  toColumn: Done
   author: Kevin J. Duling

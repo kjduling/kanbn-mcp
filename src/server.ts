@@ -54,9 +54,14 @@ export function resetOperationQueue(): void {
 
 export function enqueueKanbnOperation<T>(op: () => Promise<T>): Promise<T> {
     const result = sessionQueue.then(op);
+    // Tail must swallow the rejection: if it were `result` itself, a failure
+    // would poison every later op with a stale error. Caller still gets the
+    // rejection via `result`, so the queue resets to a known-good state.
     sessionQueue = result.then(
         () => { },
-        () => { }
+        (error: unknown) => {
+            console.error("[kanbn-mcp] queued operation failed; queue resumed:", error);
+        }
     );
     return result;
 }
@@ -130,7 +135,7 @@ export function buildTaskDataFromArgs(args: Record<string, any>): Record<string,
     const ignoreKeys = new Set(["path", "column", "targetColumn", "taskId"]);
 
     if (source.metadata && typeof source.metadata === "object") {
-        Object.assign(metadata, source.metadata);
+        Object.assign(metadata, structuredClone(source.metadata));
     }
 
     for (const [key, value] of Object.entries(source)) {
@@ -139,9 +144,9 @@ export function buildTaskDataFromArgs(args: Record<string, any>): Record<string,
         }
 
         if (topLevelKeys.has(key)) {
-            taskData[key] = value;
+            taskData[key] = value && typeof value === "object" ? structuredClone(value) : value;
         } else {
-            metadata[key] = value;
+            metadata[key] = value && typeof value === "object" ? structuredClone(value) : value;
         }
     }
 
@@ -346,6 +351,10 @@ export async function handleKanbnDeleteTask(args: Record<string, any>) {
     };
 }
 
+export function getArchiveMethod(instance: any): ((taskId: string) => unknown) | undefined {
+    return instance?.archiveTask ?? instance?.archive;
+}
+
 export async function handleKanbnArchiveTask(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -358,7 +367,7 @@ export async function handleKanbnArchiveTask(args: Record<string, any>) {
         throw new Error(`Missing required parameter: taskId`);
     }
 
-    const archiveFn = instance.archiveTask || instance.archive || instance.prchive;
+    const archiveFn = getArchiveMethod(instance);
     if (typeof archiveFn !== "function") {
         throw new TypeError(`No archiveTask method found on Kanbn instance`);
     }
