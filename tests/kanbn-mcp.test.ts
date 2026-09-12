@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { describe } from "node:test";
 
-import { buildTaskDataFromArgs, enqueueKanbnOperation, getArchiveMethod, getKanbnInstance, handleKanbnInitBoard, handleToolCall, listTools, resetOperationQueue } from "../src/server";
+import { buildTaskDataFromArgs, enqueueKanbnOperation, getArchiveMethod, getKanbnInstance, handleKanbnInitBoard, handleToolCall, isMainEntry, listTools, resetOperationQueue } from "../src/server";
 
 const KanbnClass = require("@basementuniverse/kanbn/src/main.js")?.Kanbn;
 
@@ -67,6 +67,7 @@ describe("MCP tool listing", () => {
             "kanbn_ensure_board",
             "kanbn_create_task",
             "kanbn_move_task",
+            "kanbn_rename_task",
             "kanbn_delete_task",
             "kanbn_archive_task",
             "kanbn_get_task",
@@ -467,6 +468,194 @@ describe("task creation and movement", () => {
     });
 });
 
+describe("kanbn_rename_task", () => {
+    test("renames a task and returns the new id", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Rename Test Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Old Name",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            const renamed = await handleToolCall("kanbn_rename_task", {
+                path: dir,
+                taskId: taskId,
+                newName: "New Name",
+            });
+
+            assert.match(renamed.content[0].text, /Renamed task/);
+            assert.match(renamed.content[0].text, /new id: new-name/);
+
+            const fetched = await handleToolCall("kanbn_get_task", {
+                path: dir,
+                taskId: "new-name",
+            });
+            assert.match(fetched.content[0].text, /"name": "New Name"/);
+
+            await assert.rejects(
+                handleToolCall("kanbn_get_task", {
+                    path: dir,
+                    taskId: taskId,
+                }),
+                Error
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("moves the renamed task to an optional target column", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Rename Move Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Relocate me",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await handleToolCall("kanbn_rename_task", {
+                path: dir,
+                taskId: taskId,
+                newName: "Renamed And Moved",
+                column: "Done",
+            });
+
+            const index = await new KanbnClass(dir).getIndex();
+            assert.ok(index.columns.Done.includes("renamed-and-moved"));
+            assert.equal(index.columns.Backlog.includes("renamed-and-moved"), false);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("throws when the task does not exist", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Rename Sad Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            await assert.rejects(
+                handleToolCall("kanbn_rename_task", {
+                    path: dir,
+                    taskId: "ghost-task",
+                    newName: "No such task",
+                }),
+                Error
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("throws when the new name is empty or whitespace", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Rename Empty Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Keep me",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await assert.rejects(
+                handleToolCall("kanbn_rename_task", {
+                    path: dir,
+                    taskId: taskId,
+                    newName: "",
+                }),
+                /Missing required parameter: newName/
+            );
+
+            await assert.rejects(
+                handleToolCall("kanbn_rename_task", {
+                    path: dir,
+                    taskId: taskId,
+                    newName: "   ",
+                }),
+                /Missing required parameter: newName/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("throws when renaming to a duplicate name", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Rename Dup Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Alpha",
+                column: "Backlog",
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Beta",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            await assert.rejects(
+                handleToolCall("kanbn_rename_task", {
+                    path: dir,
+                    taskId: taskId,
+                    newName: "Alpha",
+                }),
+                /already exists/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
 describe("kanbn_archive_task", () => {
     test("archives a task on the board", async () => {
         const dir = makeTempDir();
@@ -546,6 +735,30 @@ describe("getArchiveMethod", () => {
     test("returns undefined when no archive method exists", () => {
         assert.equal(getArchiveMethod({}), undefined);
         assert.equal(getArchiveMethod(null), undefined);
+    });
+});
+
+describe("isMainEntry", () => {
+    test("detects the built server entry script", () => {
+        assert.equal(isMainEntry(["node", "/proj/dist/server.js"]), true);
+        assert.equal(isMainEntry(["node", "/proj/dist/server.js", "--help"]), true);
+    });
+
+    test("detects renamed or differently-extended entry scripts", () => {
+        assert.equal(isMainEntry(["node", "/proj/dist/kanbn-server.cjs"]), true);
+        assert.equal(isMainEntry(["tsx", "/proj/src/server.ts"]), true);
+        assert.equal(isMainEntry(["node", "/proj/bin/kanbn-mcp-server.mjs"]), true);
+    });
+
+    test("honours --run-server for opaque launchers", () => {
+        assert.equal(isMainEntry(["npx", "kanbn-mcp", "--run-server"]), true);
+        assert.equal(isMainEntry(["node", "/opaque/launcher/entry.js", "--run-server"]), true);
+    });
+
+    test("does not fire for unrelated scripts", () => {
+        assert.equal(isMainEntry(["node", "/proj/src/cli.js"]), false);
+        assert.equal(isMainEntry(["tsx", "/proj/tests/kanbn-mcp.test.ts"]), false);
+        assert.equal(isMainEntry(["node"]), false);
     });
 });
 

@@ -9,7 +9,6 @@ completedColumns:
 
 ## Backlog
 
-- [make-main-entry-check-more-robust](tasks/make-main-entry-check-more-robust.md)
 - [improve-is-board-initialized-method-detection](tasks/improve-is-board-initialized-method-detection.md)
 - [add-size-limit-to-kanbn-status-response](tasks/add-size-limit-to-kanbn-status-response.md)
 - [minor-kanbn-create-task-sub-task-schema-has-confusing-triple-alias-text-name-description](tasks/minor-kanbn-create-task-sub-task-schema-has-confusing-triple-alias-text-name-description.md)
@@ -21,7 +20,6 @@ completedColumns:
 - [add-input-validation-to-handle-kanbn-move-task](tasks/add-input-validation-to-handle-kanbn-move-task.md)
 - [kanbn-board-management-—-create-delete-rename-list-boards](tasks/kanbn-board-management-—-create-delete-rename-list-boards.md)
 - [kanbn-task-search-—-search-tasks-with-filters](tasks/kanbn-task-search-—-search-tasks-with-filters.md)
-- [kanbn-task-rename-—-rename-a-task](tasks/kanbn-task-rename-—-rename-a-task.md)
 - [kanbn-status-enhanced-—-status-with-untracked-due-sprint-options](tasks/kanbn-status-enhanced-—-status-with-untracked-due-sprint-options.md)
 - [kanbn-column-sort-—-sort-a-column](tasks/kanbn-column-sort-—-sort-a-column.md)
 - [kanbn-sprints-—-start-and-manage-sprints](tasks/kanbn-sprints-—-start-and-manage-sprints.md)
@@ -44,5 +42,7 @@ completedColumns:
 - [medium-operation-queue-swallows-errors-and-corrupts-subsequent-queued-operations](tasks/medium-operation-queue-swallows-errors-and-corrupts-subsequent-queued-operations.md)
 - [medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion](tasks/medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion.md)
 - [medium-handle-kanbn-archive-task-has-dead-code-typo-prchive-in-method-chain](tasks/medium-handle-kanbn-archive-task-has-dead-code-typo-prchive-in-method-chain.md)
+- [make-main-entry-check-more-robust](tasks/make-main-entry-check-more-robust.md)
+- [kanbn-task-rename-—-rename-a-task](tasks/kanbn-task-rename-—-rename-a-task.md)
 
 ## Blocked

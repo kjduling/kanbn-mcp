@@ -30,3 +30,6 @@ dist-ssr
 # continue
 .continue/
 AGENTS.md
+
+# graphify (generated, per-machine state)
+graphify-out/

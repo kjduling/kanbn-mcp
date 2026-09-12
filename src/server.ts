@@ -581,6 +581,49 @@ export async function handleKanbnMoveTask(args: Record<string, any>) {
     };
 }
 
+export async function handleKanbnRenameTask(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+
+    const taskId = args.taskId as string;
+    if (!taskId) {
+        throw new Error(`Missing required parameter: taskId`);
+    }
+
+    const newName = args.newName as string;
+    if (typeof newName !== "string" || newName.trim().length === 0) {
+        throw new Error(`Missing required parameter: newName`);
+    }
+
+    const renameFn = instance.renameTask || instance.rename;
+    if (typeof renameFn !== "function") {
+        throw new TypeError(`No renameTask method found on Kanbn instance`);
+    }
+
+    const newTaskId = await renameFn.call(instance, taskId, newName);
+
+    const targetColumn = args.column as string | undefined;
+    if (targetColumn) {
+        const moveFn = instance.moveTask || instance.move;
+        if (typeof moveFn !== "function") {
+            throw new TypeError(`No moveTask method found on Kanbn instance`);
+        }
+        await moveFn.call(instance, newTaskId, targetColumn, args.position ?? null);
+    }
+
+    return {
+        content: [
+            {
+                type: "text",
+                text: `Renamed task ${taskId} to "${newName}" (new id: ${newTaskId})`,
+            },
+        ],
+    };
+}
+
 export const TOOLS: Tool[] = [
     {
         name: "kanbn_status",
@@ -676,6 +719,21 @@ export const TOOLS: Tool[] = [
                 targetColumn: { type: "string", description: "Column to move the task into" },
             },
             required: ["taskId", "targetColumn"],
+        },
+    },
+    {
+        name: "kanbn_rename_task",
+        description: "Rename an existing task on the Kanbn board.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                taskId: { type: "string", description: "ID or filename of the task to rename" },
+                newName: { type: "string", description: "New task title" },
+                column: { type: "string", description: "Optional column to move the task into after renaming" },
+                position: { type: "number", description: "Optional position within the target column" },
+            },
+            required: ["taskId", "newName"],
         },
     },
     {
@@ -815,6 +873,8 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
                 return handleKanbnCreateTask(args);
             case "kanbn_move_task":
                 return handleKanbnMoveTask(args);
+            case "kanbn_rename_task":
+                return handleKanbnRenameTask(args);
             case "kanbn_delete_task":
                 return handleKanbnDeleteTask(args);
             case "kanbn_archive_task":
@@ -849,10 +909,13 @@ USAGE
   node dist/server.js [options]
 
 OPTIONS
-  -h, --help     Show this help message
-  -v, --version  Print the version number
+  -h, --help       Show this help message
+  -v, --version    Print the version number
+  --run-server     Start the MCP server even when the entry script is not
+                   named 'server' (e.g. launches via npx or a renamed build)
 
-Run with no options to start the MCP server over stdio.
+Run with no options to start the MCP server over stdio. The server starts
+when the entry script's filename contains "server" or --run-server is passed.
 
 ENVIRONMENT
   KANBN_DEFAULT_PATH   Optional. Default board directory (must contain a .kanbn
@@ -868,7 +931,8 @@ LIMITATION
 
 TOOLS
   kanbn_status, kanbn_init_board, kanbn_initialize_board, kanbn_ensure_board,
-  kanbn_create_task, kanbn_edit_task, kanbn_move_task, kanbn_delete_task,
+  kanbn_create_task, kanbn_edit_task, kanbn_move_task, kanbn_rename_task,
+  kanbn_delete_task,
   kanbn_archive_task, kanbn_unarchive_task, kanbn_restore_task,
   kanbn_get_task, kanbn_delete_board
 
@@ -919,7 +983,19 @@ async function main() {
     await server.connect(transport);
 }
 
-if (process.argv[1]?.endsWith("server.js")) {
+export function isMainEntry(argv: string[] = process.argv): boolean {
+    const script = argv[1];
+    if (!script) {
+        return false;
+    }
+    if (argv.includes("--run-server")) {
+        return true;
+    }
+    const base = path.basename(script).toLowerCase();
+    return base.includes("server");
+}
+
+if (isMainEntry()) {
     const cliArgs = process.argv.slice(2);
     if (cliArgs.includes("--help") || cliArgs.includes("-h")) {
         printHelp();

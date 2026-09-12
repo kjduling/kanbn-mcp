@@ -108,6 +108,7 @@ npm test
 | `kanbn_get_task`         | Retrieve details of a specific task                  |
 | `kanbn_edit_task`        | Edit an existing task on the board                   |
 | `kanbn_move_task`        | Move a task between columns                          |
+| `kanbn_rename_task`      | Rename a task (returns the new task id)              |
 | `kanbn_delete_board`     | Delete an entire board directory                     |
 | `kanbn_unarchive_task`   | Unarchive a task on the board                        |
 | `kanbn_restore_task`     | Alias for `kanbn_unarchive_task`                     |
