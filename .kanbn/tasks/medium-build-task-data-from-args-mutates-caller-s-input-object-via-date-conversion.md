@@ -1,5 +1,6 @@
 ---
 created: 2026-09-10T04:30:19.085Z
+updated: 2026-09-12T18:11:35.220Z
 ---
 
 # MEDIUM: buildTaskDataFromArgs mutates caller's input object via Date conversion
@@ -49,4 +50,9 @@ Since `metadata` is a shallow copy of `source.metadata`, and `source` is a shall
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-12T18:11:35.220Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling

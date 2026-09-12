@@ -40,11 +40,21 @@ const server = new Server(
     }
 );
 
-let operationQueue: Promise<void> = Promise.resolve();
+/**
+ * sessionQueue serializes operations within a single session.
+ * Limitation: this server uses a single StdioServerTransport — no concurrent connections.
+ * If multiple connections ever arise, a per-connection queue would be required.
+ */
+
+let sessionQueue: Promise<void> = Promise.resolve();
+
+export function resetOperationQueue(): void {
+    sessionQueue = Promise.resolve();
+}
 
 export function enqueueKanbnOperation<T>(op: () => Promise<T>): Promise<T> {
-    const result = operationQueue.then(op);
-    operationQueue = result.then(
+    const result = sessionQueue.then(op);
+    sessionQueue = result.then(
         () => { },
         () => { }
     );
@@ -843,6 +853,10 @@ ENVIRONMENT
                        per project. Individual tools can override this
                        per-call with a "path" argument.
 
+LIMITATION
+  operationQueue serializes ops within a single session. No concurrent connections.
+  If multiple connections arise, a per-connection queue would be required.
+
 TOOLS
   kanbn_status, kanbn_init_board, kanbn_initialize_board, kanbn_ensure_board,
   kanbn_create_task, kanbn_edit_task, kanbn_move_task, kanbn_delete_task,
@@ -891,6 +905,7 @@ export function printHelp(stream: NodeJS.WriteStream = process.stdout): void {
 }
 
 async function main() {
+    resetOperationQueue();
     const transport = new StdioServerTransport();
     await server.connect(transport);
 }

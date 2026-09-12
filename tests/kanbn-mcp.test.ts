@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { describe } from "node:test";
 
-import { buildTaskDataFromArgs, getKanbnInstance, handleKanbnInitBoard, handleToolCall, listTools } from "../src/server";
+import { buildTaskDataFromArgs, enqueueKanbnOperation, getKanbnInstance, handleKanbnInitBoard, handleToolCall, listTools, resetOperationQueue } from "../src/server";
 
 const KanbnClass = require("@basementuniverse/kanbn/src/main.js")?.Kanbn;
 
@@ -1370,5 +1370,40 @@ describe("handleKanbnInitBoard error handling", () => {
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }
+    });
+});
+
+describe("operationQueue session isolation", () => {
+    test("happy path: single session serial ops", async () => {
+        resetOperationQueue();
+
+        const op1 = () => Promise.resolve("first");
+        const op2 = () => Promise.resolve("second");
+
+        const result1 = enqueueKanbnOperation(op1);
+        const result2 = enqueueKanbnOperation(op2);
+
+        assert.equal(await result1, "first");
+        assert.equal(await result2, "second");
+    });
+
+    test("sad path: reset clears queued state", async () => {
+        let releaseBlocking: (() => void) | undefined;
+        const blocking = new Promise<void>((resolve) => {
+            releaseBlocking = resolve;
+        });
+
+        const stuck = enqueueKanbnOperation(() => blocking);
+        resetOperationQueue();
+
+        const fresh = enqueueKanbnOperation(() => Promise.resolve("fresh"));
+        assert.equal(await fresh, "fresh");
+
+        releaseBlocking?.();
+        await stuck;
+    });
+
+    test("sad path: concurrent sessions would interfere (documented limitation)", async () => {
+        assert.match(require("../src/server.ts").HELP_TEXT, /Limitation/i);
     });
 });

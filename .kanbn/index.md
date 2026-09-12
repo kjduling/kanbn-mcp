@@ -9,13 +9,9 @@ completedColumns:
 
 ## Backlog
 
-- [fix-shared-global-operation-queue-breaking-across-sessions](tasks/fix-shared-global-operation-queue-breaking-across-sessions.md)
 - [make-main-entry-check-more-robust](tasks/make-main-entry-check-more-robust.md)
 - [improve-is-board-initialized-method-detection](tasks/improve-is-board-initialized-method-detection.md)
 - [add-size-limit-to-kanbn-status-response](tasks/add-size-limit-to-kanbn-status-response.md)
-- [medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion](tasks/medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion.md)
-- [medium-operation-queue-swallows-errors-and-corrupts-subsequent-queued-operations](tasks/medium-operation-queue-swallows-errors-and-corrupts-subsequent-queued-operations.md)
-- [medium-handle-kanbn-archive-task-has-dead-code-typo-prchive-in-method-chain](tasks/medium-handle-kanbn-archive-task-has-dead-code-typo-prchive-in-method-chain.md)
 - [minor-kanbn-create-task-sub-task-schema-has-confusing-triple-alias-text-name-description](tasks/minor-kanbn-create-task-sub-task-schema-has-confusing-triple-alias-text-name-description.md)
 - [minor-title-to-name-mapping-is-redundant-and-can-leave-both-keys-set](tasks/minor-title-to-name-mapping-is-redundant-and-can-leave-both-keys-set.md)
 - [minor-kanbn-create-task-column-fallback-has-silent-error-and-hidden-disk-read](tasks/minor-kanbn-create-task-column-fallback-has-silent-error-and-hidden-disk-read.md)
@@ -36,10 +32,17 @@ completedColumns:
 - [kanbn-simple-tasks-—-simple-task-non-file-operations](tasks/kanbn-simple-tasks-—-simple-task-non-file-operations.md)
 - [kanbn-comment-—-dedicated-comment-endpoint](tasks/kanbn-comment-—-dedicated-comment-endpoint.md)
 - [kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board](tasks/kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board.md)
+- [add-jsdoc-for-all-methods](tasks/add-jsdoc-for-all-methods.md)
 
 ## Todo
 
+- [medium-operation-queue-swallows-errors-and-corrupts-subsequent-queued-operations](tasks/medium-operation-queue-swallows-errors-and-corrupts-subsequent-queued-operations.md)
+- [medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion](tasks/medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion.md)
+- [medium-handle-kanbn-archive-task-has-dead-code-typo-prchive-in-method-chain](tasks/medium-handle-kanbn-archive-task-has-dead-code-typo-prchive-in-method-chain.md)
+
 ## In Progress
+
+- [fix-shared-global-operation-queue-breaking-across-sessions](tasks/fix-shared-global-operation-queue-breaking-across-sessions.md)
 
 ## Done
 

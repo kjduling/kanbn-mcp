@@ -1,5 +1,6 @@
 ---
 created: 2026-09-10T04:30:19.113Z
+updated: 2026-09-12T18:11:37.170Z
 ---
 
 # MEDIUM: handleKanbnArchiveTask has dead-code typo 'prchive' in method chain
@@ -39,4 +40,9 @@ const archiveFn = instance.archiveTask || instance.archive || instance.prchive;
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-12T18:11:37.170Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling

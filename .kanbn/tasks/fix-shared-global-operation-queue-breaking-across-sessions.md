@@ -1,5 +1,7 @@
 ---
 created: 2026-09-07T18:00:58.142Z
+updated: 2026-09-12T18:55:13.345Z
+started: 2026-09-12T18:55:13.345Z
 ---
 
 # Fix shared global operationQueue breaking across sessions
@@ -20,12 +22,6 @@ This causes issues:
 - If a global queue is kept, add a mechanism to reset or isolate it per session
 - Document the current limitation clearly
 
-## Sub-tasks
-
-- [ ] undefined
-- [ ] undefined
-- [ ] undefined
-
 ## History
 
 - type: created
@@ -33,4 +29,14 @@ This causes issues:
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-12T18:10:55.427Z
+  fromColumn: Backlog
+  toColumn: Todo
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-12T18:55:13.345Z
+  fromColumn: Todo
+  toColumn: In Progress
   author: Kevin J. Duling

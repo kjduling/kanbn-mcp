@@ -1,5 +1,6 @@
 ---
 created: 2026-09-10T04:30:19.097Z
+updated: 2026-09-12T18:11:33.537Z
 ---
 
 # MEDIUM: operationQueue swallows errors and corrupts subsequent queued operations
@@ -52,4 +53,9 @@ There is no way to recover — the queue is now a dead chain that discards every
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-12T18:11:33.537Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling
