@@ -18,7 +18,6 @@ completedColumns:
 - [minor-kanbn-initialize-board-is-a-redundant-duplicate-of-kanbn-init-board](tasks/minor-kanbn-initialize-board-is-a-redundant-duplicate-of-kanbn-init-board.md)
 - [add-required-fields-to-kanbn-create-task-tool-schema](tasks/add-required-fields-to-kanbn-create-task-tool-schema.md)
 - [add-input-validation-to-handle-kanbn-move-task](tasks/add-input-validation-to-handle-kanbn-move-task.md)
-- [kanbn-board-management-—-create-delete-rename-list-boards](tasks/kanbn-board-management-—-create-delete-rename-list-boards.md)
 - [kanbn-task-search-—-search-tasks-with-filters](tasks/kanbn-task-search-—-search-tasks-with-filters.md)
 - [kanbn-status-enhanced-—-status-with-untracked-due-sprint-options](tasks/kanbn-status-enhanced-—-status-with-untracked-due-sprint-options.md)
 - [kanbn-column-sort-—-sort-a-column](tasks/kanbn-column-sort-—-sort-a-column.md)
@@ -44,5 +43,6 @@ completedColumns:
 - [make-main-entry-check-more-robust](tasks/make-main-entry-check-more-robust.md)
 - [kanbn-task-rename-—-rename-a-task](tasks/kanbn-task-rename-—-rename-a-task.md)
 - [kanbn-simple-tasks-—-simple-task-non-file-operations](tasks/kanbn-simple-tasks-—-simple-task-non-file-operations.md)
+- [kanbn-board-management-—-create-delete-rename-list-boards](tasks/kanbn-board-management-—-create-delete-rename-list-boards.md)
 
 ## Blocked

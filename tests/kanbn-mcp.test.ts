@@ -81,6 +81,17 @@ describe("MCP tool listing", () => {
             "kanbn_move_simple_task_to_board",
             "kanbn_delete_simple_task",
             "kanbn_promote_simple_task",
+            "kanbn_create_board",
+            "kanbn_delete_board_file",
+            "kanbn_rename_board",
+            "kanbn_list_boards",
+            "kanbn_boards_summary",
+            "kanbn_board_exists",
+            "kanbn_reserved_board_slugs",
+            "kanbn_validate_board_slug",
+            "kanbn_find_orphaned_tasks",
+            "kanbn_cross_board_tasks",
+            "kanbn_tasks_on_other_boards",
         ]);
     });
 });
@@ -2025,6 +2036,269 @@ describe("kanbn_simple_tasks", () => {
                 handleToolCall("kanbn_promote_simple_task", { path: dir, input: "Alpha" }),
                 /already exists/
             );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("kanbn_board_management", () => {
+    async function initMain(dir: string, columns: string[] = ["Backlog", "Done"]) {
+        await handleToolCall("kanbn_init_board", {
+            path: dir,
+            name: "Main Board",
+            columns,
+        });
+        return new KanbnClass(dir);
+    }
+
+    test("create_board creates a secondary board", async () => {
+        const dir = makeTempDir();
+
+        try {
+            const instance = await initMain(dir);
+
+            const created = await handleToolCall("kanbn_create_board", {
+                path: dir,
+                slug: "design",
+                name: "Design Board",
+                columns: ["Ideas", "Signed Off"],
+            });
+            assert.match(created.content[0].text, /Created board "design"/);
+
+            const boards = await instance.listBoards();
+            assert.ok(boards.some((b: any) => b.slug === "design" && b.name === "Design Board" && !b.main));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("create_board throws on duplicate and reserved slugs", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+
+            await assert.rejects(
+                handleToolCall("kanbn_create_board", { path: dir, slug: "index" }),
+                /reserved|already exists/
+            );
+
+            const created = await handleToolCall("kanbn_create_board", { path: dir, slug: "design" });
+            assert.match(created.content[0].text, /Created board "design"/);
+
+            await assert.rejects(
+                handleToolCall("kanbn_create_board", { path: dir, slug: "design" }),
+                /already exists/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("delete_board_file deletes the board file and returns orphaned task IDs", async () => {
+        const dir = makeTempDir();
+
+        try {
+            const instance = await initMain(dir);
+            await handleToolCall("kanbn_create_board", { path: dir, slug: "design", columns: ["Backlog"] });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Beta", column: "Backlog" });
+
+            await instance.board("design").addTaskToBoard("beta", "Backlog");
+            const mainIndex = await new KanbnClass(dir).getIndex();
+            mainIndex.columns.Backlog = ["alpha"];
+            await new KanbnClass(dir).saveIndex(mainIndex);
+
+            const deleted = await handleToolCall("kanbn_delete_board_file", {
+                path: dir,
+                slug: "design",
+            });
+            assert.match(deleted.content[0].text, /Orphaned tasks: beta/);
+
+            const after = await instance.listBoards();
+            assert.ok(!after.some((b: any) => b.slug === "design"));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("delete_board_file throws when deleting the main board", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+            await assert.rejects(
+                handleToolCall("kanbn_delete_board_file", { path: dir, slug: "index" }),
+                /main board cannot be deleted/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("rename_board updates slug and name", async () => {
+        const dir = makeTempDir();
+
+        try {
+            const instance = await initMain(dir);
+            await handleToolCall("kanbn_create_board", {
+                path: dir,
+                slug: "design",
+                name: "Design Board",
+            });
+
+            const renamed = await handleToolCall("kanbn_rename_board", {
+                path: dir,
+                slug: "design",
+                newSlug: "art",
+                newName: "Art Board",
+            });
+            assert.match(renamed.content[0].text, /Renamed board "design" to "art"/);
+
+            const boards = await instance.listBoards();
+            assert.ok(boards.some((b: any) => b.slug === "art" && b.name === "Art Board"));
+            assert.ok(!boards.some((b: any) => b.slug === "design"));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("rename_board throws for the main board and duplicate targets", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+            await handleToolCall("kanbn_create_board", { path: dir, slug: "design" });
+            await handleToolCall("kanbn_create_board", { path: dir, slug: "art" });
+
+            await assert.rejects(
+                handleToolCall("kanbn_rename_board", { path: dir, slug: "index", newSlug: "art" }),
+                /main board cannot be renamed/
+            );
+            await assert.rejects(
+                handleToolCall("kanbn_rename_board", { path: dir, slug: "design", newSlug: "art" }),
+                /already exists/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("list_boards and boards_summary return board data", async () => {
+        const dir = makeTempDir();
+
+        try {
+            const instance = await initMain(dir);
+            await handleToolCall("kanbn_create_board", {
+                path: dir,
+                slug: "design",
+                name: "Design Board",
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+
+            const listed = await handleToolCall("kanbn_list_boards", { path: dir });
+            const boards = JSON.parse(listed.content[0].text);
+            assert.equal(boards.length, 2);
+            assert.ok(boards.some((b: any) => b.slug === "index" && b.main));
+
+            const summarized = await handleToolCall("kanbn_boards_summary", { path: dir });
+            const summaries = JSON.parse(summarized.content[0].text);
+            assert.ok(summaries.some((s: any) => s.slug === "index"));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("board_exists toggles on creation", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+
+            const before = await handleToolCall("kanbn_board_exists", { path: dir, slug: "design" });
+            assert.equal(before.content[0].text, "false");
+
+            await handleToolCall("kanbn_create_board", { path: dir, slug: "design" });
+            const after = await handleToolCall("kanbn_board_exists", { path: dir, slug: "design" });
+            assert.equal(after.content[0].text, "true");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("reserved_board_slugs and validate_board_slug behave", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+
+            const reservedCall = await handleToolCall("kanbn_reserved_board_slugs", { path: dir });
+            const reserved = JSON.parse(reservedCall.content[0].text);
+            assert.ok(reserved.includes("index"));
+
+            const valid = await handleToolCall("kanbn_validate_board_slug", { path: dir, slug: "my-board" });
+            assert.match(valid.content[0].text, /"my-board" is valid/);
+
+            await assert.rejects(
+                handleToolCall("kanbn_validate_board_slug", { path: dir, slug: "My Board" }),
+                /is not valid/
+            );
+            await assert.rejects(
+                handleToolCall("kanbn_validate_board_slug", { path: dir, slug: "index" }),
+                /is reserved/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("find_orphaned_tasks reports tasks only on one board", async () => {
+        const dir = makeTempDir();
+
+        try {
+            const instance = await initMain(dir);
+            await handleToolCall("kanbn_create_board", { path: dir, slug: "design", columns: ["Backlog"] });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Beta", column: "Backlog" });
+
+            await instance.board("design").addTaskToBoard("beta", "Backlog");
+            const mainIndex = await new KanbnClass(dir).getIndex();
+            mainIndex.columns.Backlog = ["alpha"];
+            await new KanbnClass(dir).saveIndex(mainIndex);
+
+            const orphaned = await handleToolCall("kanbn_find_orphaned_tasks", {
+                path: dir,
+                slug: "design",
+            });
+            const ids = JSON.parse(orphaned.content[0].text);
+            assert.deepStrictEqual(ids, ["beta"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("cross_board_tasks and tasks_on_other_boards report shared tasks", async () => {
+        const dir = makeTempDir();
+
+        try {
+            const instance = await initMain(dir);
+            await handleToolCall("kanbn_create_board", { path: dir, slug: "design", columns: ["Backlog"] });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+
+            await instance.board("design").addTaskToBoard("alpha", "Backlog");
+
+            const crossCall = await handleToolCall("kanbn_cross_board_tasks", { path: dir });
+            const cross = JSON.parse(crossCall.content[0].text);
+            assert.ok(cross.some((t: any) => t.id === "alpha" && Object.keys(t.boards).length >= 2));
+
+            const mainIndex = await new KanbnClass(dir).getIndex();
+            mainIndex.columns.Backlog = [];
+            await new KanbnClass(dir).saveIndex(mainIndex);
+
+            const otherCall = await handleToolCall("kanbn_tasks_on_other_boards", { path: dir });
+            const other = JSON.parse(otherCall.content[0].text);
+            assert.deepStrictEqual(other, { alpha: { design: "Backlog" } });
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }

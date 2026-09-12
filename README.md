@@ -118,6 +118,17 @@ npm test
 | `kanbn_move_simple_task_to_board` | Move a simple task onto another board        |
 | `kanbn_delete_simple_task` | Remove a simple task from the board               |
 | `kanbn_promote_simple_task` | Convert a simple task into a real task file      |
+| `kanbn_create_board` | Create a new secondary board                       |
+| `kanbn_delete_board_file` | Delete a secondary board file, returning orphaned task IDs |
+| `kanbn_rename_board` | Rename a secondary board (slug and/or name)        |
+| `kanbn_list_boards` | List all boards in the workspace                   |
+| `kanbn_boards_summary` | Summary of each board with task statistics        |
+| `kanbn_board_exists` | Check whether a board exists                       |
+| `kanbn_reserved_board_slugs` | List reserved board slugs                       |
+| `kanbn_validate_board_slug` | Validate a board slug (throws on invalid/reserved) |
+| `kanbn_find_orphaned_tasks` | Find tasks only referenced by one board            |
+| `kanbn_cross_board_tasks` | Find tasks appearing on more than one board        |
+| `kanbn_tasks_on_other_boards` | Map each task to other boards referencing it     |
 
 ## Example task metadata supported
 

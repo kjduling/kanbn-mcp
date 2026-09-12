@@ -802,6 +802,191 @@ export async function handleKanbnPromoteSimpleTask(args: Record<string, any>) {
     };
 }
 
+export async function handleKanbnCreateBoard(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    const slug = args.slug as string;
+    if (!slug) {
+        throw new Error(`Missing required parameter: slug`);
+    }
+    const createFn = instance.createBoard;
+    if (typeof createFn !== "function") {
+        throw new TypeError(`No createBoard method found on Kanbn instance`);
+    }
+    const options: Record<string, any> = {};
+    if (args.name) options.name = args.name;
+    if (args.description !== undefined) options.description = args.description;
+    if (Array.isArray(args.columns) && args.columns.length) options.columns = args.columns;
+    if (args.options && typeof args.options === "object") options.options = args.options;
+
+    const createdSlug = await createFn.call(instance, slug, options);
+    return {
+        content: [{ type: "text", text: `Created board "${createdSlug}"` }],
+    };
+}
+
+export async function handleKanbnDeleteBoardFile(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    const slug = args.slug as string;
+    if (!slug) {
+        throw new Error(`Missing required parameter: slug`);
+    }
+    const deleteFn = instance.deleteBoard;
+    if (typeof deleteFn !== "function") {
+        throw new TypeError(`No deleteBoard method found on Kanbn instance`);
+    }
+    const orphaned = await deleteFn.call(instance, slug);
+    return {
+        content: [
+            {
+                type: "text",
+                text: orphaned.length
+                    ? `Deleted board "${slug}". Orphaned tasks: ${orphaned.join(", ")}`
+                    : `Deleted board "${slug}" (no orphaned tasks)`,
+            },
+        ],
+    };
+}
+
+export async function handleKanbnRenameBoard(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    const slug = args.slug as string;
+    if (!slug) {
+        throw new Error(`Missing required parameter: slug`);
+    }
+    const newSlug = args.newSlug as string;
+    if (!newSlug) {
+        throw new Error(`Missing required parameter: newSlug`);
+    }
+    const renameFn = instance.renameBoard;
+    if (typeof renameFn !== "function") {
+        throw new TypeError(`No renameBoard method found on Kanbn instance`);
+    }
+    const renamedSlug = await renameFn.call(instance, slug, newSlug, args.newName ?? null);
+    return {
+        content: [{ type: "text", text: `Renamed board "${slug}" to "${renamedSlug}"` }],
+    };
+}
+
+export async function handleKanbnListBoards(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    const boards = await instance.listBoards();
+    return {
+        content: [{ type: "text", text: JSON.stringify(boards, null, 2) }],
+    };
+}
+
+export async function handleKanbnBoardsSummary(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    const summaries = await instance.getBoardsSummary();
+    return {
+        content: [{ type: "text", text: JSON.stringify(summaries, null, 2) }],
+    };
+}
+
+export async function handleKanbnBoardExists(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    const slug = args.slug as string;
+    if (!slug) {
+        throw new Error(`Missing required parameter: slug`);
+    }
+    const exists = await instance.boardExists(slug);
+    return {
+        content: [{ type: "text", text: String(exists) }],
+    };
+}
+
+export async function handleKanbnReservedBoardSlugs(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    const reserved = await instance.getReservedBoardSlugs();
+    return {
+        content: [{ type: "text", text: JSON.stringify(reserved, null, 2) }],
+    };
+}
+
+export async function handleKanbnValidateBoardSlug(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    const slug = args.slug as string;
+    if (!slug) {
+        throw new Error(`Missing required parameter: slug`);
+    }
+    const validated = await instance.validateBoardSlug(slug);
+    return {
+        content: [{ type: "text", text: `Board slug "${validated}" is valid` }],
+    };
+}
+
+export async function handleKanbnFindOrphanedTasks(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    const slug = args.slug as string;
+    if (!slug) {
+        throw new Error(`Missing required parameter: slug`);
+    }
+    const orphaned = await instance.findOrphanedTasks(slug);
+    return {
+        content: [{ type: "text", text: JSON.stringify(orphaned, null, 2) }],
+    };
+}
+
+export async function handleKanbnCrossBoardTasks(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    const crossBoard = await instance.getCrossBoardTasks(args.allTasks ?? false);
+    return {
+        content: [{ type: "text", text: JSON.stringify(crossBoard, null, 2) }],
+    };
+}
+
+export async function handleKanbnTasksOnOtherBoards(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    const tasksOnBoards = await instance.findTasksOnOtherBoards();
+    return {
+        content: [{ type: "text", text: JSON.stringify(tasksOnBoards, null, 2) }],
+    };
+}
+
 export const TOOLS: Tool[] = [
     {
         name: "kanbn_status",
@@ -1108,6 +1293,135 @@ export const TOOLS: Tool[] = [
             required: ["input"],
         },
     },
+    {
+        name: "kanbn_create_board",
+        description: "Create a new secondary board.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                slug: { type: "string", description: "Board slug" },
+                name: { type: "string", description: "Display name" },
+                description: { type: "string", description: "Board description" },
+                columns: { type: "array", items: { type: "string" }, description: "Initial board columns" },
+                options: { type: "object", description: "Low-level board options" },
+            },
+            required: ["slug"],
+        },
+    },
+    {
+        name: "kanbn_delete_board_file",
+        description: "Delete a secondary board file, returning orphaned task IDs.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                slug: { type: "string", description: "Board slug to delete" },
+            },
+            required: ["slug"],
+        },
+    },
+    {
+        name: "kanbn_rename_board",
+        description: "Rename a secondary board (slug and/or display name).",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                slug: { type: "string", description: "Current board slug" },
+                newSlug: { type: "string", description: "New board slug" },
+                newName: { type: "string", description: "New display name" },
+            },
+            required: ["slug", "newSlug"],
+        },
+    },
+    {
+        name: "kanbn_list_boards",
+        description: "List all boards in the workspace.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_boards_summary",
+        description: "Get a summary with per-board task statistics.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_board_exists",
+        description: "Check whether a board exists.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                slug: { type: "string", description: "Board slug" },
+            },
+            required: ["slug"],
+        },
+    },
+    {
+        name: "kanbn_reserved_board_slugs",
+        description: "List the board slugs reserved by Kanbn.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_validate_board_slug",
+        description: "Validate a proposed board slug, throwing on invalid or reserved values.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                slug: { type: "string", description: "Board slug to validate" },
+            },
+            required: ["slug"],
+        },
+    },
+    {
+        name: "kanbn_find_orphaned_tasks",
+        description: "Find tasks only referenced by one board (would orphan on its deletion).",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                slug: { type: "string", description: "Board slug" },
+            },
+            required: ["slug"],
+        },
+    },
+    {
+        name: "kanbn_cross_board_tasks",
+        description: "Find tasks that appear on more than one board.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                allTasks: { type: "boolean", description: "Include tasks on a single board" },
+            },
+        },
+    },
+    {
+        name: "kanbn_tasks_on_other_boards",
+        description: "Map every task to all other boards that reference it.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
 ];
 
 export function listTools() {
@@ -1155,6 +1469,28 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
                 return handleKanbnDeleteSimpleTask(args);
             case "kanbn_promote_simple_task":
                 return handleKanbnPromoteSimpleTask(args);
+            case "kanbn_create_board":
+                return handleKanbnCreateBoard(args);
+            case "kanbn_delete_board_file":
+                return handleKanbnDeleteBoardFile(args);
+            case "kanbn_rename_board":
+                return handleKanbnRenameBoard(args);
+            case "kanbn_list_boards":
+                return handleKanbnListBoards(args);
+            case "kanbn_boards_summary":
+                return handleKanbnBoardsSummary(args);
+            case "kanbn_board_exists":
+                return handleKanbnBoardExists(args);
+            case "kanbn_reserved_board_slugs":
+                return handleKanbnReservedBoardSlugs(args);
+            case "kanbn_validate_board_slug":
+                return handleKanbnValidateBoardSlug(args);
+            case "kanbn_find_orphaned_tasks":
+                return handleKanbnFindOrphanedTasks(args);
+            case "kanbn_cross_board_tasks":
+                return handleKanbnCrossBoardTasks(args);
+            case "kanbn_tasks_on_other_boards":
+                return handleKanbnTasksOnOtherBoards(args);
             default:
                 throw new Error(`Unknown tool requested: ${name}`);
         }
@@ -1204,7 +1540,11 @@ TOOLS
   kanbn_get_task, kanbn_delete_board,
   kanbn_find_simple_tasks, kanbn_get_simple_task, kanbn_move_simple_task,
   kanbn_move_simple_task_to_board, kanbn_delete_simple_task,
-  kanbn_promote_simple_task
+  kanbn_promote_simple_task,
+  kanbn_create_board, kanbn_delete_board_file, kanbn_rename_board,
+  kanbn_list_boards, kanbn_boards_summary, kanbn_board_exists,
+  kanbn_reserved_board_slugs, kanbn_validate_board_slug,
+  kanbn_find_orphaned_tasks, kanbn_cross_board_tasks, kanbn_tasks_on_other_boards
 
 MCP CLIENT CONFIGURATION
 
