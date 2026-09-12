@@ -1,6 +1,7 @@
 ---
 created: 2026-09-07T18:00:58.204Z
-updated: 2026-09-07T18:32:32.854Z
+updated: 2026-09-11T22:02:39.250Z
+column: Backlog
 ---
 
 # Fix silent column fallback in handleKanbnCreateTask
@@ -27,9 +28,11 @@ If the index can't be loaded, the task is created without a column. Whether that
 
 ## Sub-tasks
 
-- [ ] undefined
-- [ ] undefined
 - [ ] Create a unit test to verify
+
+## Relations
+
+- [Duplicates minor-kanbn-create-task-column-fallback-has-silent-error-and-hidden-disk-read](minor-kanbn-create-task-column-fallback-has-silent-error-and-hidden-disk-read.md)
 
 ## History
 
@@ -38,4 +41,8 @@ If the index can't be loaded, the task is created without a column. Whether that
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-11T22:02:40.910Z
+  fromColumn: Backlog
   author: Kevin J. Duling

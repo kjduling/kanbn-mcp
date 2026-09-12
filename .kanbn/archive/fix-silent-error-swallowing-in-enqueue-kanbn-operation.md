@@ -1,6 +1,7 @@
 ---
 created: 2026-09-07T18:00:58.055Z
-updated: 2026-09-11T21:13:52.158Z
+updated: 2026-09-11T22:01:38.982Z
+column: Backlog
 ---
 
 # Fix silent error swallowing in enqueueKanbnOperation
@@ -21,6 +22,10 @@ Any error from a Kanbn operation is silently swallowed. A failed task creation w
 - Consider logging errors to stderr or returning an error response
 - Ensure the promise chain doesn't lose error context
 
+## Relations
+
+- [Duplicates medium-operation-queue-swallows-errors-and-corrupts-subsequent-queued-operations](medium-operation-queue-swallows-errors-and-corrupts-subsequent-queued-operations.md)
+
 ## History
 
 - type: created
@@ -28,4 +33,8 @@ Any error from a Kanbn operation is silently swallowed. A failed task creation w
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-11T22:01:39.584Z
+  fromColumn: Backlog
   author: Kevin J. Duling

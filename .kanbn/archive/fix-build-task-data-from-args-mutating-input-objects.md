@@ -1,6 +1,7 @@
 ---
 created: 2026-09-07T18:00:58.171Z
-updated: 2026-09-07T18:33:07.267Z
+updated: 2026-09-11T21:58:29.708Z
+column: Backlog
 ---
 
 # Fix buildTaskDataFromArgs mutating input objects
@@ -20,9 +21,11 @@ This converts date strings to `Date` objects on the caller's original object. If
 
 ## Sub-tasks
 
-- [ ] undefined
-- [ ] undefined
 - [ ] Create a unit test to verify
+
+## Relations
+
+- [Duplicates medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion](medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion.md)
 
 ## History
 
@@ -31,4 +34,8 @@ This converts date strings to `Date` objects on the caller's original object. If
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-11T21:58:30.448Z
+  fromColumn: Backlog
   author: Kevin J. Duling

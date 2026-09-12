@@ -1,5 +1,7 @@
 ---
 created: 2026-09-10T04:30:19.133Z
+updated: 2026-09-11T22:00:09.107Z
+column: Backlog
 ---
 
 # MEDIUM: kanbn_ensure_board reports success even if init silently fails
@@ -37,6 +39,10 @@ If `handleKanbnInitBoard` fails silently (see issue #2), this function still ret
 - [ ] Add unit test for error propagation when init fails
 - [ ] Add unit test for already-initialized success path
 
+## Relations
+
+- [Duplicates critical-handle-kanbn-init-board-silently-discards-errors-from-both-init-attempts](critical-handle-kanbn-init-board-silently-discards-errors-from-both-init-attempts.md)
+
 ## History
 
 - type: created
@@ -44,4 +50,8 @@ If `handleKanbnInitBoard` fails silently (see issue #2), this function still ret
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-11T22:00:10.099Z
+  fromColumn: Backlog
   author: Kevin J. Duling
