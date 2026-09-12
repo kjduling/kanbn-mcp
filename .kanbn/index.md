@@ -23,6 +23,19 @@ completedColumns:
 - [minor-kanbn-initialize-board-is-a-redundant-duplicate-of-kanbn-init-board](tasks/minor-kanbn-initialize-board-is-a-redundant-duplicate-of-kanbn-init-board.md)
 - [add-required-fields-to-kanbn-create-task-tool-schema](tasks/add-required-fields-to-kanbn-create-task-tool-schema.md)
 - [add-input-validation-to-handle-kanbn-move-task](tasks/add-input-validation-to-handle-kanbn-move-task.md)
+- [kanbn-board-management-—-create-delete-rename-list-boards](tasks/kanbn-board-management-—-create-delete-rename-list-boards.md)
+- [kanbn-task-search-—-search-tasks-with-filters](tasks/kanbn-task-search-—-search-tasks-with-filters.md)
+- [kanbn-task-rename-—-rename-a-task](tasks/kanbn-task-rename-—-rename-a-task.md)
+- [kanbn-status-enhanced-—-status-with-untracked-due-sprint-options](tasks/kanbn-status-enhanced-—-status-with-untracked-due-sprint-options.md)
+- [kanbn-column-sort-—-sort-a-column](tasks/kanbn-column-sort-—-sort-a-column.md)
+- [kanbn-sprints-—-start-and-manage-sprints](tasks/kanbn-sprints-—-start-and-manage-sprints.md)
+- [kanbn-burndown-—-burndown-chart-data](tasks/kanbn-burndown-—-burndown-chart-data.md)
+- [kanbn-archived-tasks-—-list-and-load-archived-tasks](tasks/kanbn-archived-tasks-—-list-and-load-archived-tasks.md)
+- [kanbn-contributors-—-contributor-management](tasks/kanbn-contributors-—-contributor-management.md)
+- [kanbn-config-—-get-save-config-action-rules-validation](tasks/kanbn-config-—-get-save-config-action-rules-validation.md)
+- [kanbn-simple-tasks-—-simple-task-non-file-operations](tasks/kanbn-simple-tasks-—-simple-task-non-file-operations.md)
+- [kanbn-comment-—-dedicated-comment-endpoint](tasks/kanbn-comment-—-dedicated-comment-endpoint.md)
+- [kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board](tasks/kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board.md)
 
 ## Todo
 
