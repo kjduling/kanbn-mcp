@@ -824,12 +824,87 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     return handleToolCall(name, args);
 });
 
+export const HELP_TEXT = `kanbn-mcp ${version} - A Model Context Protocol server for Kanbn board management
+
+USAGE
+  node dist/server.js [options]
+
+OPTIONS
+  -h, --help     Show this help message
+  -v, --version  Print the version number
+
+Run with no options to start the MCP server over stdio.
+
+ENVIRONMENT
+  KANBN_DEFAULT_PATH   Optional. Default board directory (must contain a .kanbn
+                       folder). If unset, defaults to the server's current
+                       working directory - usually the project the MCP host
+                       launched the server from, which keeps boards
+                       per project. Individual tools can override this
+                       per-call with a "path" argument.
+
+TOOLS
+  kanbn_status, kanbn_init_board, kanbn_initialize_board, kanbn_ensure_board,
+  kanbn_create_task, kanbn_edit_task, kanbn_move_task, kanbn_delete_task,
+  kanbn_archive_task, kanbn_unarchive_task, kanbn_restore_task,
+  kanbn_get_task, kanbn_delete_board
+
+MCP CLIENT CONFIGURATION
+
+  opencode (project or ~/.config/opencode/opencode.json / opencode.jsonc):
+
+    {
+      "mcp": {
+        "kanbn": {
+          "type": "local",
+          "command": ["node", "/absolute/path/to/kanbn-mcp/dist/server.js"],
+          "enabled": true
+        }
+      }
+    }
+
+  Claude Desktop / other "mcpServers" hosts (e.g. claude_desktop_config.json):
+
+    {
+      "mcpServers": {
+        "kanbn": {
+          "command": "node",
+          "args": ["/absolute/path/to/kanbn-mcp/dist/server.js"]
+        }
+      }
+    }
+
+  In both cases the board root (the directory containing .kanbn) is taken from
+  the server's working directory, so each project configures its own board.
+  To force a fixed board regardless of working directory, add an optional
+  environment entry:
+
+    opencode:     "environment": { "KANBN_DEFAULT_PATH": "/path/to/project-root" }
+    mcpServers:   "env": { "KANBN_DEFAULT_PATH": "/path/to/project-root" }
+
+  KANBN_DEFAULT_PATH should point at the project root that contains the
+  .kanbn directory, not into .kanbn itself.
+`;
+
+export function printHelp(stream: NodeJS.WriteStream = process.stdout): void {
+    stream.write(HELP_TEXT);
+}
+
 async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
 }
 
 if (process.argv[1]?.endsWith("server.js")) {
+    const cliArgs = process.argv.slice(2);
+    if (cliArgs.includes("--help") || cliArgs.includes("-h")) {
+        printHelp();
+        process.exit(0);
+    }
+    if (cliArgs.includes("--version") || cliArgs.includes("-v")) {
+        console.log(version);
+        process.exit(0);
+    }
     main().catch((err) => {
         console.error("Fatal error starting kanbn-mcp server:", err);
         process.exit(1);

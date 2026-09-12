@@ -60,6 +60,8 @@ npm run build
 
 ## MCP client configuration
 
+Run `node dist/server.js --help` to print ready-to-paste configuration snippets for opencode, Claude Desktop, and other MCP hosts.
+
 Configure your MCP client to launch the server using a local Node command. The exact path will depend on where you installed the project, but the structure should look like this:
 
 ```json
@@ -82,7 +84,7 @@ Use this pattern in any MCP-compatible host such as a local editor or agent runt
 
 - `command`: the Node executable used to launch the server
 - `args[0]`: the compiled server entry point, typically `dist/server.js`
-- `KANBN_DEFAULT_PATH`: the project root directory, not the `.kanbn` folder itself
+- `KANBN_DEFAULT_PATH`: (Optional) the project root directory, not the `.kanbn` folder itself
 
 This should be the directory that contains the `.kanbn` subfolder. In other words, point it at the parent project directory, and let Kanbn manage the `.kanbn` directory underneath it.
 
@@ -94,21 +96,21 @@ npm test
 
 ## Available tools
 
-| Tool | Description |
-|------|-------------|
-| `kanbn_status` | Check the current status of the Kanbn board |
-| `kanbn_init_board` | Initialize a new Kanbn board |
-| `kanbn_initialize_board` | Alias for `kanbn_init_board` |
-| `kanbn_ensure_board` | Ensure a Kanbn board exists, initializing if absent |
-| `kanbn_create_task` | Create a new task with metadata |
-| `kanbn_delete_task` | Delete a task from the board (supports `force` flag) |
-| `kanbn_archive_task` | Archive a task on the board |
-| `kanbn_get_task` | Retrieve details of a specific task |
-| `kanbn_edit_task` | Edit an existing task on the board |
-| `kanbn_move_task` | Move a task between columns |
-| `kanbn_delete_board` | Delete an entire board directory |
-| `kanbn_unarchive_task` | Unarchive a task on the board |
-| `kanbn_restore_task` | Alias for `kanbn_unarchive_task` |
+| Tool                     | Description                                          |
+| ------------------------ | ---------------------------------------------------- |
+| `kanbn_status`           | Check the current status of the Kanbn board          |
+| `kanbn_init_board`       | Initialize a new Kanbn board                         |
+| `kanbn_initialize_board` | Alias for `kanbn_init_board`                         |
+| `kanbn_ensure_board`     | Ensure a Kanbn board exists, initializing if absent  |
+| `kanbn_create_task`      | Create a new task with metadata                      |
+| `kanbn_delete_task`      | Delete a task from the board (supports `force` flag) |
+| `kanbn_archive_task`     | Archive a task on the board                          |
+| `kanbn_get_task`         | Retrieve details of a specific task                  |
+| `kanbn_edit_task`        | Edit an existing task on the board                   |
+| `kanbn_move_task`        | Move a task between columns                          |
+| `kanbn_delete_board`     | Delete an entire board directory                     |
+| `kanbn_unarchive_task`   | Unarchive a task on the board                        |
+| `kanbn_restore_task`     | Alias for `kanbn_unarchive_task`                     |
 
 ## Example task metadata supported
 
