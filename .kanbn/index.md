@@ -11,7 +11,6 @@ completedColumns:
 
 ## Todo
 
-- [kanbn-burndown-—-burndown-chart-data](tasks/kanbn-burndown-—-burndown-chart-data.md)
 - [kanbn-sprints-—-start-and-manage-sprints](tasks/kanbn-sprints-—-start-and-manage-sprints.md)
 - [kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board](tasks/kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board.md)
 - [kanbn-archived-tasks-—-list-and-load-archived-tasks](tasks/kanbn-archived-tasks-—-list-and-load-archived-tasks.md)
@@ -28,5 +27,6 @@ completedColumns:
 - [kanbn-config-—-get-save-config-action-rules-validation](tasks/kanbn-config-—-get-save-config-action-rules-validation.md)
 - [kanbn-task-search-—-search-tasks-with-filters](tasks/kanbn-task-search-—-search-tasks-with-filters.md)
 - [kanbn-contributors-—-contributor-management](tasks/kanbn-contributors-—-contributor-management.md)
+- [kanbn-burndown-—-burndown-chart-data](tasks/kanbn-burndown-—-burndown-chart-data.md)
 
 ## Blocked

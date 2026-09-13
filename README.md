@@ -146,6 +146,7 @@ npm test
 | `kanbn_collect_contributor_values` | Collect every assigned/author value in use                 |
 | `kanbn_contributor_usage` | Contributor usage stats with spelling variants                  |
 | `kanbn_contributor_warnings` | Unknown contributor warnings                                   |
+| `kanbn_burndown` | Burndown chart data (sprints, dates, assigned, columns, normalise) |
 
 ## Example task metadata supported
 

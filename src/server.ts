@@ -1688,6 +1688,59 @@ export async function handleKanbnContributorWarnings(args: Record<string, any>):
     }
 }
 
+const BURNDOWN_NORMALISE_MODES = ["auto", "days", "hours", "minutes", "seconds"];
+
+/**
+ * Handle the "kanbn_burndown" MCP tool call: return burndown chart data as an object.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnBurndown(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    if (!(await isBoardInitialized(instance, boardPath))) {
+        throw new Error(`No Kanbn board found at: ${boardPath}`);
+    }
+    const sprints = args.sprints ?? null;
+    const dates = args.dates ?? null;
+    const assigned = args.assigned ?? null;
+    const columns = args.columns ?? null;
+    const normalise = args.normalise ?? null;
+    if (normalise !== null && BURNDOWN_NORMALISE_MODES.indexOf(normalise) === -1) {
+        throw new Error(`Invalid normalise mode: "${normalise}"`);
+    }
+    if (dates !== null) {
+        if (!Array.isArray(dates) || dates.length === 0 || !dates.every((d) => typeof d === "string" || typeof d === "number")) {
+            throw new Error(`Invalid dates: expected an array of dates`);
+        }
+        for (const value of dates) {
+            if (isNaN(new Date(value as string | number).getTime())) {
+                throw new Error(`Invalid date: "${value}"`);
+            }
+        }
+    }
+    if (columns !== null && !(Array.isArray(columns) && columns.every((c) => typeof c === "string"))) {
+        throw new Error(`Invalid columns: expected an array of column names`);
+    }
+    if (sprints !== null && !(Array.isArray(sprints) && sprints.every((s) => typeof s === "string" || typeof s === "number"))) {
+        throw new Error(`Invalid sprints: expected an array of sprint names or numbers`);
+    }
+    if (assigned !== null && typeof assigned !== "string") {
+        throw new Error(`Invalid assigned: expected a user name`);
+    }
+    try {
+        const data = await instance.burndown(sprints, dates, assigned, columns, normalise);
+        return {
+            content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to get burndown data: ${(error as Error).message}`);
+    }
+}
+
 export const TOOLS: Tool[] = [
     {
         name: "kanbn_status",
@@ -2328,6 +2381,37 @@ export const TOOLS: Tool[] = [
             },
         },
     },
+    {
+        name: "kanbn_burndown",
+        description: "Get burndown chart data as an object.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                sprints: {
+                    type: "array",
+                    items: { oneOf: [{ type: "string" }, { type: "number" }] },
+                    description: "Sprint names or 1-based numbers to show charts for (defaults to the current sprint)",
+                },
+                dates: {
+                    type: "array",
+                    items: { oneOf: [{ type: "string" }, { type: "number" }] },
+                    description: "Dates defining a range to show a chart for (defaults to no date filter)",
+                },
+                assigned: { type: "string", description: "Only show tasks assigned to this user" },
+                columns: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "Only show tasks in these columns",
+                },
+                normalise: {
+                    type: "string",
+                    enum: ["auto", "days", "hours", "minutes", "seconds"],
+                    description: "Date normalisation mode",
+                },
+            },
+        },
+    },
 ];
 
 /**
@@ -2441,6 +2525,8 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
                 return handleKanbnContributorUsage(args);
             case "kanbn_contributor_warnings":
                 return handleKanbnContributorWarnings(args);
+            case "kanbn_burndown":
+                return handleKanbnBurndown(args);
             default:
                 throw new Error(`Unknown tool requested: ${name}`);
         }
@@ -2500,7 +2586,8 @@ TOOLS
   kanbn_find_action_warnings, kanbn_get_date_format, kanbn_get_task_template,
   kanbn_get_workspace_options, kanbn_validate_board, kanbn_search,
   kanbn_get_contributors, kanbn_find_contributor, kanbn_current_user,
-  kanbn_collect_contributor_values, kanbn_contributor_usage, kanbn_contributor_warnings
+  kanbn_collect_contributor_values, kanbn_contributor_usage, kanbn_contributor_warnings,
+  kanbn_burndown
 
 MCP CLIENT CONFIGURATION
 

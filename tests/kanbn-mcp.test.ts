@@ -109,6 +109,7 @@ describe("MCP tool listing", () => {
             "kanbn_collect_contributor_values",
             "kanbn_contributor_usage",
             "kanbn_contributor_warnings",
+            "kanbn_burndown",
         ]);
     });
 });
@@ -1080,6 +1081,191 @@ describe("kanbn_contributors", () => {
             await assert.rejects(
                 handleToolCall("kanbn_collect_contributor_values", { path: dir }),
                 /Failed to collect contributor values: Not initialised in this folder/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("kanbn_burndown", () => {
+    async function initBurndownBoard(dir: string) {
+        await handleToolCall("kanbn_init_board", {
+            path: dir,
+            name: "Burndown Board",
+            columns: ["Backlog", "In Progress", "Done"],
+        });
+        const kanbn = new KanbnClass(dir);
+        const index = await kanbn.getIndex();
+        index.options.startedColumns = ["In Progress"];
+        index.options.completedColumns = ["Done"];
+        index.options.sprints = [{ name: "Sprint 1", start: new Date("2026-09-01") }];
+        await kanbn.saveIndex(index);
+    }
+
+    async function createChartTasks(dir: string) {
+        await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+        await handleToolCall("kanbn_edit_task", {
+            path: dir,
+            taskId: "alpha",
+            assigned: "alice",
+            started: "2026-09-01T00:00:00.000Z",
+            completed: "2026-09-05T00:00:00.000Z",
+        });
+        await handleToolCall("kanbn_create_task", { path: dir, name: "Beta", column: "Backlog" });
+        await handleToolCall("kanbn_edit_task", {
+            path: dir,
+            taskId: "beta",
+            assigned: "bob",
+            started: "2026-09-01T00:00:00.000Z",
+        });
+        await handleToolCall("kanbn_move_task", {
+            path: dir,
+            taskId: "beta",
+            targetColumn: "In Progress",
+        });
+    }
+
+    function totalY(data: any): number {
+        return data.series[0].dataPoints.reduce((sum: number, point: any) => sum + point.y, 0);
+    }
+
+    test("returns the current sprint burndown by default", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initBurndownBoard(dir);
+            await createChartTasks(dir);
+
+            const result = await handleToolCall("kanbn_burndown", { path: dir });
+            const data = JSON.parse(result.content[0].text);
+            assert.equal(data.series.length, 1);
+            assert.equal(data.series[0].sprint.name, "Sprint 1");
+            assert.ok(data.series[0].dataPoints.length >= 2);
+            assert.ok(data.series[0].dataPoints.every((point: any) => typeof point.y === "number"));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("selects a sprint by name or number", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initBurndownBoard(dir);
+            await createChartTasks(dir);
+
+            for (const sprints of [["Sprint 1"], [1]]) {
+                const result = await handleToolCall("kanbn_burndown", { path: dir, sprints });
+                const data = JSON.parse(result.content[0].text);
+                assert.equal(data.series.length, 1);
+                assert.equal(data.series[0].sprint.name, "Sprint 1");
+            }
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("filters the burndown by assigned user", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initBurndownBoard(dir);
+            await createChartTasks(dir);
+
+            const all = JSON.parse((await handleToolCall("kanbn_burndown", { path: dir })).content[0].text);
+            const alice = JSON.parse(
+                (await handleToolCall("kanbn_burndown", { path: dir, assigned: "alice" })).content[0].text
+            );
+            assert.ok(totalY(all) > 0);
+            assert.ok(totalY(alice) > 0);
+            assert.notEqual(totalY(alice), totalY(all));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("filters the burndown by columns", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initBurndownBoard(dir);
+            await createChartTasks(dir);
+
+            const all = JSON.parse((await handleToolCall("kanbn_burndown", { path: dir })).content[0].text);
+            const inProgress = JSON.parse(
+                (await handleToolCall("kanbn_burndown", { path: dir, columns: ["In Progress"] })).content[0].text
+            );
+            assert.ok(totalY(all) > 0);
+            assert.ok(totalY(inProgress) > 0);
+            assert.notEqual(totalY(inProgress), totalY(all));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("rejects a sprint number that does not exist", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initBurndownBoard(dir);
+
+            await assert.rejects(
+                handleToolCall("kanbn_burndown", { path: dir, sprints: [9] }),
+                /Failed to get burndown data: Sprint 9 does not exist/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("rejects a sprint name that does not exist", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initBurndownBoard(dir);
+
+            await assert.rejects(
+                handleToolCall("kanbn_burndown", { path: dir, sprints: ["Nope"] }),
+                /Failed to get burndown data: No sprint found with name "Nope"/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("rejects an invalid date range", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initBurndownBoard(dir);
+
+            await assert.rejects(
+                handleToolCall("kanbn_burndown", { path: dir, dates: ["not-a-date"] }),
+                /Invalid date: "not-a-date"/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("rejects a board that declares no started columns", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "No Started Board",
+                columns: ["Backlog", "Done"],
+            });
+            const kanbn = new KanbnClass(dir);
+            const index = await kanbn.getIndex();
+            index.options.startedColumns = [];
+            await kanbn.saveIndex(index);
+
+            await assert.rejects(
+                handleToolCall("kanbn_burndown", { path: dir }),
+                /Failed to get burndown data: .*no startedColumns/
             );
         } finally {
             rmSync(dir, { recursive: true, force: true });
