@@ -111,6 +111,7 @@ describe("MCP tool listing", () => {
             "kanbn_contributor_usage",
             "kanbn_contributor_warnings",
             "kanbn_burndown",
+            "kanbn_start_sprint",
             "kanbn_list_archived_tasks",
             "kanbn_load_archived_task",
         ]);
@@ -1419,6 +1420,95 @@ describe("archived tasks", () => {
 
             const result = await handleToolCall("kanbn_list_archived_tasks", { path: dir });
             assert.deepEqual(JSON.parse(result.content[0].text), []);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("kanbn_start_sprint", () => {
+    test("creates a sprint and returns the sprint object", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Sprint Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const result = await handleToolCall("kanbn_start_sprint", {
+                path: dir,
+                name: "Alpha Sprint",
+                description: "First sprint",
+                start: "2026-09-01T00:00:00.000Z",
+            });
+
+            const sprint = JSON.parse(result.content[0].text);
+            assert.equal(sprint.name, "Alpha Sprint");
+            assert.equal(sprint.description, "First sprint");
+            assert.equal(sprint.start, "2026-09-01T00:00:00.000Z");
+
+            const index = await new KanbnClass(dir).getIndex();
+            assert.ok(Array.isArray(index.options.sprints));
+            assert.equal(index.options.sprints[0].name, "Alpha Sprint");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("auto-generates a sprint name when omitted", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Sprint Board",
+                columns: ["Backlog"],
+            });
+
+            const result = await handleToolCall("kanbn_start_sprint", { path: dir });
+            const sprint = JSON.parse(result.content[0].text);
+            assert.equal(sprint.name, "Sprint 1");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("rejects a duplicate sprint name", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Sprint Board",
+                columns: ["Backlog"],
+            });
+            await handleToolCall("kanbn_start_sprint", { path: dir, name: "Alpha Sprint" });
+
+            await assert.rejects(
+                handleToolCall("kanbn_start_sprint", { path: dir, name: "Alpha Sprint" }),
+                /Sprint "Alpha Sprint" already exists/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("rejects an invalid start date", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Sprint Board",
+                columns: ["Backlog"],
+            });
+
+            await assert.rejects(
+                handleToolCall("kanbn_start_sprint", { path: dir, name: "Bad Date", start: "not-a-date" }),
+                /Invalid date: "not-a-date"/
+            );
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }
