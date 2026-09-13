@@ -24,7 +24,6 @@ completedColumns:
 
 ## Todo
 
-- [minor-kanbn-create-task-sub-task-schema-has-confusing-triple-alias-text-name-description](tasks/minor-kanbn-create-task-sub-task-schema-has-confusing-triple-alias-text-name-description.md)
 - [minor-title-to-name-mapping-is-redundant-and-can-leave-both-keys-set](tasks/minor-title-to-name-mapping-is-redundant-and-can-leave-both-keys-set.md)
 - [minor-kanbn-create-task-column-fallback-has-silent-error-and-hidden-disk-read](tasks/minor-kanbn-create-task-column-fallback-has-silent-error-and-hidden-disk-read.md)
 - [minor-kanbn-initialize-board-is-a-redundant-duplicate-of-kanbn-init-board](tasks/minor-kanbn-initialize-board-is-a-redundant-duplicate-of-kanbn-init-board.md)
@@ -45,5 +44,6 @@ completedColumns:
 - [add-jsdoc-for-all-methods](tasks/add-jsdoc-for-all-methods.md)
 - [kanbn-comment-—-dedicated-comment-endpoint](tasks/kanbn-comment-—-dedicated-comment-endpoint.md)
 - [minor-kanbn-d-ts-actions-option-type-is-overly-specific](tasks/minor-kanbn-d-ts-actions-option-type-is-overly-specific.md)
+- [minor-kanbn-create-task-sub-task-schema-has-confusing-triple-alias-text-name-description](tasks/minor-kanbn-create-task-sub-task-schema-has-confusing-triple-alias-text-name-description.md)
 
 ## Blocked

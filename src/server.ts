@@ -203,6 +203,8 @@ export function buildTaskDataFromArgs(args: Record<string, any>): Record<string,
             if (typeof sub === "string") {
                 return { text: sub, completed: false };
             }
+            // text is the primary field; name and description are deprecated aliases kept for
+            // backwards compatibility. Precedence: text ?? name ?? description.
             return {
                 text: String(sub?.text ?? sub?.name ?? sub?.description ?? ""),
                 completed: Boolean(sub?.completed),
@@ -1313,9 +1315,9 @@ export const TOOLS: Tool[] = [
                     items: {
                         type: "object",
                         properties: {
-                            text: { type: "string", description: "Sub-task text" },
-                            name: { type: "string", description: "Alias for text" },
-                            description: { type: "string", description: "Alias for text" },
+                            text: { type: "string", description: "Sub-task text (primary field)" },
+                            name: { type: "string", description: "Deprecated alias for text; ignored when text is set" },
+                            description: { type: "string", description: "Deprecated alias for text; ignored when text or name is set" },
                             completed: { type: "boolean", description: "Whether the sub-task is completed" },
                         },
                     },
@@ -1422,9 +1424,9 @@ export const TOOLS: Tool[] = [
                     items: {
                         type: "object",
                         properties: {
-                            text: { type: "string", description: "Sub-task text" },
-                            name: { type: "string", description: "Alias for text" },
-                            description: { type: "string", description: "Alias for text" },
+                            text: { type: "string", description: "Sub-task text (primary field)" },
+                            name: { type: "string", description: "Deprecated alias for text; ignored when text is set" },
+                            description: { type: "string", description: "Deprecated alias for text; ignored when text or name is set" },
                             completed: { type: "boolean", description: "Whether the sub-task is completed" },
                         },
                     },

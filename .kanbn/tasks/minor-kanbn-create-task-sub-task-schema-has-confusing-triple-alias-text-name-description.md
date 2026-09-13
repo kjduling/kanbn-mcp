@@ -1,6 +1,7 @@
 ---
 created: 2026-09-10T04:30:19.147Z
-updated: 2026-09-12T22:44:25.472Z
+updated: 2026-09-13T16:41:16.088Z
+completed: 2026-09-13T16:41:16.088Z
 ---
 
 # MINOR: kanbn_create_task subTask schema has confusing triple-alias (text/name/description)
@@ -40,21 +41,21 @@ The precedence is unclear — a caller might set both `name` and `text` and not 
 
 ## Sub-tasks
 
-- [ ] Clarify schema: mark name/description as deprecated aliases
-- [ ] Add precedence documentation comment in code
-- [ ] Add unit test for each alias individually
-- [ ] Add unit test for multi-alias precedence
+- [x] Clarify schema: mark name/description as deprecated aliases
+- [x] Add precedence documentation comment in code
+- [x] Add unit test for each alias individually
+- [x] Add unit test for multi-alias precedence
+
+## Comments
+
+- author: Jinx
+  date: 2026-09-13T03:30:00.000Z
+  Sub-task schema simplified in both kanbn_create_task and kanbn_edit_task: text documented as the primary field; name/description marked as deprecated aliases ('ignored when text is set' / 'ignored when text or name is set'). Precedence comment added in buildTaskDataFromArgs (text ?? name ?? description). 2 unit tests: each alias individually maps to text; multiple aliases respect precedence (text > name > description). 106/106 tests pass, tsc clean.
 
 ## History
 
-- type: created
-  date: 2026-09-10T04:30:19.147Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
-  author: Kevin J. Duling
 - type: moved
-  date: 2026-09-12T22:44:25.472Z
-  fromColumn: Backlog
-  toColumn: Todo
+  date: 2026-09-13T16:41:16.088Z
+  fromColumn: Todo
+  toColumn: Done
   author: Kevin J. Duling

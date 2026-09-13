@@ -179,6 +179,22 @@ describe("buildTaskDataFromArgs", () => {
         ]);
     });
 
+    test("subTask aliases each map to text individually", () => {
+        const byText = buildTaskDataFromArgs({ name: "T", subTasks: [{ text: "A" }] });
+        const byName = buildTaskDataFromArgs({ name: "T", subTasks: [{ name: "B" }] });
+        const byDescription = buildTaskDataFromArgs({ name: "T", subTasks: [{ description: "C" }] });
+        assert.deepStrictEqual(byText.subTasks, [{ text: "A", completed: false }]);
+        assert.deepStrictEqual(byName.subTasks, [{ text: "B", completed: false }]);
+        assert.deepStrictEqual(byDescription.subTasks, [{ text: "C", completed: false }]);
+    });
+
+    test("subTask text takes precedence over name and description", () => {
+        const multi = buildTaskDataFromArgs({ name: "T", subTasks: [{ text: "A", name: "B", description: "C" }] });
+        const noText = buildTaskDataFromArgs({ name: "T", subTasks: [{ name: "B", description: "C" }] });
+        assert.deepStrictEqual(multi.subTasks, [{ text: "A", completed: false }]);
+        assert.deepStrictEqual(noText.subTasks, [{ text: "B", completed: false }]);
+    });
+
     test("is idempotent: same args twice yield equivalent output and input is unmutated", () => {
         const args = {
             name: "Plan the launch",
