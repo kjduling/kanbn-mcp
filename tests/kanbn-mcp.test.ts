@@ -299,6 +299,76 @@ describe("kanbn_status", () => {
             rmSync(dir, { recursive: true, force: true });
         }
     });
+
+    test("truncates oversized responses down to the configured size limit", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Size Limited Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Alpha",
+                description: "x".repeat(2000),
+            });
+
+            const previous = process.env.KANBN_MAX_RESPONSE_SIZE;
+            process.env.KANBN_MAX_RESPONSE_SIZE = "120";
+            try {
+                const result = await handleToolCall("kanbn_status", { path: dir });
+                const text = result.content[0].text;
+                assert.ok(Buffer.byteLength(text) <= 120, `response (${Buffer.byteLength(text)} bytes) exceeds the size limit`);
+                assert.match(text, /kanbn_status response truncated: exceeds size limit/);
+            } finally {
+                if (previous === undefined) {
+                    delete process.env.KANBN_MAX_RESPONSE_SIZE;
+                } else {
+                    process.env.KANBN_MAX_RESPONSE_SIZE = previous;
+                }
+            }
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("returns compact JSON rather than truncating when the compact form fits", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Compact Board",
+                columns: ["Backlog"],
+            });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Alpha",
+                description: "x".repeat(4000),
+            });
+
+            const previous = process.env.KANBN_MAX_RESPONSE_SIZE;
+            process.env.KANBN_MAX_RESPONSE_SIZE = "900";
+            try {
+                const result = await handleToolCall("kanbn_status", { path: dir });
+                const text = result.content[0].text;
+                assert.ok(Buffer.byteLength(text) <= 900, `response (${Buffer.byteLength(text)} bytes) exceeds the size limit`);
+                assert.doesNotMatch(text, /kanbn_status response truncated/);
+                const parsed = JSON.parse(text);
+                assert.ok(parsed.columns.Backlog.includes("alpha"));
+            } finally {
+                if (previous === undefined) {
+                    delete process.env.KANBN_MAX_RESPONSE_SIZE;
+                } else {
+                    process.env.KANBN_MAX_RESPONSE_SIZE = previous;
+                }
+            }
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
 });
 
 describe("board lifecycle commands", () => {

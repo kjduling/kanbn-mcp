@@ -320,6 +320,48 @@ export async function isBoardInitialized(instance: any, boardPath: string): Prom
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
+const DEFAULT_MAX_RESPONSE_SIZE = 100 * 1024;
+const TRUNCATED_RESPONSE_MARKER = "[kanbn_status response truncated: exceeds size limit]";
+
+/**
+ * Get the maximum response size (in bytes) for kanbn_status output, from the KANBN_MAX_RESPONSE_SIZE
+ * environment variable, or the default of 100KB when unset or invalid.
+ * @return {number} The maximum response size in bytes
+ */
+export function getMaxResponseSize(): number {
+    const parsed = parseInt(process.env.KANBN_MAX_RESPONSE_SIZE ?? "", 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed;
+    }
+    return DEFAULT_MAX_RESPONSE_SIZE;
+}
+
+/**
+ * Truncate a string to a maximum byte size, appending a marker that indicates the response was truncated.
+ * The cut is made at a character boundary so multi-byte characters are never split.
+ * @param {string} text The text to truncate
+ * @param {number} maxBytes The maximum byte size
+ * @return {string} The truncated text with the truncation marker appended
+ */
+export function truncateResponse(text: string, maxBytes: number): string {
+    const markerBytes = Buffer.byteLength(TRUNCATED_RESPONSE_MARKER);
+    const budget = maxBytes - markerBytes;
+    if (budget <= 0) {
+        return TRUNCATED_RESPONSE_MARKER;
+    }
+    let low = 0;
+    let high = text.length;
+    while (low < high) {
+        const mid = Math.ceil((low + high) / 2);
+        if (Buffer.byteLength(text.slice(0, mid)) <= budget) {
+            low = mid;
+        } else {
+            high = mid - 1;
+        }
+    }
+    return text.slice(0, low) + TRUNCATED_RESPONSE_MARKER;
+}
+
 export async function handleKanbnStatus(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -331,8 +373,16 @@ export async function handleKanbnStatus(args: Record<string, any>): Promise<{ co
     }
     const getIndexFn = instance.getIndex || instance.index || instance.loadIndex;
     const index = typeof getIndexFn === "function" ? await getIndexFn.call(instance) : {};
+    const maxSize = getMaxResponseSize();
+    let serialized = JSON.stringify(index, null, 2);
+    if (Buffer.byteLength(serialized) > maxSize) {
+        serialized = JSON.stringify(index);
+        if (Buffer.byteLength(serialized) > maxSize) {
+            serialized = truncateResponse(serialized, maxSize);
+        }
+    }
     return {
-        content: [{ type: "text", text: JSON.stringify(index, null, 2) }],
+        content: [{ type: "text", text: serialized }],
     };
 }
 
@@ -1802,7 +1852,7 @@ export async function handleKanbnLoadArchivedTask(args: Record<string, any>): Pr
 export const TOOLS: Tool[] = [
     {
         name: "kanbn_status",
-        description: "Check the current status of the Kanbn board (board detection checks the methods: initialised, initialized, isInitialized, isInitialised).",
+        description: "Check the current status of the Kanbn board (board detection checks the methods: initialised, initialized, isInitialized, isInitialised). The response is capped at 100KB by default (configurable via the KANBN_MAX_RESPONSE_SIZE environment variable, in bytes): oversized output automatically falls back to compact JSON, then is truncated with a truncation marker.",
         inputSchema: {
             type: "object",
             properties: {

@@ -1,6 +1,7 @@
 ---
 created: 2026-09-07T18:00:58.160Z
-updated: 2026-09-13T17:02:50.881Z
+updated: 2026-09-13T20:22:27.950Z
+completed: 2026-09-13T20:22:27.950Z
 ---
 
 # Add size limit to kanbn_status response
@@ -24,20 +25,20 @@ No size limit, no pagination. A board with hundreds of tasks could return megaby
 
 ## Sub-tasks
 
-- [ ] undefined
-- [ ] undefined
-- [ ] Create a unit test to verify
+- [x] Add a configurable max response size limit (KANBN_MAX_RESPONSE_SIZE, default 100KB)
+- [x] Truncate oversized kanbn_status output with a truncation marker
+- [x] Create a unit test to verify
+
+## Comments
+
+- author: Jinx
+  date: 2026-09-13T21:15:00.000Z
+  kanbn_status now caps its response at 100KB by default, configurable via KANBN_MAX_RESPONSE_SIZE (bytes, read per call). Output that exceeds the limit first falls back to compact JSON; if that still exceeds the limit it is truncated at a UTF-8-safe character boundary (binary search on byte length) and ends with marker '[kanbn_status response truncated: exceeds size limit]'. Added getMaxResponseSize() and truncateResponse() helpers, and documented the limit + env var in the tool description. 2 tests (162 → 164): truncation under a tiny 120-byte limit (marker present, byte length <= limit) and compact-JSON fallback that stays parseable under 900 bytes. 164/164 tests pass, tsc clean.
 
 ## History
 
-- type: created
-  date: 2026-09-07T18:00:58.160Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
-  author: Kevin J. Duling
 - type: moved
-  date: 2026-09-13T17:02:50.881Z
-  fromColumn: Backlog
-  toColumn: Todo
+  date: 2026-09-13T20:22:27.950Z
+  fromColumn: Todo
+  toColumn: Done
   author: Kevin J. Duling
