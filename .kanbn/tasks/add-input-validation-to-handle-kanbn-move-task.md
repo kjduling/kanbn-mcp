@@ -1,6 +1,6 @@
 ---
 created: 2026-09-07T18:00:58.125Z
-updated: 2026-09-11T21:14:49.559Z
+updated: 2026-09-13T17:02:53.774Z
 ---
 
 # Add input validation to handleKanbnMoveTask
@@ -35,4 +35,9 @@ No check that `taskId` is non-empty or that `targetColumn` exists. The underlyin
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-13T17:02:53.774Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling

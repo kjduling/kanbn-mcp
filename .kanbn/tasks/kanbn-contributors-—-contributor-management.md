@@ -1,5 +1,6 @@
 ---
 created: 2026-09-12T05:05:58.284Z
+updated: 2026-09-13T17:03:03.096Z
 ---
 
 # kanbn-contributors — contributor management
@@ -36,4 +37,9 @@ Acceptance criteria:
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-13T17:03:03.096Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling

@@ -1,5 +1,6 @@
 ---
 created: 2026-09-12T05:00:08.848Z
+updated: 2026-09-13T17:02:55.096Z
 ---
 
 # kanbn-task-search — search tasks with filters
@@ -27,4 +28,9 @@ Acceptance criteria:
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-13T17:02:55.096Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling

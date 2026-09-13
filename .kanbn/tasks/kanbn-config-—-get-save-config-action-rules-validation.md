@@ -1,5 +1,6 @@
 ---
 created: 2026-09-12T05:07:35.653Z
+updated: 2026-09-13T17:03:00.309Z
 ---
 
 # kanbn-config — get/save config, action rules, validation
@@ -43,4 +44,9 @@ Acceptance criteria:
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-13T17:03:00.309Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling

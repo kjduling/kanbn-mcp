@@ -1,5 +1,6 @@
 ---
 created: 2026-09-12T05:03:07.946Z
+updated: 2026-09-13T17:02:57.842Z
 ---
 
 # kanbn-sprints — start and manage sprints
@@ -25,4 +26,9 @@ Acceptance criteria:
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-13T17:02:57.842Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling

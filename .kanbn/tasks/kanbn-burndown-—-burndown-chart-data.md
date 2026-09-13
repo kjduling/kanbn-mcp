@@ -1,5 +1,6 @@
 ---
 created: 2026-09-12T05:03:54.253Z
+updated: 2026-09-13T17:03:04.409Z
 ---
 
 # kanbn-burndown — burndown chart data
@@ -26,4 +27,9 @@ Acceptance criteria:
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-13T17:03:04.409Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling

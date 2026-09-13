@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import test, { describe } from "node:test";
+import test, { describe, mock } from "node:test";
 
-import { buildTaskDataFromArgs, enqueueKanbnOperation, getArchiveMethod, getKanbnInstance, handleKanbnInitBoard, handleToolCall, isMainEntry, listTools, resetOperationQueue } from "../src/server";
+import { buildTaskDataFromArgs, enqueueKanbnOperation, getArchiveMethod, getKanbnInstance, handleKanbnInitBoard, handleToolCall, isBoardInitialized, isMainEntry, listTools, registerInitializedMethod, resetOperationQueue } from "../src/server";
 
 const KanbnClass = require("@basementuniverse/kanbn/src/main.js")?.Kanbn;
 
@@ -342,6 +342,67 @@ describe("board lifecycle commands", () => {
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }
+    });
+});
+
+describe("isBoardInitialized", () => {
+    test("detects a recognized initialised method without warnings", async () => {
+        const warnMock = mock.method(console, "warn", () => {});
+        try {
+            const instance = { initialised: () => true };
+            assert.equal(await isBoardInitialized(instance, "/tmp/board"), true);
+        } finally {
+            warnMock.mock.restore();
+        }
+        assert.equal(warnMock.mock.callCount(), 0);
+    });
+
+    test("recognizes false from a variant method name", async () => {
+        const instance = { isInitialized: () => false };
+        assert.equal(await isBoardInitialized(instance, "/tmp/board"), false);
+    });
+
+    test("retries the initialized check with boardPath after a no-arg throw", async () => {
+        const instance = {
+            isInitialised: (boardPath?: string) => {
+                if (boardPath === undefined) {
+                    throw new Error("Board path required");
+                }
+                return true;
+            },
+        };
+        assert.equal(await isBoardInitialized(instance, "/tmp/board"), true);
+    });
+
+    test("falls back to a lookalike initialized method", async () => {
+        const instance = { boardinitialized: () => true };
+        assert.equal(await isBoardInitialized(instance, "/tmp/board"), true);
+    });
+
+    test("returns false and warns when no method is found", async () => {
+        const warnMock = mock.method(console, "warn", () => {});
+        try {
+            assert.equal(await isBoardInitialized({}, "/tmp/board"), false);
+        } finally {
+            warnMock.mock.restore();
+        }
+        assert.equal(warnMock.mock.callCount(), 1);
+        assert.match(
+            String(warnMock.mock.calls[0]?.arguments?.[0] ?? ""),
+            /No recognized initialised-check method/
+        );
+    });
+
+    test("detects a registered custom method name", async () => {
+        const warnMock = mock.method(console, "warn", () => {});
+        registerInitializedMethod("myCheck");
+        try {
+            const instance = { myCheck: () => true };
+            assert.equal(await isBoardInitialized(instance, "/tmp/board"), true);
+        } finally {
+            warnMock.mock.restore();
+        }
+        assert.equal(warnMock.mock.callCount(), 0);
     });
 });
 

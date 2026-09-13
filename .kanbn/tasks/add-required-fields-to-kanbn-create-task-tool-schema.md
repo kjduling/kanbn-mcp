@@ -1,6 +1,6 @@
 ---
 created: 2026-09-07T18:00:58.224Z
-updated: 2026-09-10T04:58:18.783Z
+updated: 2026-09-13T17:02:52.061Z
 ---
 
 # Add required fields to kanbn_create_task tool schema
@@ -25,4 +25,9 @@ Without `required` fields, LLM callers may omit essential parameters and produce
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-13T17:02:52.061Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling

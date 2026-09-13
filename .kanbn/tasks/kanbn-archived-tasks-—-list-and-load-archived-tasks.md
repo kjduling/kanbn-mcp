@@ -1,5 +1,6 @@
 ---
 created: 2026-09-12T05:04:44.022Z
+updated: 2026-09-13T17:02:59.127Z
 ---
 
 # kanbn-archived-tasks — list and load archived tasks
@@ -28,4 +29,9 @@ Acceptance criteria:
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-13T17:02:59.127Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling

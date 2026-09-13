@@ -218,23 +218,82 @@ export function buildTaskDataFromArgs(args: Record<string, any>): Record<string,
     return taskData;
 }
 
+const KNOWN_INITIALIZED_METHODS: readonly string[] = [
+    "initialised",
+    "initialized",
+    "isInitialized",
+    "isInitialised",
+];
+
+const customInitializedMethods = new Set<string>();
+
+/**
+ * Register an additional method name that isBoardInitialized should treat as a board-initialised check.
+ * @param {string} methodName Method name on the Kanbn instance
+ * @returns {void}
+ */
+export function registerInitializedMethod(methodName: string): void {
+    customInitializedMethods.add(methodName);
+}
+
 /**
  * Check whether the board at boardPath is already initialized.
+ *
+ * Detection order: known method names (initialised, initialized, isInitialized,
+ * isInitialised) plus any registered custom names, then any function property that
+ * looks like an initialised check (name ends in "initialized"/"initialised").
+ * Writes a console.warn when nothing matches, instead of silently returning false.
+ *
  * @param {any} instance A Kanbn instance
  * @param {string} boardPath Path to the project root directory
  * @returns {Promise<boolean>} True when the board is initialized
  */
-async function isBoardInitialized(instance: any, boardPath: string): Promise<boolean> {
+export async function isBoardInitialized(instance: any, boardPath: string): Promise<boolean> {
     if (!instance) return false;
-    const fn = instance.initialised || instance.initialized || instance.isInitialized || instance.isInitialised;
-    if (typeof fn === "function") {
-        try {
-            return await fn.call(instance);
-        } catch {
-            try {
-                return await fn.call(instance, boardPath);
-            } catch { }
+
+    const candidates = Array.from(new Set([
+        ...KNOWN_INITIALIZED_METHODS,
+        ...customInitializedMethods,
+    ]));
+
+    let fn: unknown = null;
+    for (const name of candidates) {
+        if (typeof instance[name] === "function") {
+            fn = instance[name];
+            break;
         }
+    }
+
+    // Fallback: any function property that looks like a board-initialised check.
+    // Looks for names ending in "initialized" or "initialised", which deliberately
+    // excludes the initialize/initialise setup methods.
+    if (fn === null) {
+        try {
+            const lookalike = Object.keys(instance).find(
+                (key) =>
+                    typeof instance[key] === "function" &&
+                    /initiali[sz]ed$/i.test(key)
+            );
+            if (lookalike) {
+                fn = instance[lookalike];
+            }
+        } catch { }
+    }
+
+    if (fn === null) {
+        console.warn(
+            `[isBoardInitialized] No recognized initialised-check method found on Kanbn instance for: ${boardPath} (tried: ${candidates.join(", ")})`
+        );
+        return false;
+    }
+
+    const checkFn = fn as (...args: any[]) => Promise<boolean> | boolean;
+    try {
+        return await checkFn.call(instance);
+    } catch {
+        try {
+            return await checkFn.call(instance, boardPath);
+        } catch { }
     }
     return false;
 }
@@ -1263,7 +1322,7 @@ export async function handleKanbnComment(args: Record<string, any>): Promise<{ c
 export const TOOLS: Tool[] = [
     {
         name: "kanbn_status",
-        description: "Check the current status of the Kanbn board.",
+        description: "Check the current status of the Kanbn board (board detection checks the methods: initialised, initialized, isInitialized, isInitialised).",
         inputSchema: {
             type: "object",
             properties: {
@@ -1300,7 +1359,7 @@ export const TOOLS: Tool[] = [
     },
     {
         name: "kanbn_ensure_board",
-        description: "Ensure a Kanbn board exists, initializing one if absent.",
+        description: "Ensure a Kanbn board exists, initializing one if absent (board detection checks the methods: initialised, initialized, isInitialized, isInitialised).",
         inputSchema: {
             type: "object",
             properties: {

@@ -1,6 +1,7 @@
 ---
 created: 2026-09-07T18:00:58.192Z
-updated: 2026-09-07T18:32:46.667Z
+updated: 2026-09-13T18:26:10.173Z
+completed: 2026-09-13T18:26:10.173Z
 ---
 
 # Improve isBoardInitialized method detection
@@ -21,15 +22,18 @@ If none of these methods match, it returns `false` without logging or warning. T
 
 ## Sub-tasks
 
-- [ ] undefined
-- [ ] undefined
-- [ ] Create a unit test to verify
+- [x] Create a unit test to verify
+
+## Comments
+
+- author: Jinx
+  date: 2026-09-13T05:15:00.000Z
+  isBoardInitialized no longer fails silently on method-name mismatch. Detection order: known names (initialised, initialized, isInitialized, isInitialised) + registered custom names, then a regex fallback (function property ending in 'initialized'/'initialised'). console.warn emitted when nothing matches instead of returning false undetected. Exported registerInitializedMethod() API for custom method names. JSDoc on isBoardInitialized documents the expected method names; kanbn_status and kanbn_ensure_board TOOLS descriptions updated. 6 unit tests: recognized variant without warn; false returned from variant; no-arg throw retried with boardPath; lookalike fallback; no-method returns false with one warn; registered custom name detected. 117/117 pass, tsc clean.
 
 ## History
 
-- type: created
-  date: 2026-09-07T18:00:58.192Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
+- type: moved
+  date: 2026-09-13T18:26:10.173Z
+  fromColumn: Todo
+  toColumn: Done
   author: Kevin J. Duling

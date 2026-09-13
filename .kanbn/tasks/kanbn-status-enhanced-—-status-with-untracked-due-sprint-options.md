@@ -1,5 +1,6 @@
 ---
 created: 2026-09-12T05:01:41.427Z
+updated: 2026-09-13T17:02:56.426Z
 ---
 
 # kanbn-status-enhanced — status with untracked/due/sprint options
@@ -29,4 +30,9 @@ Acceptance criteria:
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-13T17:02:56.426Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling

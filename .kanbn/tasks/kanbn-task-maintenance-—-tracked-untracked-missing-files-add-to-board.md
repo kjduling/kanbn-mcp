@@ -1,5 +1,6 @@
 ---
 created: 2026-09-12T05:12:09.049Z
+updated: 2026-09-13T17:03:01.826Z
 ---
 
 # kanbn-task-maintenance — tracked/untracked, missing files, add to board
@@ -50,4 +51,9 @@ Acceptance criteria:
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-13T17:03:01.826Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling
