@@ -1,6 +1,7 @@
 ---
 created: 2026-09-10T04:37:04.433Z
-updated: 2026-09-12T22:44:32.529Z
+updated: 2026-09-13T16:45:21.397Z
+completed: 2026-09-13T16:45:21.397Z
 ---
 
 # MINOR: kanbn_initialize_board is a redundant duplicate of kanbn_init_board
@@ -29,20 +30,20 @@ It exists as an alias for MCP client convenience, but it inflates the tool list 
 
 ## Sub-tasks
 
-- [ ] Add comment to alias schema explaining MCP client compatibility purpose
-- [ ] Or remove alias and document canonical tool name
-- [ ] Verify remaining canonical tool works in unit test
+- [x] Add comment to alias schema explaining MCP client compatibility purpose
+- [x] Or remove alias and document canonical tool name
+- [x] Verify remaining canonical tool works in unit test
+
+## Comments
+
+- author: Jinx
+  date: 2026-09-13T04:00:00.000Z
+  Decision: KEEP the alias (removing a public MCP tool would break clients that registered kanbn_initialize_board). Added a schema comment marking it a deliberate alias for kanbn_init_board (canonical) for MCP client compatibility, noting to keep entry/dispatch/handler in sync; dispatch case annotated too. New parity test: kanbn_initialize_board initializes a board identically to kanbn_init_board (existing canonical test still passes). 107/107 tests pass, tsc clean.
 
 ## History
 
-- type: created
-  date: 2026-09-10T04:37:04.433Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
-  author: Kevin J. Duling
 - type: moved
-  date: 2026-09-12T22:44:32.529Z
-  fromColumn: Backlog
-  toColumn: Todo
+  date: 2026-09-13T16:45:21.397Z
+  fromColumn: Todo
+  toColumn: Done
   author: Kevin J. Duling

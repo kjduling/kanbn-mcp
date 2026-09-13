@@ -288,6 +288,26 @@ describe("board lifecycle commands", () => {
         }
     });
 
+    test("kanbn_initialize_board alias initializes like kanbn_init_board", async () => {
+        const dir = makeTempDir();
+
+        try {
+            const result = await handleToolCall("kanbn_initialize_board", {
+                path: dir,
+                name: "Alias Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            assert.match(result.content[0].text, /Initialized Kanbn board/i);
+
+            const status = await handleToolCall("kanbn_status", { path: dir });
+            assert.match(status.content[0].text, /Backlog/i);
+            assert.match(status.content[0].text, /Done/i);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
     test("kanbn_ensure_board initializes a missing board", async () => {
         const dir = makeTempDir();
 

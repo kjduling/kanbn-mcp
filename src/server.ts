@@ -1276,6 +1276,9 @@ export const TOOLS: Tool[] = [
         },
     },
     {
+        // Deliberate alias for kanbn_init_board, kept for MCP client compatibility: some clients
+        // registered this tool name and removing it would break them. kanbn_init_board is canonical;
+        // keep this entry, its dispatch case and the shared handler in sync with it.
         name: "kanbn_initialize_board",
         description: "Alias for kanbn_init_board.",
         inputSchema: {
@@ -1751,7 +1754,7 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
             case "kanbn_status":
                 return handleKanbnStatus(args);
             case "kanbn_init_board":
-            case "kanbn_initialize_board":
+            case "kanbn_initialize_board": // alias for kanbn_init_board (MCP client compatibility)
                 return handleKanbnInitBoard(args);
             case "kanbn_ensure_board":
                 return handleKanbnEnsureBoard(args);
