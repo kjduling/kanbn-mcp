@@ -31,6 +31,23 @@ export function getKanbnInstance(boardPath: string): any {
     return null;
 }
 
+/**
+ * Load the board index from a Kanbn instance, or an empty object if the instance has no loader.
+ * @param {any} instance A Kanbn instance
+ * @returns {Promise<any>} The parsed index object
+ */
+async function getBoardIndex(instance: any): Promise<any> {
+    const getIndexFn = instance.getIndex || instance.index || instance.loadIndex;
+    if (typeof getIndexFn !== "function") {
+        return {};
+    }
+    try {
+        return await getIndexFn.call(instance);
+    } catch (error) {
+        throw new Error(`Failed to load board index: ${(error as Error).message}`);
+    }
+}
+
 export const { version } = require("../package.json");
 
 const server = new Server(
@@ -1319,6 +1336,167 @@ export async function handleKanbnComment(args: Record<string, any>): Promise<{ c
     };
 }
 
+/**
+ * Handle the "kanbn_get_config" MCP tool call: return the board config or null.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnGetConfig(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    const config = await instance.getConfig();
+    return {
+        content: [{ type: "text", text: config === null || config === undefined ? "No config file found" : JSON.stringify(config, null, 2) }],
+    };
+}
+
+/**
+ * Handle the "kanbn_save_config" MCP tool call: persist the board config.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnSaveConfig(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    if (typeof instance.saveConfig !== "function") {
+        throw new TypeError(`No saveConfig method found on Kanbn instance`);
+    }
+    const config = args.config;
+    if (config === null || typeof config !== "object" || Array.isArray(config)) {
+        throw new Error(`Missing required parameter: config`);
+    }
+    await instance.saveConfig(config);
+    return {
+        content: [{ type: "text", text: `Config saved successfully` }],
+    };
+}
+
+/**
+ * Handle the "kanbn_get_action_rules" MCP tool call: return the board's resolved action rules.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnGetActionRules(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    if (!(await isBoardInitialized(instance, boardPath))) {
+        throw new Error(`No Kanbn board found at: ${boardPath}`);
+    }
+    const index = await getBoardIndex(instance);
+    const rules = await instance.getActionRules(index);
+    return {
+        content: [{ type: "text", text: JSON.stringify(rules, null, 2) }],
+    };
+}
+
+/**
+ * Handle the "kanbn_find_action_warnings" MCP tool call: return potential issues with the action rules.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnFindActionWarnings(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    if (!(await isBoardInitialized(instance, boardPath))) {
+        throw new Error(`No Kanbn board found at: ${boardPath}`);
+    }
+    const warnings = await instance.findActionWarnings();
+    return {
+        content: [{ type: "text", text: JSON.stringify(warnings, null, 2) }],
+    };
+}
+
+/**
+ * Handle the "kanbn_get_date_format" MCP tool call: return the board's date format string.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnGetDateFormat(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    if (!(await isBoardInitialized(instance, boardPath))) {
+        throw new Error(`No Kanbn board found at: ${boardPath}`);
+    }
+    const index = await getBoardIndex(instance);
+    return {
+        content: [{ type: "text", text: instance.getDateFormat(index) }],
+    };
+}
+
+/**
+ * Handle the "kanbn_get_task_template" MCP tool call: return the board's task template string.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnGetTaskTemplate(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    if (!(await isBoardInitialized(instance, boardPath))) {
+        throw new Error(`No Kanbn board found at: ${boardPath}`);
+    }
+    const index = await getBoardIndex(instance);
+    return {
+        content: [{ type: "text", text: instance.getTaskTemplate(index) }],
+    };
+}
+
+/**
+ * Handle the "kanbn_get_workspace_options" MCP tool call: return workspace-scoped options.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnGetWorkspaceOptions(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    const options = await instance.getWorkspaceOptions();
+    return {
+        content: [{ type: "text", text: JSON.stringify(options, null, 2) }],
+    };
+}
+
+/**
+ * Handle the "kanbn_validate_board" MCP tool call: validate the board, returning true or parsing errors.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnValidateBoard(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    if (!(await isBoardInitialized(instance, boardPath))) {
+        throw new Error(`No Kanbn board found at: ${boardPath}`);
+    }
+    const save = args.save === true;
+    const result = await instance.validate(save);
+    const text = result === true ? "Board is valid" : JSON.stringify(result, null, 2);
+    return {
+        content: [{ type: "text", text }],
+    };
+}
+
 export const TOOLS: Tool[] = [
     {
         name: "kanbn_status",
@@ -1799,6 +1977,89 @@ export const TOOLS: Tool[] = [
             required: ["taskId", "text"],
         },
     },
+    {
+        name: "kanbn_get_config",
+        description: "Get the Kanbn config, or null if no separate config file exists.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_save_config",
+        description: "Save the Kanbn config to a config file.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                config: { type: "object", description: "Kanbn config object to persist" },
+            },
+            required: ["config"],
+        },
+    },
+    {
+        name: "kanbn_get_action_rules",
+        description: "Get the resolved action rules for the board.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_find_action_warnings",
+        description: "Get potential issues with the board's action rules.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_get_date_format",
+        description: "Get the board's date format string.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_get_task_template",
+        description: "Get the board's task template string.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_get_workspace_options",
+        description: "Get workspace-scoped Kanbn options.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_validate_board",
+        description: "Validate the board and return true or a list of parsing errors.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                save: { type: "boolean", description: "Re-save files while validating (default: false)" },
+            },
+        },
+    },
 ];
 
 /**
@@ -1882,6 +2143,22 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
                 return handleKanbnSortColumn(args);
             case "kanbn_comment":
                 return handleKanbnComment(args);
+            case "kanbn_get_config":
+                return handleKanbnGetConfig(args);
+            case "kanbn_save_config":
+                return handleKanbnSaveConfig(args);
+            case "kanbn_get_action_rules":
+                return handleKanbnGetActionRules(args);
+            case "kanbn_find_action_warnings":
+                return handleKanbnFindActionWarnings(args);
+            case "kanbn_get_date_format":
+                return handleKanbnGetDateFormat(args);
+            case "kanbn_get_task_template":
+                return handleKanbnGetTaskTemplate(args);
+            case "kanbn_get_workspace_options":
+                return handleKanbnGetWorkspaceOptions(args);
+            case "kanbn_validate_board":
+                return handleKanbnValidateBoard(args);
             default:
                 throw new Error(`Unknown tool requested: ${name}`);
         }
@@ -1936,7 +2213,10 @@ TOOLS
   kanbn_list_boards, kanbn_boards_summary, kanbn_board_exists,
   kanbn_reserved_board_slugs, kanbn_validate_board_slug,
   kanbn_find_orphaned_tasks, kanbn_cross_board_tasks, kanbn_tasks_on_other_boards,
-  kanbn_sort_column, kanbn_comment
+  kanbn_sort_column, kanbn_comment,
+  kanbn_get_config, kanbn_save_config, kanbn_get_action_rules,
+  kanbn_find_action_warnings, kanbn_get_date_format, kanbn_get_task_template,
+  kanbn_get_workspace_options, kanbn_validate_board
 
 MCP CLIENT CONFIGURATION
 

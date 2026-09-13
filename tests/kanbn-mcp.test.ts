@@ -94,6 +94,14 @@ describe("MCP tool listing", () => {
             "kanbn_tasks_on_other_boards",
             "kanbn_sort_column",
             "kanbn_comment",
+            "kanbn_get_config",
+            "kanbn_save_config",
+            "kanbn_get_action_rules",
+            "kanbn_find_action_warnings",
+            "kanbn_get_date_format",
+            "kanbn_get_task_template",
+            "kanbn_get_workspace_options",
+            "kanbn_validate_board",
         ]);
     });
 });
@@ -403,6 +411,202 @@ describe("isBoardInitialized", () => {
             warnMock.mock.restore();
         }
         assert.equal(warnMock.mock.callCount(), 0);
+    });
+});
+
+describe("kanbn config tools", () => {
+    test("kanbn_get_config returns null when no config file exists", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Config Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const result = await handleToolCall("kanbn_get_config", { path: dir });
+            assert.equal(result.content[0].text, "No config file found");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_save_config persists config and kanbn_get_config reads it back", async () => {
+        const dir = makeTempDir();
+
+        try {
+            const saved = await handleToolCall("kanbn_save_config", {
+                path: dir,
+                config: { dateFormat: "DD/MM/YYYY" },
+            });
+            assert.match(saved.content[0].text, /Config saved/i);
+
+            const read = await handleToolCall("kanbn_get_config", { path: dir });
+            assert.match(read.content[0].text, /DD\/MM\/YYYY/);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_save_config throws when config is missing", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await assert.rejects(
+                handleToolCall("kanbn_save_config", { path: dir }),
+                /Missing required parameter: config/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_get_action_rules returns an empty array when no rules are configured", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Rules Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const result = await handleToolCall("kanbn_get_action_rules", { path: dir });
+            assert.deepStrictEqual(JSON.parse(result.content[0].text), []);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_find_action_warnings returns an empty array on a clean board", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Warnings Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const result = await handleToolCall("kanbn_find_action_warnings", { path: dir });
+            assert.deepStrictEqual(JSON.parse(result.content[0].text), []);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_get_date_format returns a non-empty date format string", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Date Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const result = await handleToolCall("kanbn_get_date_format", { path: dir });
+            const format = result.content[0].text;
+            assert.equal(typeof format, "string");
+            assert.ok(format.length > 0);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_get_task_template returns a non-empty task template string", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Template Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const result = await handleToolCall("kanbn_get_task_template", { path: dir });
+            const template = result.content[0].text;
+            assert.equal(typeof template, "string");
+            assert.ok(template.length > 0);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_get_workspace_options returns an object", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Options Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const result = await handleToolCall("kanbn_get_workspace_options", { path: dir });
+            const options = JSON.parse(result.content[0].text);
+            assert.equal(typeof options, "object");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_validate_board reports a well-formed board as valid", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Valid Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Valid task",
+                column: "Backlog",
+            });
+
+            const result = await handleToolCall("kanbn_validate_board", { path: dir });
+            assert.equal(result.content[0].text, "Board is valid");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_validate_board reports parsing errors for a corrupt board", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Corrupt Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const fs = await import("node:fs");
+            fs.writeFileSync(path.join(dir, ".kanbn", "index.md"), "garbage: [unclosed\n");
+
+            const result = await handleToolCall("kanbn_validate_board", { path: dir });
+            assert.notEqual(result.content[0].text, "Board is valid");
+            const parsed = JSON.parse(result.content[0].text);
+            assert.ok(Array.isArray(parsed) && parsed.length >= 1);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_get_action_rules throws when no board exists", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await assert.rejects(
+                handleToolCall("kanbn_get_action_rules", { path: dir }),
+                /No Kanbn board found at:/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
     });
 });
 

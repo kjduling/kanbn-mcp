@@ -1,6 +1,8 @@
 ---
 created: 2026-09-12T05:07:35.653Z
-updated: 2026-09-13T17:03:00.309Z
+updated: 2026-09-13T18:56:03.329Z
+started: 2026-09-13T07:00:00.000Z
+completed: 2026-09-13T18:56:03.329Z
 ---
 
 # kanbn-config — get/save config, action rules, validation
@@ -26,27 +28,27 @@ Acceptance criteria:
 
 ## Sub-tasks
 
-- [ ] Implement `kanbn_get_config` tool
-- [ ] Implement `kanbn_save_config` tool with config param
-- [ ] Implement `kanbn_get_action_rules` tool
-- [ ] Implement `kanbn_find_action_warnings` tool
-- [ ] Implement `kanbn_get_date_format` tool
-- [ ] Implement `kanbn_get_task_template` tool
-- [ ] Implement `kanbn_get_workspace_options` tool
-- [ ] Implement `kanbn_validate_board` tool with optional save param
-- [ ] Unit tests — happy paths (get/save config, get rules, validate passing)
-- [ ] Unit tests — sad paths (invalid config, validation failures, no config file)
+- [x] Implement `kanbn_get_config` tool
+- [x] Implement `kanbn_save_config` tool with config param
+- [x] Implement `kanbn_get_action_rules` tool
+- [x] Implement `kanbn_find_action_warnings` tool
+- [x] Implement `kanbn_get_date_format` tool
+- [x] Implement `kanbn_get_task_template` tool
+- [x] Implement `kanbn_get_workspace_options` tool
+- [x] Implement `kanbn_validate_board` tool with optional save param
+- [x] Unit tests — happy paths (get/save config, get rules, validate passing)
+- [x] Unit tests — sad paths (invalid config, validation failures, no config file)
+
+## Comments
+
+- author: Jinx
+  date: 2026-09-13T05:45:00.000Z
+  All 8 config/validation tools implemented as thin wrappers over the kanbn lib: kanbn_get_config (returns config JSON or 'No config file found'), kanbn_save_config (requires config param), kanbn_get_action_rules (passes pre-loaded index to avoid double load), kanbn_find_action_warnings, kanbn_get_date_format, kanbn_get_task_template (sync, need getIndex first), kanbn_get_workspace_options, kanbn_validate_board (returns 'Board is valid' or parsing-error JSON; optional save param). Added shared getBoardIndex helper. Each tool has handler + TOOLS entry + dispatch case + HELP_TEXT + README row. 11 tests: happy paths (null config, save+read-back, empty rules, empty warnings, date format, task template, workspace options, valid board) and sad paths (missing config param, corrupt board parse errors, missing board). 128/128 tests pass, tsc clean.
 
 ## History
 
-- type: created
-  date: 2026-09-12T05:07:35.653Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
-  author: Kevin J. Duling
 - type: moved
-  date: 2026-09-13T17:03:00.309Z
-  fromColumn: Backlog
-  toColumn: Todo
+  date: 2026-09-13T18:56:03.329Z
+  fromColumn: Todo
+  toColumn: Done
   author: Kevin J. Duling

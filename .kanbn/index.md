@@ -15,7 +15,6 @@ completedColumns:
 - [kanbn-sprints-—-start-and-manage-sprints](tasks/kanbn-sprints-—-start-and-manage-sprints.md)
 - [kanbn-contributors-—-contributor-management](tasks/kanbn-contributors-—-contributor-management.md)
 - [kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board](tasks/kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board.md)
-- [kanbn-config-—-get-save-config-action-rules-validation](tasks/kanbn-config-—-get-save-config-action-rules-validation.md)
 - [kanbn-archived-tasks-—-list-and-load-archived-tasks](tasks/kanbn-archived-tasks-—-list-and-load-archived-tasks.md)
 - [kanbn-status-enhanced-—-status-with-untracked-due-sprint-options](tasks/kanbn-status-enhanced-—-status-with-untracked-due-sprint-options.md)
 - [add-size-limit-to-kanbn-status-response](tasks/add-size-limit-to-kanbn-status-response.md)
@@ -28,5 +27,6 @@ completedColumns:
 ## Done
 
 - [improve-is-board-initialized-method-detection](tasks/improve-is-board-initialized-method-detection.md)
+- [kanbn-config-—-get-save-config-action-rules-validation](tasks/kanbn-config-—-get-save-config-action-rules-validation.md)
 
 ## Blocked

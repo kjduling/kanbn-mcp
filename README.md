@@ -131,6 +131,14 @@ npm test
 | `kanbn_tasks_on_other_boards` | Map each task to other boards referencing it     |
 | `kanbn_sort_column` | Sort a board column (name/created/modified/due/assigned/progress) |
 | `kanbn_comment` | Add a comment to a task                         |
+| `kanbn_get_config` | Get the Kanbn config, or null if none exists     |
+| `kanbn_save_config` | Save the Kanbn config to a config file           |
+| `kanbn_get_action_rules` | Get the resolved action rules for the board   |
+| `kanbn_find_action_warnings` | Get potential issues with the action rules   |
+| `kanbn_get_date_format` | Get the board's date format string             |
+| `kanbn_get_task_template` | Get the board's task template string          |
+| `kanbn_get_workspace_options` | Get workspace-scoped Kanbn options          |
+| `kanbn_validate_board` | Validate the board (true or list of parsing errors) |
 
 ## Example task metadata supported
 
