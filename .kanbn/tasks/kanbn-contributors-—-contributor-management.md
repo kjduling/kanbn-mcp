@@ -1,6 +1,7 @@
 ---
 created: 2026-09-12T05:05:58.284Z
-updated: 2026-09-13T17:03:03.096Z
+updated: 2026-09-13T19:49:06.324Z
+completed: 2026-09-13T19:49:06.324Z
 ---
 
 # kanbn-contributors — contributor management
@@ -22,24 +23,25 @@ Acceptance criteria:
 
 ## Sub-tasks
 
-- [ ] Implement `kanbn_get_contributors` tool
-- [ ] Implement `kanbn_find_contributor` tool with value param
-- [ ] Implement `kanbn_current_user` tool
-- [ ] Implement `kanbn_contributor_usage` tool
-- [ ] Implement `kanbn_contributor_warnings` tool
-- [ ] Unit tests — happy paths (get, find, current user, usage, warnings)
-- [ ] Unit tests — sad paths (unknown value, no git config)
+- [x] Implement `kanbn_get_contributors` tool
+- [x] Implement `kanbn_find_contributor` tool with value param
+- [x] Implement `kanbn_current_user` tool
+- [x] Implement `kanbn_collect_contributor_values` tool
+- [x] Implement `kanbn_contributor_usage` tool
+- [x] Implement `kanbn_contributor_warnings` tool
+- [x] Unit tests — happy paths (get, find, current user, usage, warnings)
+- [x] Unit tests — sad paths (unknown value, no git config)
+
+## Comments
+
+- author: Jinx
+  date: 2026-09-13T06:15:00.000Z
+  All 6 contributor tools implemented as thin wrappers over the lib: kanbn_get_contributors (normalised list), kanbn_find_contributor (name/display/alias match, requires value), kanbn_current_user (KANBN_USER → git), kanbn_collect_contributor_values (Map/Set converted to plain object), kanbn_contributor_usage (spelling variants + unknown), kanbn_contributor_warnings (unknown-contributor warnings). Workspace-scoped tools skip the board init check; usage-family errors wrapped. TOOLS entries, dispatch cases, HELP_TEXT, README rows all added. 10 tests: normalised list, empty list, name/display/alias match, unknown null, missing value, KANBN_USER, collect keyed usage, usage spelling variants, warnings flag only unknown, uninitialised dir error. 146/146 tests pass, tsc clean.
 
 ## History
 
-- type: created
-  date: 2026-09-12T05:05:58.284Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
-  author: Kevin J. Duling
 - type: moved
-  date: 2026-09-13T17:03:03.096Z
-  fromColumn: Backlog
-  toColumn: Todo
+  date: 2026-09-13T19:49:06.324Z
+  fromColumn: Todo
+  toColumn: Done
   author: Kevin J. Duling

@@ -1566,6 +1566,128 @@ export async function handleKanbnSearch(args: Record<string, any>): Promise<{ co
     }
 }
 
+/**
+ * Handle the "kanbn_get_contributors" MCP tool call: return the workspace's normalised contributors.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnGetContributors(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    const contributors = await instance.getContributors();
+    return {
+        content: [{ type: "text", text: JSON.stringify(contributors, null, 2) }],
+    };
+}
+
+/**
+ * Handle the "kanbn_find_contributor" MCP tool call: match a value to a contributor.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnFindContributor(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    if (typeof args.value !== "string") {
+        throw new Error(`Missing required parameter: value`);
+    }
+    const contributor = await instance.findContributor(args.value);
+    return {
+        content: [{ type: "text", text: JSON.stringify(contributor, null, 2) }],
+    };
+}
+
+/**
+ * Handle the "kanbn_current_user" MCP tool call: resolve the current user value.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnCurrentUser(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    const user = await instance.currentUser();
+    const text = user === null || user === undefined ? "null" : String(user);
+    return {
+        content: [{ type: "text", text }],
+    };
+}
+
+/**
+ * Handle the "kanbn_collect_contributor_values" MCP tool call: collect every assigned/author value in use.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnCollectContributorValues(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    try {
+        const values = await instance.collectContributorValues();
+        const entries = [...values.entries()].map(([key, entry]: [string, any]) => [
+            key,
+            { ...entry, tasks: [...entry.tasks].sort() },
+        ]);
+        return {
+            content: [{ type: "text", text: JSON.stringify(Object.fromEntries(entries), null, 2) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to collect contributor values: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Handle the "kanbn_contributor_usage" MCP tool call: report how contributors are used.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnContributorUsage(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    try {
+        const usage = await instance.getContributorUsage();
+        return {
+            content: [{ type: "text", text: JSON.stringify(usage, null, 2) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to get contributor usage: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Handle the "kanbn_contributor_warnings" MCP tool call: find unknown contributor usages.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnContributorWarnings(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    try {
+        const warnings = await instance.findContributorWarnings();
+        return {
+            content: [{ type: "text", text: JSON.stringify(warnings, null, 2) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to find contributor warnings: ${(error as Error).message}`);
+    }
+}
+
 export const TOOLS: Tool[] = [
     {
         name: "kanbn_status",
@@ -2144,6 +2266,68 @@ export const TOOLS: Tool[] = [
             },
         },
     },
+    {
+        name: "kanbn_get_contributors",
+        description: "Get the workspace's contributors, normalised to the object form.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_find_contributor",
+        description: "Find the contributor a value refers to, matching name, display name or aliases.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                value: { type: "string", description: "The value to look up" },
+            },
+            required: ["value"],
+        },
+    },
+    {
+        name: "kanbn_current_user",
+        description: "Resolve the current user (KANBN_USER, then git email/name when contributors are declared).",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_collect_contributor_values",
+        description: "Collect every distinct assigned/author value in use across task files.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_contributor_usage",
+        description: "Report how the workspace's contributors are used, including spelling variants and unknown values.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_contributor_warnings",
+        description: "Find tasks whose assigned user or comment author isn't a known contributor.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
 ];
 
 /**
@@ -2245,6 +2429,18 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
                 return handleKanbnValidateBoard(args);
             case "kanbn_search":
                 return handleKanbnSearch(args);
+            case "kanbn_get_contributors":
+                return handleKanbnGetContributors(args);
+            case "kanbn_find_contributor":
+                return handleKanbnFindContributor(args);
+            case "kanbn_current_user":
+                return handleKanbnCurrentUser(args);
+            case "kanbn_collect_contributor_values":
+                return handleKanbnCollectContributorValues(args);
+            case "kanbn_contributor_usage":
+                return handleKanbnContributorUsage(args);
+            case "kanbn_contributor_warnings":
+                return handleKanbnContributorWarnings(args);
             default:
                 throw new Error(`Unknown tool requested: ${name}`);
         }
@@ -2302,7 +2498,9 @@ TOOLS
   kanbn_sort_column, kanbn_comment,
   kanbn_get_config, kanbn_save_config, kanbn_get_action_rules,
   kanbn_find_action_warnings, kanbn_get_date_format, kanbn_get_task_template,
-  kanbn_get_workspace_options, kanbn_validate_board, kanbn_search
+  kanbn_get_workspace_options, kanbn_validate_board, kanbn_search,
+  kanbn_get_contributors, kanbn_find_contributor, kanbn_current_user,
+  kanbn_collect_contributor_values, kanbn_contributor_usage, kanbn_contributor_warnings
 
 MCP CLIENT CONFIGURATION
 

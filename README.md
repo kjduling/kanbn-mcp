@@ -140,6 +140,12 @@ npm test
 | `kanbn_get_workspace_options` | Get workspace-scoped Kanbn options          |
 | `kanbn_validate_board` | Validate the board (true or list of parsing errors) |
 | `kanbn_search` | Search tasks with filters (tag, assigned, due, etc.) across all columns |
+| `kanbn_get_contributors` | Get the workspace's normalised contributors                     |
+| `kanbn_find_contributor` | Match a value to a contributor (name, display name, aliases)     |
+| `kanbn_current_user` | Resolve the current user (KANBN_USER, then git identity)          |
+| `kanbn_collect_contributor_values` | Collect every assigned/author value in use                 |
+| `kanbn_contributor_usage` | Contributor usage stats with spelling variants                  |
+| `kanbn_contributor_warnings` | Unknown contributor warnings                                   |
 
 ## Example task metadata supported
 

@@ -103,6 +103,12 @@ describe("MCP tool listing", () => {
             "kanbn_get_workspace_options",
             "kanbn_validate_board",
             "kanbn_search",
+            "kanbn_get_contributors",
+            "kanbn_find_contributor",
+            "kanbn_current_user",
+            "kanbn_collect_contributor_values",
+            "kanbn_contributor_usage",
+            "kanbn_contributor_warnings",
         ]);
     });
 });
@@ -831,6 +837,250 @@ describe("kanbn_search", () => {
                 filters: { tag: "zzz-no-such-tag" },
             });
             assert.deepStrictEqual(JSON.parse(result.content[0].text), []);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("kanbn_contributors", () => {
+    async function initWithContributors(dir: string, contributors: any[]) {
+        await handleToolCall("kanbn_init_board", {
+            path: dir,
+            name: "Contributor Board",
+            columns: ["Backlog", "Done"],
+        });
+        await handleToolCall("kanbn_save_config", { path: dir, config: { contributors } });
+    }
+
+    test("kanbn_get_contributors returns the normalised contributor list", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initWithContributors(dir, [
+                "alice",
+                { name: "gordon", displayName: "Gordon Larrigan", aliases: ["gordy"], email: "gordon@example.com" },
+            ]);
+
+            const result = await handleToolCall("kanbn_get_contributors", { path: dir });
+            const contributors = JSON.parse(result.content[0].text);
+            assert.deepStrictEqual(contributors, [
+                { name: "alice", displayName: "alice", aliases: [] },
+                { name: "gordon", displayName: "Gordon Larrigan", aliases: ["gordy"], email: "gordon@example.com" },
+            ]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_get_contributors returns an empty array when none are declared", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "No Contributor Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const result = await handleToolCall("kanbn_get_contributors", { path: dir });
+            assert.deepStrictEqual(JSON.parse(result.content[0].text), []);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_find_contributor matches by name, display name and alias, case-insensitively", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initWithContributors(dir, [
+                { name: "gordon", displayName: "Gordon Larrigan", aliases: ["gordy"] },
+            ]);
+
+            for (const value of ["gordon", "Gordon Larrigan", "gordy", "GORDY"]) {
+                const result = await handleToolCall("kanbn_find_contributor", { path: dir, value });
+                const contributor = JSON.parse(result.content[0].text);
+                assert.equal(contributor.name, "gordon");
+            }
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_find_contributor returns null for an unknown value", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initWithContributors(dir, [{ name: "gordon" }]);
+
+            const result = await handleToolCall("kanbn_find_contributor", {
+                path: dir,
+                value: "mystranger",
+            });
+            assert.equal(result.content[0].text, "null");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_find_contributor throws when value is missing", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Find Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            await assert.rejects(
+                handleToolCall("kanbn_find_contributor", { path: dir }),
+                /Missing required parameter: value/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_current_user honours KANBN_USER", async () => {
+        const dir = makeTempDir();
+        const previous = process.env.KANBN_USER;
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "User Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            process.env.KANBN_USER = "jinx-test-user";
+            const result = await handleToolCall("kanbn_current_user", { path: dir });
+            assert.equal(result.content[0].text, "jinx-test-user");
+        } finally {
+            if (previous === undefined) {
+                delete process.env.KANBN_USER;
+            } else {
+                process.env.KANBN_USER = previous;
+            }
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_collect_contributor_values returns usage keyed by value", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initWithContributors(dir, ["gordon", "alice"]);
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Alpha",
+                column: "Backlog",
+                assigned: "Gordon Larrigan",
+            });
+            await handleToolCall("kanbn_comment", {
+                path: dir,
+                taskId: "alpha",
+                author: "gordy",
+                text: "Working on it",
+            });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Beta",
+                column: "Backlog",
+                assigned: "mystranger",
+            });
+
+            const result = await handleToolCall("kanbn_collect_contributor_values", { path: dir });
+            const values = JSON.parse(result.content[0].text);
+            assert.equal(values["Gordon Larrigan"].assigned, 1);
+            assert.equal(values.gordy.comments, 1);
+            const unknown = values.mystranger;
+            assert.equal(unknown.assigned, 1);
+            assert.deepStrictEqual(unknown.tasks, ["beta"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_contributor_usage reports spelling variants and unknown values", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initWithContributors(dir, [{ name: "gordon", displayName: "Gordon Larrigan", aliases: ["gordy"] }, "alice"]);
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Alpha",
+                column: "Backlog",
+                assigned: "Gordon Larrigan",
+            });
+            await handleToolCall("kanbn_comment", {
+                path: dir,
+                taskId: "alpha",
+                author: "gordy",
+                text: "Working on it",
+            });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Beta",
+                column: "Backlog",
+                assigned: "mystranger",
+            });
+
+            const result = await handleToolCall("kanbn_contributor_usage", { path: dir });
+            const usage = JSON.parse(result.content[0].text);
+            const gordon = usage.contributors.find((contributor: any) => contributor.name === "gordon");
+            assert.equal(gordon.assigned, 1);
+            assert.equal(gordon.comments, 1);
+            assert.equal(gordon.tasks, 1);
+            assert.deepStrictEqual(
+                gordon.spellings.map((spelling: any) => spelling.value),
+                ["Gordon Larrigan", "gordy"]
+            );
+            assert.equal(usage.unknown.length, 1);
+            assert.equal(usage.unknown[0].value, "mystranger");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_contributor_warnings only flags unknown contributors", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initWithContributors(dir, [{ name: "gordon", displayName: "Gordon Larrigan", aliases: ["gordy"] }, "alice"]);
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Alpha",
+                column: "Backlog",
+                assigned: "Gordon Larrigan",
+            });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Beta",
+                column: "Backlog",
+                assigned: "mystranger",
+            });
+
+            const result = await handleToolCall("kanbn_contributor_warnings", { path: dir });
+            const warnings = JSON.parse(result.content[0].text);
+            assert.equal(warnings.length, 1);
+            assert.equal(warnings[0].type, "unknown-contributor");
+            assert.equal(warnings[0].value, "mystranger");
+            assert.equal(warnings[0].task, "beta");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_collect_contributor_values throws when the workspace has no board", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await assert.rejects(
+                handleToolCall("kanbn_collect_contributor_values", { path: dir }),
+                /Failed to collect contributor values: Not initialised in this folder/
+            );
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }
