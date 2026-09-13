@@ -92,6 +92,7 @@ describe("MCP tool listing", () => {
             "kanbn_find_orphaned_tasks",
             "kanbn_cross_board_tasks",
             "kanbn_tasks_on_other_boards",
+            "kanbn_sort_column",
         ]);
     });
 });
@@ -2299,6 +2300,183 @@ describe("kanbn_board_management", () => {
             const otherCall = await handleToolCall("kanbn_tasks_on_other_boards", { path: dir });
             const other = JSON.parse(otherCall.content[0].text);
             assert.deepStrictEqual(other, { alpha: { design: "Backlog" } });
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("kanbn_column_sort", () => {
+    async function initMain(dir: string, columns: string[] = ["Backlog", "Done"]) {
+        await handleToolCall("kanbn_init_board", {
+            path: dir,
+            name: "Main Board",
+            columns,
+        });
+        return new KanbnClass(dir);
+    }
+
+    test("sort_column sorts by name ascending", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Beta", column: "Backlog" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Gamma", column: "Backlog" });
+
+            const sorted = await handleToolCall("kanbn_sort_column", {
+                path: dir,
+                columnName: "Backlog",
+                sorters: [{ field: "name", order: "ascending" }],
+            });
+            assert.deepStrictEqual(JSON.parse(sorted.content[0].text), ["alpha", "beta", "gamma"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("sort_column sorts by due date descending", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Early", column: "Backlog", due: "2026-01-01" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Middle", column: "Backlog", due: "2026-06-01" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Late", column: "Backlog", due: "2026-12-31" });
+
+            const sorted = await handleToolCall("kanbn_sort_column", {
+                path: dir,
+                columnName: "Backlog",
+                sorters: [{ field: "due", order: "descending" }],
+            });
+            assert.deepStrictEqual(JSON.parse(sorted.content[0].text), ["late", "middle", "early"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("sort_column supports multi-field sorters", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Bravo", column: "Backlog", assigned: "kevin" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog", assigned: "anna" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Zulu", column: "Backlog", assigned: "anna" });
+
+            const sorted = await handleToolCall("kanbn_sort_column", {
+                path: dir,
+                columnName: "Backlog",
+                sorters: [
+                    { field: "assigned", order: "ascending" },
+                    { field: "name", order: "ascending" },
+                ],
+            });
+            assert.deepStrictEqual(JSON.parse(sorted.content[0].text), ["alpha", "zulu", "bravo"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("sort_column with save true persists the sort order", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Beta", column: "Backlog" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+
+            await handleToolCall("kanbn_sort_column", {
+                path: dir,
+                columnName: "Backlog",
+                sorters: [{ field: "name", order: "ascending" }],
+                save: true,
+            });
+
+            const instance = new KanbnClass(dir);
+            const index = await instance.getIndex();
+            assert.deepStrictEqual(index.columns.Backlog, ["alpha", "beta"]);
+            assert.deepStrictEqual(index.options.columnSorting, { Backlog: [{ field: "name", order: "ascending" }] });
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("sort_column throws on an invalid column", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+
+            await assert.rejects(
+                handleToolCall("kanbn_sort_column", {
+                    path: dir,
+                    columnName: "Nope",
+                    sorters: [{ field: "name" }],
+                }),
+                /Column "Nope" doesn't exist/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("sort_column throws on an invalid sort field", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+
+            await assert.rejects(
+                handleToolCall("kanbn_sort_column", {
+                    path: dir,
+                    columnName: "Backlog",
+                    sorters: [{ field: "colour" }],
+                }),
+                /Invalid sort field: colour/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("sort_column throws on an invalid sort order", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+
+            await assert.rejects(
+                handleToolCall("kanbn_sort_column", {
+                    path: dir,
+                    columnName: "Backlog",
+                    sorters: [{ field: "name", order: "sideways" }],
+                }),
+                /Invalid sort order: sideways/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("sort_column throws when sorters is missing", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+
+            await assert.rejects(
+                handleToolCall("kanbn_sort_column", {
+                    path: dir,
+                    columnName: "Backlog",
+                }),
+                /Missing required parameter: sorters/
+            );
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }

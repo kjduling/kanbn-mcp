@@ -15,7 +15,6 @@ completedColumns:
 - [add-input-validation-to-handle-kanbn-move-task](tasks/add-input-validation-to-handle-kanbn-move-task.md)
 - [kanbn-task-search-—-search-tasks-with-filters](tasks/kanbn-task-search-—-search-tasks-with-filters.md)
 - [kanbn-status-enhanced-—-status-with-untracked-due-sprint-options](tasks/kanbn-status-enhanced-—-status-with-untracked-due-sprint-options.md)
-- [kanbn-column-sort-—-sort-a-column](tasks/kanbn-column-sort-—-sort-a-column.md)
 - [kanbn-sprints-—-start-and-manage-sprints](tasks/kanbn-sprints-—-start-and-manage-sprints.md)
 - [kanbn-burndown-—-burndown-chart-data](tasks/kanbn-burndown-—-burndown-chart-data.md)
 - [kanbn-archived-tasks-—-list-and-load-archived-tasks](tasks/kanbn-archived-tasks-—-list-and-load-archived-tasks.md)
@@ -45,5 +44,6 @@ completedColumns:
 - [kanbn-task-rename-—-rename-a-task](tasks/kanbn-task-rename-—-rename-a-task.md)
 - [kanbn-simple-tasks-—-simple-task-non-file-operations](tasks/kanbn-simple-tasks-—-simple-task-non-file-operations.md)
 - [kanbn-board-management-—-create-delete-rename-list-boards](tasks/kanbn-board-management-—-create-delete-rename-list-boards.md)
+- [kanbn-column-sort-—-sort-a-column](tasks/kanbn-column-sort-—-sort-a-column.md)
 
 ## Blocked

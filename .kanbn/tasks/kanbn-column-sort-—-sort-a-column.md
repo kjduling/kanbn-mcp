@@ -1,5 +1,7 @@
 ---
 created: 2026-09-12T05:02:26.170Z
+updated: 2026-09-13T16:16:49.476Z
+completed: 2026-09-13T16:16:49.476Z
 ---
 
 # kanbn-column-sort — sort a column
@@ -15,15 +17,20 @@ Acceptance criteria:
 
 ## Sub-tasks
 
-- [ ] Implement `kanbn_sort_column` tool with columnName, sorters, save params
-- [ ] Unit tests — happy paths (sort by name asc, sort by due desc, multi-field sort)
-- [ ] Unit tests — sad paths (invalid column, invalid sort field, invalid sort order)
+- [x] Implement kanbn_sort_column tool with columnName, sorters, save params
+- [x] Unit tests — happy paths (sort by name asc, sort by due desc, multi-field sort)
+- [x] Unit tests — sad paths (invalid column, invalid sort field, invalid sort order)
+
+## Comments
+
+- author: Jinx
+  date: 2026-09-13T01:40:00.000Z
+  kanbn_sort_column implemented: accepts columnName, sorters array (field/order/filter), optional save flag. Fields validated: name, created, modified, due, assigned, progress — lib maps modified→updated internally. Lib sort() returns void; handler reloads index to return the reordered task-id array. save:true persists sorters into index.options.columnSorting and the lib re-sorts on every subsequent save. 97/97 tests pass, tsc clean.
 
 ## History
 
-- type: created
-  date: 2026-09-12T05:02:26.170Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
+- type: moved
+  date: 2026-09-13T16:16:49.476Z
+  fromColumn: Backlog
+  toColumn: Done
   author: Kevin J. Duling

@@ -987,6 +987,51 @@ export async function handleKanbnTasksOnOtherBoards(args: Record<string, any>) {
     };
 }
 
+const VALID_SORT_FIELDS = ["name", "created", "modified", "due", "assigned", "progress"];
+const VALID_SORT_ORDERS = ["ascending", "descending"];
+
+export async function handleKanbnSortColumn(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+
+    const columnName = args.columnName as string;
+    if (!columnName) {
+        throw new Error(`Missing required parameter: columnName`);
+    }
+    if (!Array.isArray(args.sorters)) {
+        throw new Error(`Missing required parameter: sorters`);
+    }
+
+    const sorters = args.sorters.map((sorter: any) => {
+        if (!VALID_SORT_FIELDS.includes(sorter.field)) {
+            throw new Error(`Invalid sort field: ${sorter.field}`);
+        }
+        const order = sorter.order ?? "ascending";
+        if (!VALID_SORT_ORDERS.includes(order)) {
+            throw new Error(`Invalid sort order: ${order}`);
+        }
+        const normalized: Record<string, any> = {
+            field: sorter.field === "modified" ? "updated" : sorter.field,
+            order,
+        };
+        if (sorter.filter !== undefined) {
+            normalized.filter = sorter.filter;
+        }
+        return normalized;
+    });
+
+    await instance.sort(columnName, sorters, args.save ?? false);
+
+    const index = await instance.getIndex();
+    const tasks = index.columns[columnName] ?? [];
+    return {
+        content: [{ type: "text", text: JSON.stringify(tasks, null, 2) }],
+    };
+}
+
 export const TOOLS: Tool[] = [
     {
         name: "kanbn_status",
@@ -1422,6 +1467,34 @@ export const TOOLS: Tool[] = [
             },
         },
     },
+    {
+        name: "kanbn_sort_column",
+        description: "Sort a board column by the given sorters.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                columnName: {
+                    type: "string",
+                    description: "Name of the column to sort",
+                },
+                sorters: {
+                    type: "array",
+                    description: "List of sorter objects with field (name, created, modified, due, assigned, progress), order (ascending, descending) and optional filter",
+                    items: {
+                        type: "object",
+                        properties: {
+                            field: { type: "string", description: "Field to sort by" },
+                            order: { type: "string", description: "Sort order (ascending or descending)" },
+                            filter: { type: "string", description: "Optional filter regular expression" },
+                        },
+                    },
+                },
+                save: { type: "boolean", description: "Persist the sort order to the index (default false)" },
+            },
+            required: ["columnName", "sorters"],
+        },
+    },
 ];
 
 export function listTools() {
@@ -1491,6 +1564,8 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
                 return handleKanbnCrossBoardTasks(args);
             case "kanbn_tasks_on_other_boards":
                 return handleKanbnTasksOnOtherBoards(args);
+            case "kanbn_sort_column":
+                return handleKanbnSortColumn(args);
             default:
                 throw new Error(`Unknown tool requested: ${name}`);
         }
@@ -1544,7 +1619,8 @@ TOOLS
   kanbn_create_board, kanbn_delete_board_file, kanbn_rename_board,
   kanbn_list_boards, kanbn_boards_summary, kanbn_board_exists,
   kanbn_reserved_board_slugs, kanbn_validate_board_slug,
-  kanbn_find_orphaned_tasks, kanbn_cross_board_tasks, kanbn_tasks_on_other_boards
+  kanbn_find_orphaned_tasks, kanbn_cross_board_tasks, kanbn_tasks_on_other_boards,
+  kanbn_sort_column
 
 MCP CLIENT CONFIGURATION
 
