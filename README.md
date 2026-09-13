@@ -147,6 +147,8 @@ npm test
 | `kanbn_contributor_usage` | Contributor usage stats with spelling variants                  |
 | `kanbn_contributor_warnings` | Unknown contributor warnings                                   |
 | `kanbn_burndown` | Burndown chart data (sprints, dates, assigned, columns, normalise) |
+| `kanbn_list_archived_tasks` | List archived task ids                                            |
+| `kanbn_load_archived_task` | Load a task from the archive                                       |
 
 ## Example task metadata supported
 

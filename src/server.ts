@@ -1741,6 +1741,58 @@ export async function handleKanbnBurndown(args: Record<string, any>): Promise<{ 
     }
 }
 
+/**
+ * Handle the "kanbn_list_archived_tasks" MCP tool call: list archived task ids.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnListArchivedTasks(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    if (!(await isBoardInitialized(instance, boardPath))) {
+        throw new Error(`No Kanbn board found at: ${boardPath}`);
+    }
+    try {
+        const taskIds = await instance.listArchivedTasks();
+        return {
+            content: [{ type: "text", text: JSON.stringify(taskIds) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to list archived tasks: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Handle the "kanbn_load_archived_task" MCP tool call: load a task from the archive.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnLoadArchivedTask(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    if (!(await isBoardInitialized(instance, boardPath))) {
+        throw new Error(`No Kanbn board found at: ${boardPath}`);
+    }
+    const taskId = args.taskId;
+    if (typeof taskId !== "string" || taskId.length === 0) {
+        throw new Error(`Missing required parameter: taskId`);
+    }
+    try {
+        const task = await instance.loadArchivedTask(taskId);
+        return {
+            content: [{ type: "text", text: JSON.stringify(task, null, 2) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to load archived task: ${(error as Error).message}`);
+    }
+}
+
 export const TOOLS: Tool[] = [
     {
         name: "kanbn_status",
@@ -2413,6 +2465,28 @@ export const TOOLS: Tool[] = [
             },
         },
     },
+    {
+        name: "kanbn_list_archived_tasks",
+        description: "List the ids of tasks that have been archived.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_load_archived_task",
+        description: "Load a task from the archive.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                taskId: { type: "string", description: "ID or filename of the task to load" },
+            },
+            required: ["taskId"],
+        },
+    },
 ];
 
 /**
@@ -2528,6 +2602,10 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
                 return handleKanbnContributorWarnings(args);
             case "kanbn_burndown":
                 return handleKanbnBurndown(args);
+            case "kanbn_list_archived_tasks":
+                return handleKanbnListArchivedTasks(args);
+            case "kanbn_load_archived_task":
+                return handleKanbnLoadArchivedTask(args);
             default:
                 throw new Error(`Unknown tool requested: ${name}`);
         }
@@ -2588,7 +2666,7 @@ TOOLS
   kanbn_get_workspace_options, kanbn_validate_board, kanbn_search,
   kanbn_get_contributors, kanbn_find_contributor, kanbn_current_user,
   kanbn_collect_contributor_values, kanbn_contributor_usage, kanbn_contributor_warnings,
-  kanbn_burndown
+  kanbn_burndown, kanbn_list_archived_tasks, kanbn_load_archived_task
 
 MCP CLIENT CONFIGURATION
 

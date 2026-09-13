@@ -13,7 +13,6 @@ completedColumns:
 
 - [kanbn-sprints-—-start-and-manage-sprints](tasks/kanbn-sprints-—-start-and-manage-sprints.md)
 - [kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board](tasks/kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board.md)
-- [kanbn-archived-tasks-—-list-and-load-archived-tasks](tasks/kanbn-archived-tasks-—-list-and-load-archived-tasks.md)
 - [kanbn-status-enhanced-—-status-with-untracked-due-sprint-options](tasks/kanbn-status-enhanced-—-status-with-untracked-due-sprint-options.md)
 - [add-size-limit-to-kanbn-status-response](tasks/add-size-limit-to-kanbn-status-response.md)
 - [add-input-validation-to-handle-kanbn-move-task](tasks/add-input-validation-to-handle-kanbn-move-task.md)
@@ -28,5 +27,6 @@ completedColumns:
 - [kanbn-contributors-—-contributor-management](tasks/kanbn-contributors-—-contributor-management.md)
 - [kanbn-burndown-—-burndown-chart-data](tasks/kanbn-burndown-—-burndown-chart-data.md)
 - [add-required-fields-to-kanbn-create-task-tool-schema](tasks/add-required-fields-to-kanbn-create-task-tool-schema.md)
+- [kanbn-archived-tasks-—-list-and-load-archived-tasks](tasks/kanbn-archived-tasks-—-list-and-load-archived-tasks.md)
 
 ## Blocked

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, existsSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { describe, mock } from "node:test";
@@ -111,6 +111,8 @@ describe("MCP tool listing", () => {
             "kanbn_contributor_usage",
             "kanbn_contributor_warnings",
             "kanbn_burndown",
+            "kanbn_list_archived_tasks",
+            "kanbn_load_archived_task",
         ]);
     });
 });
@@ -1285,6 +1287,71 @@ describe("tool schema required fields", () => {
         const tool = TOOLS.find((t) => t.name === "kanbn_board_exists");
         assert.ok(tool);
         assert.deepEqual(tool.inputSchema.required, ["slug"]);
+    });
+});
+
+describe("archived tasks", () => {
+    test("lists archived task ids", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Archive Board", columns: ["Backlog"] });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha" });
+            await handleToolCall("kanbn_archive_task", { path: dir, taskId: "alpha" });
+
+            const result = await handleToolCall("kanbn_list_archived_tasks", { path: dir });
+            assert.deepEqual(JSON.parse(result.content[0].text), ["alpha"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("loads an existing archived task", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Archive Board", columns: ["Backlog"] });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", description: "The first task" });
+            await handleToolCall("kanbn_archive_task", { path: dir, taskId: "alpha" });
+
+            const result = await handleToolCall("kanbn_load_archived_task", { path: dir, taskId: "alpha" });
+            const task = JSON.parse(result.content[0].text);
+            assert.equal(task.name, "Alpha");
+            assert.equal(task.description, "The first task");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("rejects loading a non-existent archived task", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Archive Board", columns: ["Backlog"] });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha" });
+            await handleToolCall("kanbn_archive_task", { path: dir, taskId: "alpha" });
+
+            await assert.rejects(
+                handleToolCall("kanbn_load_archived_task", { path: dir, taskId: "nope" }),
+                /Failed to load archived task: Couldn't access archived task file/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("returns an empty array for an empty archive", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Archive Board", columns: ["Backlog"] });
+            await mkdirSync(path.join(dir, ".kanbn", "archive"), { recursive: true });
+
+            const result = await handleToolCall("kanbn_list_archived_tasks", { path: dir });
+            assert.deepEqual(JSON.parse(result.content[0].text), []);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
     });
 });
 
