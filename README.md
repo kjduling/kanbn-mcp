@@ -48,8 +48,21 @@ The MCP server currently exposes tools for:
 
 ## Installation
 
+### From npm
+
 ```bash
+npm install -g @kjduling/kanbn-mcp
+```
+
+This installs a `kanbn-mcp` binary on your PATH.
+
+### From source
+
+```bash
+git clone git@github.com:kjduling/kanbn-mcp.git
+cd kanbn-mcp
 npm install
+npm run build
 ```
 
 ## Build
@@ -60,7 +73,7 @@ npm run build
 
 ## MCP client configuration
 
-Run `node dist/server.js --help` to print ready-to-paste configuration snippets for opencode, Claude Desktop, and other MCP hosts.
+Run `node dist/server.js --help` (or `kanbn-mcp --help` when installed from npm) to print ready-to-paste configuration snippets for opencode, Claude Desktop, and other MCP hosts.
 
 Configure your MCP client to launch the server using a local Node command. The exact path will depend on where you installed the project, but the structure should look like this:
 
@@ -150,6 +163,16 @@ npm test
 | `kanbn_start_sprint` | Start a new sprint (optional name, description, start date)        |
 | `kanbn_list_archived_tasks` | List archived task ids                                            |
 | `kanbn_load_archived_task` | Load a task from the archive                                       |
+| `kanbn_add_untracked_task` | Add an untracked task file to a column in the index              |
+| `kanbn_find_tracked_tasks` | List tracked task IDs (optionally filtered by column)            |
+| `kanbn_find_untracked_tasks` | List task files that aren't in the index                        |
+| `kanbn_find_missing_task_files` | Find indexed tasks whose file is missing                       |
+| `kanbn_add_task_to_board` | Add an existing task file to this board                          |
+| `kanbn_find_task_boards` | Find which boards and columns reference a task                   |
+| `kanbn_task_file_exists` | Check whether a task file exists                                 |
+| `kanbn_task_exists` | Check that a task file exists and is indexed                     |
+| `kanbn_find_task_column` | Find the column a task is in                                     |
+| `kanbn_remove_all` | Delete the whole board (requires confirm: true)                  |
 
 ## Example task metadata supported
 

@@ -371,12 +371,42 @@ export async function handleKanbnStatus(args: Record<string, any>): Promise<{ co
             content: [{ type: "text", text: `No Kanbn board found at: ${boardPath}` }],
         };
     }
-    const getIndexFn = instance.getIndex || instance.index || instance.loadIndex;
-    const index = typeof getIndexFn === "function" ? await getIndexFn.call(instance) : {};
+
+    const quiet = args.quiet === true;
+    const untracked = args.untracked === true;
+    const due = args.due === true;
+    const sprint = typeof args.sprint === "number" || typeof args.sprint === "string" && (args.sprint as string).length > 0 ? args.sprint : null;
+    let dates: Date[] | null = null;
+    if (args.dates !== undefined && args.dates !== null) {
+        dates = (Array.isArray(args.dates) ? args.dates : [args.dates]).map((date: unknown) => {
+            const parsed = new Date(String(date));
+            if (isNaN(parsed.getTime())) {
+                throw new Error(`Invalid date: "${String(date)}"`);
+            }
+            return parsed;
+        });
+    }
+
+    let data: unknown;
+    if (quiet || untracked || due || sprint !== null || dates !== null) {
+        const statusFn = instance.status;
+        if (typeof statusFn !== "function") {
+            throw new Error("Failed to get status: no status method available on the Kanbn instance");
+        }
+        try {
+            data = await statusFn.call(instance, quiet, untracked, due, sprint, dates);
+        } catch (error) {
+            throw new Error(`Failed to get status: ${(error as Error).message}`);
+        }
+    } else {
+        const getIndexFn = instance.getIndex || instance.index || instance.loadIndex;
+        data = typeof getIndexFn === "function" ? await getIndexFn.call(instance) : {};
+    }
+
     const maxSize = getMaxResponseSize();
-    let serialized = JSON.stringify(index, null, 2);
+    let serialized = JSON.stringify(data, null, 2);
     if (Buffer.byteLength(serialized) > maxSize) {
-        serialized = JSON.stringify(index);
+        serialized = JSON.stringify(data);
         if (Buffer.byteLength(serialized) > maxSize) {
             serialized = truncateResponse(serialized, maxSize);
         }
@@ -1900,6 +1930,233 @@ export async function handleKanbnStartSprint(args: Record<string, any>): Promise
     }
 }
 
+/**
+ * Resolve the Kanbn path and instance for a tool call, throwing when instantiation or initialisation
+ * fails. Skips the initialisation check when only the path argument is needed.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @param {boolean} [requireBoard=true] Also require an initialised board
+ * @return {Promise<{instance: any, boardPath: string}>} The Kanbn instance and resolved board path
+ */
+async function readyBoard(args: Record<string, any>, requireBoard = true): Promise<{ instance: any; boardPath: string; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    if (requireBoard && !(await isBoardInitialized(instance, boardPath))) {
+        throw new Error(`No Kanbn board found at: ${boardPath}`);
+    }
+    return { instance, boardPath };
+}
+
+/**
+ * Handle the "kanbn_add_untracked_task" MCP tool call: add an untracked task file to a column in the
+ * index.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnAddUntrackedTask(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const taskId = args.taskId as string | undefined;
+    const columnName = args.columnName as string | undefined;
+    if (!taskId) {
+        throw new Error("Missing required parameter: taskId");
+    }
+    if (!columnName) {
+        throw new Error("Missing required parameter: columnName");
+    }
+    const { instance } = await readyBoard(args);
+    try {
+        const added = await instance.addUntrackedTaskToIndex(taskId, columnName);
+        return {
+            content: [{ type: "text", text: JSON.stringify(added) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to add untracked task: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Handle the "kanbn_find_tracked_tasks" MCP tool call: list tracked task ids, optionally filtered by
+ * column.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnFindTrackedTasks(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const columnName = args.columnName as string | undefined;
+    const { instance } = await readyBoard(args);
+    try {
+        const tracked = await instance.findTrackedTasks(columnName || null);
+        return {
+            content: [{ type: "text", text: JSON.stringify(Array.from(tracked as Iterable<string>)) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to find tracked tasks: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Handle the "kanbn_find_untracked_tasks" MCP tool call: list task files that aren't in the index.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnFindUntrackedTasks(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const { instance } = await readyBoard(args);
+    try {
+        const untracked = await instance.findUntrackedTasks();
+        return {
+            content: [{ type: "text", text: JSON.stringify(Array.from(untracked as Iterable<string>)) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to find untracked tasks: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Handle the "kanbn_find_missing_task_files" MCP tool call: find indexed tasks whose file is missing.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnFindMissingTaskFiles(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const { instance } = await readyBoard(args);
+    try {
+        const missing = await instance.findMissingTaskFiles();
+        return {
+            content: [{ type: "text", text: JSON.stringify(missing, null, 2) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to find missing task files: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Handle the "kanbn_add_task_to_board" MCP tool call: add an existing task file to this board.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnAddTaskToBoard(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const taskId = args.taskId as string | undefined;
+    const columnName = args.columnName as string | undefined;
+    if (!taskId) {
+        throw new Error("Missing required parameter: taskId");
+    }
+    if (!columnName) {
+        throw new Error("Missing required parameter: columnName");
+    }
+    const { instance } = await readyBoard(args);
+    try {
+        const added = await instance.addTaskToBoard(taskId, columnName);
+        return {
+            content: [{ type: "text", text: JSON.stringify(added) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to add task to board: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Handle the "kanbn_find_task_boards" MCP tool call: list which boards and columns reference a task.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnFindTaskBoards(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const taskId = args.taskId as string | undefined;
+    if (!taskId) {
+        throw new Error("Missing required parameter: taskId");
+    }
+    const { instance } = await readyBoard(args);
+    try {
+        const boards = await instance.findTaskBoards(taskId);
+        return {
+            content: [{ type: "text", text: JSON.stringify(boards, null, 2) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to find task boards: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Handle the "kanbn_task_file_exists" MCP tool call: check whether a task file exists.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnTaskFileExists(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const taskId = args.taskId as string | undefined;
+    if (!taskId) {
+        throw new Error("Missing required parameter: taskId");
+    }
+    const { instance } = await readyBoard(args);
+    try {
+        const exists = await instance.taskFileExists(taskId);
+        return {
+            content: [{ type: "text", text: JSON.stringify(exists) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to check task file existence: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Handle the "kanbn_task_exists" MCP tool call: check whether a task file exists and is indexed.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnTaskExists(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const taskId = args.taskId as string | undefined;
+    if (!taskId) {
+        throw new Error("Missing required parameter: taskId");
+    }
+    const { instance } = await readyBoard(args);
+    try {
+        await instance.taskExists(taskId);
+        return {
+            content: [{ type: "text", text: JSON.stringify(true) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to check task existence: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Handle the "kanbn_find_task_column" MCP tool call: find the column a task is in.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnFindTaskColumn(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const taskId = args.taskId as string | undefined;
+    if (!taskId) {
+        throw new Error("Missing required parameter: taskId");
+    }
+    const { instance } = await readyBoard(args);
+    try {
+        const column = await instance.findTaskColumn(taskId);
+        return {
+            content: [{ type: "text", text: JSON.stringify(column) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to find task column: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Handle the "kanbn_remove_all" MCP tool call: delete the whole board. Requires explicit confirmation.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnRemoveAll(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    if (args.confirm !== true) {
+        throw new Error("Failed to remove all: deletion requires confirmation (pass confirm: true)");
+    }
+    const { instance, boardPath } = await readyBoard(args);
+    try {
+        await instance.removeAll();
+        return {
+            content: [{ type: "text", text: JSON.stringify({ deleted: true, path: boardPath }, null, 2) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to remove all: ${(error as Error).message}`);
+    }
+}
+
 export const TOOLS: Tool[] = [
     {
         name: "kanbn_status",
@@ -1941,11 +2198,15 @@ export const TOOLS: Tool[] = [
     {
         name: "kanbn_ensure_board",
         description: "Ensure a Kanbn board exists, initializing one if absent (board detection checks the methods: initialised, initialized, isInitialized, isInitialised).",
-        inputSchema: {
+inputSchema: {
             type: "object",
             properties: {
                 path: { type: "string", description: "Path to the project root directory" },
-                name: { type: "string", description: "Name of the board" },
+                quiet: { type: "boolean", description: "Return partial status (task counts only)" },
+                untracked: { type: "boolean", description: "Include a list of untracked task files (with quiet, returns just that list)" },
+                due: { type: "boolean", description: "Show overdue tasks and time remaining" },
+                sprint: { description: "Show sprint stats for a named or numbered (1-based) sprint; defaults to the current sprint when omitted", oneOf: [{ type: "string" }, { type: "number" }] },
+                dates: { description: "Filter stats by a date range: a single ISO date or an array of two ISO dates", oneOf: [{ type: "string" }, { type: "array", items: { type: "string" } }] },
             },
         },
     },
@@ -2573,6 +2834,123 @@ export const TOOLS: Tool[] = [
         },
     },
     {
+        name: "kanbn_add_untracked_task",
+        description: "Add an untracked task file to a column in the index.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                taskId: { type: "string", description: "ID or filename of the untracked task" },
+                columnName: { type: "string", description: "Column to add the task to" },
+            },
+            required: ["taskId", "columnName"],
+        },
+    },
+    {
+        name: "kanbn_find_tracked_tasks",
+        description: "List tracked task IDs, optionally filtered by column.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                columnName: { type: "string", description: "Optional column name to filter tasks by" },
+            },
+        },
+    },
+    {
+        name: "kanbn_find_untracked_tasks",
+        description: "List task files that aren't in the index.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_find_missing_task_files",
+        description: "Find indexed tasks whose file is missing, as {task, column} entries.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+            },
+        },
+    },
+    {
+        name: "kanbn_add_task_to_board",
+        description: "Add an existing task file to this board.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                taskId: { type: "string", description: "ID or filename of the task" },
+                columnName: { type: "string", description: "Column to add the task to" },
+            },
+            required: ["taskId", "columnName"],
+        },
+    },
+    {
+        name: "kanbn_find_task_boards",
+        description: "Find which boards and columns reference a task.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                taskId: { type: "string", description: "ID or filename of the task" },
+            },
+            required: ["taskId"],
+        },
+    },
+    {
+        name: "kanbn_task_file_exists",
+        description: "Check whether a task file exists, regardless of whether any board references it.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                taskId: { type: "string", description: "ID or filename of the task" },
+            },
+            required: ["taskId"],
+        },
+    },
+    {
+        name: "kanbn_task_exists",
+        description: "Check that a task file exists and is indexed; throws otherwise.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                taskId: { type: "string", description: "ID or filename of the task" },
+            },
+            required: ["taskId"],
+        },
+    },
+    {
+        name: "kanbn_find_task_column",
+        description: "Find the column a task is in, or throw if the task doesn't exist or isn't indexed.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                taskId: { type: "string", description: "ID or filename of the task" },
+            },
+            required: ["taskId"],
+        },
+    },
+    {
+        name: "kanbn_remove_all",
+        description: "Delete the whole board and all its data. Requires confirm: true.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                confirm: { type: "boolean", description: "Must be true to run the deletion" },
+            },
+            required: ["confirm"],
+        },
+    },
+    {
         name: "kanbn_start_sprint",
         description: "Start a new sprint on the Kanbn board. Accepts an optional name, description, and start date; a blank name generates 'Sprint N' and a blank start date defaults to now. Sprint names must be unique.",
         inputSchema: {
@@ -2722,6 +3100,26 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
                 return handleKanbnContributorWarnings(args);
             case "kanbn_burndown":
                 return handleKanbnBurndown(args);
+            case "kanbn_add_untracked_task":
+                return handleKanbnAddUntrackedTask(args);
+            case "kanbn_find_tracked_tasks":
+                return handleKanbnFindTrackedTasks(args);
+            case "kanbn_find_untracked_tasks":
+                return handleKanbnFindUntrackedTasks(args);
+            case "kanbn_find_missing_task_files":
+                return handleKanbnFindMissingTaskFiles(args);
+            case "kanbn_add_task_to_board":
+                return handleKanbnAddTaskToBoard(args);
+            case "kanbn_find_task_boards":
+                return handleKanbnFindTaskBoards(args);
+            case "kanbn_task_file_exists":
+                return handleKanbnTaskFileExists(args);
+            case "kanbn_task_exists":
+                return handleKanbnTaskExists(args);
+            case "kanbn_find_task_column":
+                return handleKanbnFindTaskColumn(args);
+            case "kanbn_remove_all":
+                return handleKanbnRemoveAll(args);
             case "kanbn_start_sprint":
                 return handleKanbnStartSprint(args);
             case "kanbn_list_archived_tasks":
@@ -2788,7 +3186,10 @@ TOOLS
   kanbn_get_workspace_options, kanbn_validate_board, kanbn_search,
   kanbn_get_contributors, kanbn_find_contributor, kanbn_current_user,
   kanbn_collect_contributor_values, kanbn_contributor_usage, kanbn_contributor_warnings,
-  kanbn_burndown, kanbn_list_archived_tasks, kanbn_load_archived_task, kanbn_start_sprint
+  kanbn_burndown, kanbn_list_archived_tasks, kanbn_load_archived_task, kanbn_start_sprint,
+  kanbn_add_untracked_task, kanbn_find_tracked_tasks, kanbn_find_untracked_tasks,
+  kanbn_find_missing_task_files, kanbn_add_task_to_board, kanbn_find_task_boards,
+  kanbn_task_file_exists, kanbn_task_exists, kanbn_find_task_column, kanbn_remove_all
 
 MCP CLIENT CONFIGURATION
 

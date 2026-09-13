@@ -1,6 +1,7 @@
 ---
 created: 2026-09-12T05:12:09.049Z
-updated: 2026-09-13T17:03:01.826Z
+updated: 2026-09-13T20:38:42.338Z
+completed: 2026-09-13T20:38:42.338Z
 ---
 
 # kanbn-task-maintenance — tracked/untracked, missing files, add to board
@@ -31,29 +32,29 @@ Acceptance criteria:
 
 ## Sub-tasks
 
-- [ ] Implement `kanbn_add_untracked_task` tool
-- [ ] Implement `kanbn_find_tracked_tasks` tool with optional column param
-- [ ] Implement `kanbn_find_untracked_tasks` tool
-- [ ] Implement `kanbn_find_missing_task_files` tool
-- [ ] Implement `kanbn_add_task_to_board` tool
-- [ ] Implement `kanbn_find_task_boards` tool
-- [ ] Implement `kanbn_task_file_exists` tool
-- [ ] Implement `kanbn_task_exists` tool
-- [ ] Implement `kanbn_find_task_column` tool
-- [ ] Implement `kanbn_remove_all` tool (with safety guard)
-- [ ] Unit tests — happy paths (all tools)
-- [ ] Unit tests — sad paths (missing files, non-existent tasks, invalid columns)
+- [x] Implement `kanbn_add_untracked_task` tool
+- [x] Implement `kanbn_find_tracked_tasks` tool with optional column param
+- [x] Implement `kanbn_find_untracked_tasks` tool
+- [x] Implement `kanbn_find_missing_task_files` tool
+- [x] Implement `kanbn_add_task_to_board` tool
+- [x] Implement `kanbn_find_task_boards` tool
+- [x] Implement `kanbn_task_file_exists` tool
+- [x] Implement `kanbn_task_exists` tool
+- [x] Implement `kanbn_find_task_column` tool
+- [x] Implement `kanbn_remove_all` tool (with safety guard)
+- [x] Unit tests — happy paths (all tools)
+- [x] Unit tests — sad paths (missing files, non-existent tasks, invalid columns)
+
+## Comments
+
+- author: Jinx
+  date: 2026-09-13T22:45:00.000Z
+  Implemented all 10 task-maintenance tools: kanbn_add_untracked_task, kanbn_find_tracked_tasks (optional column filter), kanbn_find_untracked_tasks, kanbn_find_missing_task_files, kanbn_add_task_to_board, kanbn_find_task_boards, kanbn_task_file_exists, kanbn_task_exists, kanbn_find_task_column, kanbn_remove_all (requires confirm: true). Shared readyBoard() helper for path/instance/initialised resolution; Set results → arrays, lib errors wrapped per-tool (e.g. Failed to find tracked tasks: <msg>). TOOLS entries (taskId/columnName required where relevant), dispatch cases, HELP_TEXT rows, README rows, listTools entries. 12 tests (174 → 186) covering happy + sad paths incl. already-indexed rejection, invalid column, missing task files, unindexed/missing task errors, remove_all confirmation guard.
 
 ## History
 
-- type: created
-  date: 2026-09-12T05:12:09.049Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
-  author: Kevin J. Duling
 - type: moved
-  date: 2026-09-13T17:03:01.826Z
-  fromColumn: Backlog
-  toColumn: Todo
+  date: 2026-09-13T20:38:42.338Z
+  fromColumn: Todo
+  toColumn: Done
   author: Kevin J. Duling

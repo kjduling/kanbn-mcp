@@ -1,8 +1,14 @@
 {
-  "name": "kanbn-mcp",
-  "version": "0.5.0",
-  "description": "",
-  "main": "index.js",
+  "name": "@kjduling/kanbn-mcp",
+  "version": "1.0.0",
+  "description": "A Model Context Protocol (MCP) server for Kanbn board management",
+  "main": "dist/server.js",
+  "bin": {
+    "kanbn-mcp": "dist/server.js"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "test": "tsx --test tests/**/*.test.ts",
     "build": "tsc",
@@ -13,10 +19,24 @@
     "docs:serve": "echo '(typedoc --entryPointStrategy expand src && python -m http.server 8080 --directory docs) not yet supported in TypeScript7'",
     "prepare": "husky"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "kanbn",
+    "kanban",
+    "board"
+  ],
+  "author": "Kevin J. Duling",
   "license": "MIT",
   "type": "commonjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kjduling/kanbn-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kjduling/kanbn-mcp/issues"
+  },
+  "homepage": "https://github.com/kjduling/kanbn-mcp",
   "devDependencies": {
     "@types/node": "^26.5.0",
     "husky": "^9.1.7",

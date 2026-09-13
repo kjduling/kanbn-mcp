@@ -11,9 +11,6 @@ completedColumns:
 
 ## Todo
 
-- [kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board](tasks/kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board.md)
-- [kanbn-status-enhanced-—-status-with-untracked-due-sprint-options](tasks/kanbn-status-enhanced-—-status-with-untracked-due-sprint-options.md)
-
 ## In Progress
 
 ## Done
@@ -28,5 +25,7 @@ completedColumns:
 - [add-input-validation-to-handle-kanbn-move-task](tasks/add-input-validation-to-handle-kanbn-move-task.md)
 - [add-size-limit-to-kanbn-status-response](tasks/add-size-limit-to-kanbn-status-response.md)
 - [kanbn-sprints-—-start-and-manage-sprints](tasks/kanbn-sprints-—-start-and-manage-sprints.md)
+- [kanbn-status-enhanced-—-status-with-untracked-due-sprint-options](tasks/kanbn-status-enhanced-—-status-with-untracked-due-sprint-options.md)
+- [kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board](tasks/kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board.md)
 
 ## Blocked

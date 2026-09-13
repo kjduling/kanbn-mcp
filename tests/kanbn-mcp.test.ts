@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, existsSync, mkdirSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { describe, mock } from "node:test";
@@ -111,6 +111,16 @@ describe("MCP tool listing", () => {
             "kanbn_contributor_usage",
             "kanbn_contributor_warnings",
             "kanbn_burndown",
+            "kanbn_add_untracked_task",
+            "kanbn_find_tracked_tasks",
+            "kanbn_find_untracked_tasks",
+            "kanbn_find_missing_task_files",
+            "kanbn_add_task_to_board",
+            "kanbn_find_task_boards",
+            "kanbn_task_file_exists",
+            "kanbn_task_exists",
+            "kanbn_find_task_column",
+            "kanbn_remove_all",
             "kanbn_start_sprint",
             "kanbn_list_archived_tasks",
             "kanbn_load_archived_task",
@@ -1509,6 +1519,417 @@ describe("kanbn_start_sprint", () => {
                 handleToolCall("kanbn_start_sprint", { path: dir, name: "Bad Date", start: "not-a-date" }),
                 /Invalid date: "not-a-date"/
             );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+function writeDropInTaskFile(dir: string, id: string, name = id): string {
+    const tasksDir = path.join(dir, ".kanbn", "tasks");
+    mkdirSync(tasksDir, { recursive: true });
+    const filePath = path.join(tasksDir, `${id}.md`);
+    writeFileSync(filePath, `---\nname: ${name}\n---\n\n# ${name}\n`);
+    return filePath;
+}
+
+describe("kanbn_status enhanced options", () => {
+    test("quiet + untracked returns just the untracked task filenames", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Status Board",
+                columns: ["Backlog", "Done"],
+            });
+            writeDropInTaskFile(dir, "stray");
+
+            const result = await handleToolCall("kanbn_status", {
+                path: dir,
+                quiet: true,
+                untracked: true,
+            });
+            const parsed = JSON.parse(result.content[0].text);
+            assert.deepEqual(parsed, ["stray.md"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("due shows overdue tasks", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Status Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha" });
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: "alpha",
+                due: "2020-01-01T00:00:00.000Z",
+            });
+
+            const result = await handleToolCall("kanbn_status", { path: dir, due: true });
+            const parsed = JSON.parse(result.content[0].text);
+            assert.ok(Array.isArray(parsed.dueTasks));
+            assert.ok(parsed.dueTasks.some((t: { task: string }) => t.task === "alpha"));
+            assert.ok(parsed.dueTasks[0].overdue === true);
+            assert.ok(parsed.dueTasks[0].dueMessage);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("sprint shows stats for a named sprint", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Status Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_start_sprint", {
+                path: dir,
+                name: "Alpha Sprint",
+                start: "2026-01-01T00:00:00.000Z",
+            });
+
+            const result = await handleToolCall("kanbn_status", { path: dir, sprint: "Alpha Sprint" });
+            const parsed = JSON.parse(result.content[0].text);
+            assert.equal(parsed.sprint.name, "Alpha Sprint");
+            assert.equal(parsed.sprint.number, 1);
+            assert.ok("created" in parsed.sprint);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("dates filters stats by a date range", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Status Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const result = await handleToolCall("kanbn_status", {
+                path: dir,
+                dates: ["2026-01-01", "2026-01-10"],
+            });
+            const parsed = JSON.parse(result.content[0].text);
+            assert.equal(parsed.period.start, "2026-01-01T00:00:00.000Z");
+            assert.equal(parsed.period.end, "2026-01-10T00:00:00.000Z");
+            assert.ok("created" in parsed.period);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("rejects an unknown sprint name", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Status Board",
+                columns: ["Backlog"],
+            });
+
+            await handleToolCall("kanbn_start_sprint", { path: dir, name: "Alpha Sprint" });
+
+            await assert.rejects(
+                handleToolCall("kanbn_status", { path: dir, sprint: "Nope" }),
+                /No sprint found with name "Nope"/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("rejects an invalid date", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Status Board",
+                columns: ["Backlog"],
+            });
+
+            await assert.rejects(
+                handleToolCall("kanbn_status", { path: dir, dates: "banana" }),
+                /Invalid date: "banana"/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("kanbn task maintenance", () => {
+    test("kanbn_add_untracked_task adds a drop-in task file to a column", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Maintenance Board",
+                columns: ["Backlog", "Done"],
+            });
+            writeDropInTaskFile(dir, "stray");
+
+            const result = await handleToolCall("kanbn_add_untracked_task", {
+                path: dir,
+                taskId: "stray",
+                columnName: "Backlog",
+            });
+            assert.equal(JSON.parse(result.content[0].text), "stray");
+
+            const index = await new KanbnClass(dir).getIndex();
+            assert.ok(index.columns.Backlog.includes("stray"));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_add_untracked_task rejects already-indexed tasks and invalid columns", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Maintenance Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha" });
+            writeDropInTaskFile(dir, "stray");
+
+            await assert.rejects(
+                handleToolCall("kanbn_add_untracked_task", { path: dir, taskId: "alpha", columnName: "Backlog" }),
+                /Task "alpha" is already in the index/
+            );
+            await assert.rejects(
+                handleToolCall("kanbn_add_untracked_task", { path: dir, taskId: "stray", columnName: "Nope" }),
+                /Column "Nope" doesn't exist/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_find_tracked_tasks lists tracked ids, filtered or not", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Maintenance Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha" });
+
+            const all = JSON.parse((await handleToolCall("kanbn_find_tracked_tasks", { path: dir })).content[0].text);
+            assert.ok(all.includes("alpha"));
+
+            const backlog = JSON.parse((await handleToolCall("kanbn_find_tracked_tasks", { path: dir, columnName: "Backlog" })).content[0].text);
+            assert.deepEqual(backlog, ["alpha"]);
+
+            const done = JSON.parse((await handleToolCall("kanbn_find_tracked_tasks", { path: dir, columnName: "Done" })).content[0].text);
+            assert.deepEqual(done, []);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_find_untracked_tasks lists task files not in the index", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Maintenance Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha" });
+            writeDropInTaskFile(dir, "stray");
+
+            const result = JSON.parse((await handleToolCall("kanbn_find_untracked_tasks", { path: dir })).content[0].text);
+            assert.deepEqual(result, ["stray"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_find_missing_task_files reports indexed tasks with no file", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Maintenance Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha" });
+            rmSync(path.join(dir, ".kanbn", "tasks", "alpha.md"));
+
+            const result = JSON.parse((await handleToolCall("kanbn_find_missing_task_files", { path: dir })).content[0].text);
+            assert.deepEqual(result, [{ task: "alpha", column: "Backlog" }]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_add_task_to_board adds an existing task file to the board", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Maintenance Board",
+                columns: ["Backlog", "Done"],
+            });
+            writeDropInTaskFile(dir, "feature");
+
+            const result = await handleToolCall("kanbn_add_task_to_board", {
+                path: dir,
+                taskId: "feature",
+                columnName: "Backlog",
+            });
+            assert.equal(JSON.parse(result.content[0].text), "feature");
+
+            const tracked = JSON.parse((await handleToolCall("kanbn_find_tracked_tasks", { path: dir })).content[0].text);
+            assert.ok(tracked.includes("feature"));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_find_task_boards maps a task to boards and columns", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Maintenance Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha" });
+
+            const result = JSON.parse((await handleToolCall("kanbn_find_task_boards", { path: dir, taskId: "alpha" })).content[0].text);
+            assert.ok(Object.values(result).includes("Backlog"));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_task_file_exists returns true or false", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Maintenance Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha" });
+
+            assert.equal(JSON.parse((await handleToolCall("kanbn_task_file_exists", { path: dir, taskId: "alpha" })).content[0].text), true);
+            assert.equal(JSON.parse((await handleToolCall("kanbn_task_file_exists", { path: dir, taskId: "nope" })).content[0].text), false);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_task_exists throws for missing or unindexed tasks", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Maintenance Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha" });
+            writeDropInTaskFile(dir, "stray");
+
+            assert.equal(JSON.parse((await handleToolCall("kanbn_task_exists", { path: dir, taskId: "alpha" })).content[0].text), true);
+            await assert.rejects(
+                handleToolCall("kanbn_task_exists", { path: dir, taskId: "stray" }),
+                /No task with id "stray" found in the index/
+            );
+            await assert.rejects(
+                handleToolCall("kanbn_task_exists", { path: dir, taskId: "nope" }),
+                /No task file found with id "nope"/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_find_task_column returns the column and throws for unindexed tasks", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Maintenance Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha" });
+            writeDropInTaskFile(dir, "stray");
+
+            const column = JSON.parse((await handleToolCall("kanbn_find_task_column", { path: dir, taskId: "alpha" })).content[0].text);
+            assert.equal(column, "Backlog");
+            await assert.rejects(
+                handleToolCall("kanbn_find_task_column", { path: dir, taskId: "stray" }),
+                /No task with id "stray" found in the index/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_remove_all requires confirmation", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Maintenance Board",
+                columns: ["Backlog"],
+            });
+
+            await assert.rejects(
+                handleToolCall("kanbn_remove_all", { path: dir }),
+                /confirmation \(pass confirm: true\)/
+            );
+            assert.ok(existsSync(path.join(dir, ".kanbn")));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_remove_all deletes the board when confirmed", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Maintenance Board",
+                columns: ["Backlog"],
+            });
+
+            const result = await handleToolCall("kanbn_remove_all", { path: dir, confirm: true });
+            const parsed = JSON.parse(result.content[0].text);
+            assert.equal(parsed.deleted, true);
+            assert.equal(existsSync(path.join(dir, ".kanbn")), false);
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }
