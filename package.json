@@ -1,5 +1,5 @@
 {
-  "name": "@kjduling/kanbn-mcp",
+  "name": "@kduling/kanbn-mcp",
   "version": "1.0.0",
   "description": "A Model Context Protocol (MCP) server for Kanbn board management",
   "main": "dist/server.js",

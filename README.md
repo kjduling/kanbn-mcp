@@ -51,7 +51,7 @@ The MCP server currently exposes tools for:
 ### From npm
 
 ```bash
-npm install -g @kjduling/kanbn-mcp
+npm install -g @kduling/kanbn-mcp
 ```
 
 This installs a `kanbn-mcp` binary on your PATH.
