@@ -1,6 +1,7 @@
 ---
 created: 2026-09-07T18:00:58.125Z
-updated: 2026-09-13T17:02:53.774Z
+updated: 2026-09-13T20:19:09.136Z
+completed: 2026-09-13T20:19:09.136Z
 ---
 
 # Add input validation to handleKanbnMoveTask
@@ -23,21 +24,21 @@ No check that `taskId` is non-empty or that `targetColumn` exists. The underlyin
 
 ## Sub-tasks
 
-- [ ] Validate that taskId is provided and non-empty
-- [ ] Validate that targetColumn is provided and non-empty
-- [ ] Return a clear validation error response if either is missing
-- [ ] Add the required constraint to the tool schema if not already present
+- [x] Validate that taskId is provided and non-empty
+- [x] Validate that targetColumn is provided and non-empty
+- [x] Return a clear validation error response if either is missing
+- [x] Add the required constraint to the tool schema if not already present
+
+## Comments
+
+- author: Jinx
+  date: 2026-09-13T20:50:00.000Z
+  Added empty-string-safe validation to handleKanbnMoveTask: non-empty taskId required (else 'Missing required parameter: taskId'), non-empty targetColumn after the existing column/targetColumn/col fallback (else 'Missing required parameter: targetColumn'). The tool schema already declared required: ["taskId", "targetColumn"], so no schema change was needed — the handler now enforces what the schema promised. 2 tests added (160 → 162), all passing, tsc clean.
 
 ## History
 
-- type: created
-  date: 2026-09-07T18:00:58.125Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
-  author: Kevin J. Duling
 - type: moved
-  date: 2026-09-13T17:02:53.774Z
-  fromColumn: Backlog
-  toColumn: Todo
+  date: 2026-09-13T20:19:09.136Z
+  fromColumn: Todo
+  toColumn: Done
   author: Kevin J. Duling

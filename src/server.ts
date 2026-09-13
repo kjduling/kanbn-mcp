@@ -743,6 +743,12 @@ export async function handleKanbnMoveTask(args: Record<string, any>): Promise<{ 
     }
     const taskId = args.taskId as string;
     const targetColumn = args.targetColumn || args.column || args.col;
+    if (typeof taskId !== "string" || taskId.length === 0) {
+        throw new Error(`Missing required parameter: taskId`);
+    }
+    if (typeof targetColumn !== "string" || targetColumn.length === 0) {
+        throw new Error(`Missing required parameter: targetColumn`);
+    }
 
     const moveFn = instance.moveTask || instance.move;
     if (typeof moveFn !== "function") {

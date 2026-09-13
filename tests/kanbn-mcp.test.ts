@@ -1490,6 +1490,38 @@ describe("task creation and movement", () => {
         }
     });
 
+    test("kanbn_move_task rejects a missing taskId", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Move Board", columns: ["Backlog", "Done"] });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha" });
+
+            await assert.rejects(
+                handleToolCall("kanbn_move_task", { path: dir, targetColumn: "Done" }),
+                /Missing required parameter: taskId/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_move_task rejects a missing target column", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Move Board", columns: ["Backlog", "Done"] });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha" });
+
+            await assert.rejects(
+                handleToolCall("kanbn_move_task", { path: dir, taskId: "alpha" }),
+                /Missing required parameter: targetColumn/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
     test("kanbn_delete_task removes a task from the board", async () => {
         const dir = makeTempDir();
 
