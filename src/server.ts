@@ -1221,6 +1221,35 @@ export async function handleKanbnSortColumn(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_comment" MCP tool call: add a comment to a task.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnComment(args: Record<string, any>) {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+
+    const taskId = args.taskId as string;
+    if (!taskId) {
+        throw new Error(`Missing required parameter: taskId`);
+    }
+    const text = args.text as string;
+    if (typeof text !== "string" || text.length === 0) {
+        throw new Error(`Missing required parameter: text`);
+    }
+
+    const author = (args.author as string) ?? (await instance.currentUser()) ?? "";
+    await instance.comment(taskId, text, author);
+
+    return {
+        content: [{ type: "text", text: `Commented on task "${taskId}"` }],
+    };
+}
+
 export const TOOLS: Tool[] = [
     {
         name: "kanbn_status",
@@ -1684,6 +1713,20 @@ export const TOOLS: Tool[] = [
             required: ["columnName", "sorters"],
         },
     },
+    {
+        name: "kanbn_comment",
+        description: "Add a comment to a task.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                taskId: { type: "string", description: "ID or filename of the task to comment on" },
+                text: { type: "string", description: "Comment text" },
+                author: { type: "string", description: "Comment author (defaults to KANBN_USER or git identity)" },
+            },
+            required: ["taskId", "text"],
+        },
+    },
 ];
 
 /**
@@ -1765,6 +1808,8 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
                 return handleKanbnTasksOnOtherBoards(args);
             case "kanbn_sort_column":
                 return handleKanbnSortColumn(args);
+            case "kanbn_comment":
+                return handleKanbnComment(args);
             default:
                 throw new Error(`Unknown tool requested: ${name}`);
         }
@@ -1819,7 +1864,7 @@ TOOLS
   kanbn_list_boards, kanbn_boards_summary, kanbn_board_exists,
   kanbn_reserved_board_slugs, kanbn_validate_board_slug,
   kanbn_find_orphaned_tasks, kanbn_cross_board_tasks, kanbn_tasks_on_other_boards,
-  kanbn_sort_column
+  kanbn_sort_column, kanbn_comment
 
 MCP CLIENT CONFIGURATION
 

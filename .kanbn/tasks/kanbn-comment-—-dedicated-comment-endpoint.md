@@ -1,5 +1,7 @@
 ---
 created: 2026-09-12T05:10:02.281Z
+updated: 2026-09-13T16:31:58.362Z
+completed: 2026-09-13T16:31:58.362Z
 ---
 
 # kanbn-comment — dedicated comment endpoint
@@ -16,15 +18,20 @@ Acceptance criteria:
 
 ## Sub-tasks
 
-- [ ] Implement `kanbn_comment` tool with taskId, text, optional author params
-- [ ] Unit tests — happy paths (add comment, verify comment appended)
-- [ ] Unit tests — sad paths (non-existent task, empty text)
+- [x] Implement `kanbn_comment` tool with taskId, text, optional author params
+- [x] Unit tests — happy paths (add comment, verify comment appended)
+- [x] Unit tests — sad paths (non-existent task, empty text)
+
+## Comments
+
+- author: Jinx
+  date: 2026-09-13T02:45:00.000Z
+  kanbn_comment implemented: requires taskId + text, optional author. Default author resolved via lib currentUser() = KANBN_USER env → git config email/name → empty string. Calls instance.comment() which appends (never overwrites); lib throws for missing task / empty text / not indexed. Handler returns 'Commented on task "X"'. 102/102 tests pass, tsc clean.
 
 ## History
 
-- type: created
-  date: 2026-09-12T05:10:02.281Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
+- type: moved
+  date: 2026-09-13T16:31:58.362Z
+  fromColumn: Backlog
+  toColumn: Done
   author: Kevin J. Duling

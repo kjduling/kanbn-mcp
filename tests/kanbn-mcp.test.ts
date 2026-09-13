@@ -93,6 +93,7 @@ describe("MCP tool listing", () => {
             "kanbn_cross_board_tasks",
             "kanbn_tasks_on_other_boards",
             "kanbn_sort_column",
+            "kanbn_comment",
         ]);
     });
 });
@@ -2476,6 +2477,135 @@ describe("kanbn_column_sort", () => {
                     columnName: "Backlog",
                 }),
                 /Missing required parameter: sorters/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("kanbn_comment", () => {
+    async function initMain(dir: string, columns: string[] = ["Backlog", "Done"]) {
+        await handleToolCall("kanbn_init_board", {
+            path: dir,
+            name: "Main Board",
+            columns,
+        });
+        return new KanbnClass(dir);
+    }
+
+    test("comment appends to an existing task", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+
+            const result = await handleToolCall("kanbn_comment", {
+                path: dir,
+                taskId: "alpha",
+                text: "Looking good",
+                author: "Tom",
+            });
+            assert.match(result.content[0].text, /Commented on task "alpha"/);
+
+            const task = await new KanbnClass(dir).getTask("alpha");
+            assert.equal(task.comments.at(-1).text, "Looking good");
+            assert.equal(task.comments.at(-1).author, "Tom");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("comment preserves existing comments", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+
+            await handleToolCall("kanbn_comment", {
+                path: dir,
+                taskId: "alpha",
+                text: "First comment",
+                author: "Tom",
+            });
+            await handleToolCall("kanbn_comment", {
+                path: dir,
+                taskId: "alpha",
+                text: "Second comment",
+                author: "Dick",
+            });
+
+            const task = await new KanbnClass(dir).getTask("alpha");
+            assert.equal(task.comments.length, 2);
+            assert.equal(task.comments[0].text, "First comment");
+            assert.equal(task.comments[1].text, "Second comment");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("comment defaults author to KANBN_USER", async () => {
+        const dir = makeTempDir();
+        const previous = process.env.KANBN_USER;
+
+        try {
+            process.env.KANBN_USER = "Test Author";
+            await initMain(dir);
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+
+            await handleToolCall("kanbn_comment", {
+                path: dir,
+                taskId: "alpha",
+                text: "Who wrote this?",
+            });
+
+            const task = await new KanbnClass(dir).getTask("alpha");
+            assert.equal(task.comments.at(-1).author, "Test Author");
+        } finally {
+            if (previous === undefined) {
+                delete process.env.KANBN_USER;
+            } else {
+                process.env.KANBN_USER = previous;
+            }
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("comment throws on a non-existent task", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+
+            await assert.rejects(
+                handleToolCall("kanbn_comment", {
+                    path: dir,
+                    taskId: "nope",
+                    text: "Hello",
+                }),
+                /No task file found with id "nope"/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("comment throws on empty text", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await initMain(dir);
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+
+            await assert.rejects(
+                handleToolCall("kanbn_comment", {
+                    path: dir,
+                    taskId: "alpha",
+                    text: "",
+                }),
+                /Missing required parameter: text/
             );
         } finally {
             rmSync(dir, { recursive: true, force: true });

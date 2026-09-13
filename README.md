@@ -130,6 +130,7 @@ npm test
 | `kanbn_cross_board_tasks` | Find tasks appearing on more than one board        |
 | `kanbn_tasks_on_other_boards` | Map each task to other boards referencing it     |
 | `kanbn_sort_column` | Sort a board column (name/created/modified/due/assigned/progress) |
+| `kanbn_comment` | Add a comment to a task                         |
 
 ## Example task metadata supported
 

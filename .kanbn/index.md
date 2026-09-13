@@ -20,7 +20,6 @@ completedColumns:
 - [kanbn-archived-tasks-—-list-and-load-archived-tasks](tasks/kanbn-archived-tasks-—-list-and-load-archived-tasks.md)
 - [kanbn-contributors-—-contributor-management](tasks/kanbn-contributors-—-contributor-management.md)
 - [kanbn-config-—-get-save-config-action-rules-validation](tasks/kanbn-config-—-get-save-config-action-rules-validation.md)
-- [kanbn-comment-—-dedicated-comment-endpoint](tasks/kanbn-comment-—-dedicated-comment-endpoint.md)
 - [kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board](tasks/kanbn-task-maintenance-—-tracked-untracked-missing-files-add-to-board.md)
 
 ## Todo
@@ -45,5 +44,6 @@ completedColumns:
 - [kanbn-board-management-—-create-delete-rename-list-boards](tasks/kanbn-board-management-—-create-delete-rename-list-boards.md)
 - [kanbn-column-sort-—-sort-a-column](tasks/kanbn-column-sort-—-sort-a-column.md)
 - [add-jsdoc-for-all-methods](tasks/add-jsdoc-for-all-methods.md)
+- [kanbn-comment-—-dedicated-comment-endpoint](tasks/kanbn-comment-—-dedicated-comment-endpoint.md)
 
 ## Blocked
