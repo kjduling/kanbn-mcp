@@ -244,7 +244,7 @@ async function isBoardInitialized(instance: any, boardPath: string): Promise<boo
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnStatus(args: Record<string, any>) {
+export async function handleKanbnStatus(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     const initialized = await isBoardInitialized(instance, boardPath);
@@ -265,7 +265,7 @@ export async function handleKanbnStatus(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnInitBoard(args: Record<string, any>) {
+export async function handleKanbnInitBoard(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -306,7 +306,7 @@ export async function handleKanbnInitBoard(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnEnsureBoard(args: Record<string, any>) {
+export async function handleKanbnEnsureBoard(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     const initialized = await isBoardInitialized(instance, boardPath);
@@ -324,7 +324,7 @@ export async function handleKanbnEnsureBoard(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnCreateTask(args: Record<string, any>) {
+export async function handleKanbnCreateTask(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -389,7 +389,7 @@ export async function handleKanbnCreateTask(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnDeleteTask(args: Record<string, any>) {
+export async function handleKanbnDeleteTask(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -434,7 +434,7 @@ export function getArchiveMethod(instance: any): ((taskId: string) => unknown) |
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnArchiveTask(args: Record<string, any>) {
+export async function handleKanbnArchiveTask(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -468,7 +468,7 @@ export async function handleKanbnArchiveTask(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnUnarchiveTask(args: Record<string, any>) {
+export async function handleKanbnUnarchiveTask(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -502,7 +502,7 @@ export async function handleKanbnUnarchiveTask(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnGetTask(args: Record<string, any>) {
+export async function handleKanbnGetTask(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -536,7 +536,7 @@ export async function handleKanbnGetTask(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnEditTask(args: Record<string, any>) {
+export async function handleKanbnEditTask(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -630,7 +630,7 @@ export async function handleKanbnEditTask(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnDeleteBoard(args: Record<string, any>) {
+export async function handleKanbnDeleteBoard(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const fs = await import("node:fs");
 
@@ -659,7 +659,7 @@ export async function handleKanbnDeleteBoard(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnMoveTask(args: Record<string, any>) {
+export async function handleKanbnMoveTask(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -690,7 +690,7 @@ export async function handleKanbnMoveTask(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnRenameTask(args: Record<string, any>) {
+export async function handleKanbnRenameTask(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -738,7 +738,7 @@ export async function handleKanbnRenameTask(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnFindSimpleTasks(args: Record<string, any>) {
+export async function handleKanbnFindSimpleTasks(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -768,7 +768,7 @@ export async function handleKanbnFindSimpleTasks(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnGetSimpleTask(args: Record<string, any>) {
+export async function handleKanbnGetSimpleTask(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -802,7 +802,7 @@ export async function handleKanbnGetSimpleTask(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnMoveSimpleTask(args: Record<string, any>) {
+export async function handleKanbnMoveSimpleTask(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -840,7 +840,7 @@ export async function handleKanbnMoveSimpleTask(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnMoveSimpleTaskToBoard(args: Record<string, any>) {
+export async function handleKanbnMoveSimpleTaskToBoard(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -878,7 +878,7 @@ export async function handleKanbnMoveSimpleTaskToBoard(args: Record<string, any>
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnDeleteSimpleTask(args: Record<string, any>) {
+export async function handleKanbnDeleteSimpleTask(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -912,7 +912,7 @@ export async function handleKanbnDeleteSimpleTask(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnPromoteSimpleTask(args: Record<string, any>) {
+export async function handleKanbnPromoteSimpleTask(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -946,7 +946,7 @@ export async function handleKanbnPromoteSimpleTask(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnCreateBoard(args: Record<string, any>) {
+export async function handleKanbnCreateBoard(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -977,7 +977,7 @@ export async function handleKanbnCreateBoard(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnDeleteBoardFile(args: Record<string, any>) {
+export async function handleKanbnDeleteBoardFile(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -1009,7 +1009,7 @@ export async function handleKanbnDeleteBoardFile(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnRenameBoard(args: Record<string, any>) {
+export async function handleKanbnRenameBoard(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -1038,7 +1038,7 @@ export async function handleKanbnRenameBoard(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnListBoards(args: Record<string, any>) {
+export async function handleKanbnListBoards(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -1055,7 +1055,7 @@ export async function handleKanbnListBoards(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnBoardsSummary(args: Record<string, any>) {
+export async function handleKanbnBoardsSummary(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -1072,7 +1072,7 @@ export async function handleKanbnBoardsSummary(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnBoardExists(args: Record<string, any>) {
+export async function handleKanbnBoardExists(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -1093,7 +1093,7 @@ export async function handleKanbnBoardExists(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnReservedBoardSlugs(args: Record<string, any>) {
+export async function handleKanbnReservedBoardSlugs(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -1110,7 +1110,7 @@ export async function handleKanbnReservedBoardSlugs(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnValidateBoardSlug(args: Record<string, any>) {
+export async function handleKanbnValidateBoardSlug(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -1131,7 +1131,7 @@ export async function handleKanbnValidateBoardSlug(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnFindOrphanedTasks(args: Record<string, any>) {
+export async function handleKanbnFindOrphanedTasks(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -1152,7 +1152,7 @@ export async function handleKanbnFindOrphanedTasks(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnCrossBoardTasks(args: Record<string, any>) {
+export async function handleKanbnCrossBoardTasks(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -1169,7 +1169,7 @@ export async function handleKanbnCrossBoardTasks(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnTasksOnOtherBoards(args: Record<string, any>) {
+export async function handleKanbnTasksOnOtherBoards(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -1189,7 +1189,7 @@ const VALID_SORT_ORDERS = ["ascending", "descending"];
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnSortColumn(args: Record<string, any>) {
+export async function handleKanbnSortColumn(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -1236,7 +1236,7 @@ export async function handleKanbnSortColumn(args: Record<string, any>) {
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleKanbnComment(args: Record<string, any>) {
+export async function handleKanbnComment(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
     if (!instance) {
@@ -1746,7 +1746,7 @@ export const TOOLS: Tool[] = [
  * List the available MCP tools.
  * @returns {{tools: Tool[]}} An object containing the tool definitions
  */
-export function listTools() {
+export function listTools(): { tools: Tool[]; } {
     return { tools: TOOLS };
 }
 
@@ -1756,7 +1756,7 @@ export function listTools() {
  * @param {Record<string, any>} [args] The tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
-export async function handleToolCall(name: string, args: Record<string, any> = {}) {
+export async function handleToolCall(name: string, args: Record<string, any> = {}): Promise<{ content: { type: string; text: string; }[]; }> {
     return enqueueKanbnOperation(async () => {
         switch (name) {
             case "kanbn_status":
@@ -1929,7 +1929,7 @@ export function printHelp(stream: NodeJS.WriteStream = process.stdout): void {
  * Run the MCP server over stdio.
  * @returns {Promise<void>}
  */
-async function main() {
+async function main(): Promise<void> {
     resetOperationQueue();
     const transport = new StdioServerTransport();
     await server.connect(transport);
