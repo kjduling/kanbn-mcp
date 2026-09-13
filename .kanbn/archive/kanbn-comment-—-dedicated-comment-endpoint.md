@@ -2,6 +2,7 @@
 created: 2026-09-12T05:10:02.281Z
 updated: 2026-09-13T16:31:58.362Z
 completed: 2026-09-13T16:31:58.362Z
+column: Done
 ---
 
 # kanbn-comment — dedicated comment endpoint
@@ -34,4 +35,8 @@ Acceptance criteria:
   date: 2026-09-13T16:31:58.362Z
   fromColumn: Backlog
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T16:56:01.066Z
+  fromColumn: Done
   author: Kevin J. Duling

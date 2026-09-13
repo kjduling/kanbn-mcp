@@ -2,6 +2,7 @@
 created: 2026-09-10T04:37:04.407Z
 updated: 2026-09-13T16:48:24.956Z
 completed: 2026-09-13T16:48:24.956Z
+column: Done
 ---
 
 # MINOR: title-to-name mapping is redundant and can leave both keys set
@@ -61,4 +62,8 @@ But if both are set, neither condition triggers — `taskData` ends up with both
   date: 2026-09-13T16:48:24.956Z
   fromColumn: Todo
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T16:56:12.952Z
+  fromColumn: Done
   author: Kevin J. Duling

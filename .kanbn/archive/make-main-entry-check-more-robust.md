@@ -2,6 +2,7 @@
 created: 2026-09-07T18:00:58.213Z
 updated: 2026-09-12T22:12:41.088Z
 completed: 2026-09-12T22:12:41.088Z
+column: Done
 ---
 
 # Make main() entry check more robust
@@ -41,4 +42,8 @@ This won't match if:
   date: 2026-09-12T22:12:41.088Z
   fromColumn: Backlog
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T16:55:42.676Z
+  fromColumn: Done
   author: Kevin J. Duling

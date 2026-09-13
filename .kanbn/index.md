@@ -28,21 +28,4 @@ completedColumns:
 
 ## Done
 
-- [fix-shared-global-operation-queue-breaking-across-sessions](tasks/fix-shared-global-operation-queue-breaking-across-sessions.md)
-- [medium-operation-queue-swallows-errors-and-corrupts-subsequent-queued-operations](tasks/medium-operation-queue-swallows-errors-and-corrupts-subsequent-queued-operations.md)
-- [medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion](tasks/medium-build-task-data-from-args-mutates-caller-s-input-object-via-date-conversion.md)
-- [medium-handle-kanbn-archive-task-has-dead-code-typo-prchive-in-method-chain](tasks/medium-handle-kanbn-archive-task-has-dead-code-typo-prchive-in-method-chain.md)
-- [make-main-entry-check-more-robust](tasks/make-main-entry-check-more-robust.md)
-- [kanbn-task-rename-—-rename-a-task](tasks/kanbn-task-rename-—-rename-a-task.md)
-- [kanbn-simple-tasks-—-simple-task-non-file-operations](tasks/kanbn-simple-tasks-—-simple-task-non-file-operations.md)
-- [kanbn-board-management-—-create-delete-rename-list-boards](tasks/kanbn-board-management-—-create-delete-rename-list-boards.md)
-- [kanbn-column-sort-—-sort-a-column](tasks/kanbn-column-sort-—-sort-a-column.md)
-- [add-jsdoc-for-all-methods](tasks/add-jsdoc-for-all-methods.md)
-- [kanbn-comment-—-dedicated-comment-endpoint](tasks/kanbn-comment-—-dedicated-comment-endpoint.md)
-- [minor-kanbn-d-ts-actions-option-type-is-overly-specific](tasks/minor-kanbn-d-ts-actions-option-type-is-overly-specific.md)
-- [minor-kanbn-create-task-sub-task-schema-has-confusing-triple-alias-text-name-description](tasks/minor-kanbn-create-task-sub-task-schema-has-confusing-triple-alias-text-name-description.md)
-- [minor-kanbn-initialize-board-is-a-redundant-duplicate-of-kanbn-init-board](tasks/minor-kanbn-initialize-board-is-a-redundant-duplicate-of-kanbn-init-board.md)
-- [minor-title-to-name-mapping-is-redundant-and-can-leave-both-keys-set](tasks/minor-title-to-name-mapping-is-redundant-and-can-leave-both-keys-set.md)
-- [minor-kanbn-create-task-column-fallback-has-silent-error-and-hidden-disk-read](tasks/minor-kanbn-create-task-column-fallback-has-silent-error-and-hidden-disk-read.md)
-
 ## Blocked

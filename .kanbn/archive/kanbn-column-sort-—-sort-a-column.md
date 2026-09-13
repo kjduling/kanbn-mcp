@@ -2,6 +2,7 @@
 created: 2026-09-12T05:02:26.170Z
 updated: 2026-09-13T16:16:49.476Z
 completed: 2026-09-13T16:16:49.476Z
+column: Done
 ---
 
 # kanbn-column-sort — sort a column
@@ -33,4 +34,8 @@ Acceptance criteria:
   date: 2026-09-13T16:16:49.476Z
   fromColumn: Backlog
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T16:55:54.884Z
+  fromColumn: Done
   author: Kevin J. Duling

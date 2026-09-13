@@ -5,6 +5,7 @@ assigned: Kevin
 progress: 1
 started: 2026-09-12T18:55:13.345Z
 completed: 2026-09-12T07:00:00.000Z
+column: Done
 ---
 
 # Fix shared global operationQueue breaking across sessions
@@ -52,4 +53,8 @@ This causes issues:
   date: 2026-09-12T21:22:02.636Z
   fromColumn: In Progress
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T16:55:30.817Z
+  fromColumn: Done
   author: Kevin J. Duling

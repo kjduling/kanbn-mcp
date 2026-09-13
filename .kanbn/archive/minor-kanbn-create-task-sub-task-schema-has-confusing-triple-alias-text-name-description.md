@@ -2,6 +2,7 @@
 created: 2026-09-10T04:30:19.147Z
 updated: 2026-09-13T16:41:16.088Z
 completed: 2026-09-13T16:41:16.088Z
+column: Done
 ---
 
 # MINOR: kanbn_create_task subTask schema has confusing triple-alias (text/name/description)
@@ -58,4 +59,8 @@ The precedence is unclear — a caller might set both `name` and `text` and not 
   date: 2026-09-13T16:41:16.088Z
   fromColumn: Todo
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T16:56:06.697Z
+  fromColumn: Done
   author: Kevin J. Duling

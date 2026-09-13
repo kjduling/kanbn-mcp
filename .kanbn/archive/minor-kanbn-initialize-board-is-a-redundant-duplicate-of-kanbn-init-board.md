@@ -2,6 +2,7 @@
 created: 2026-09-10T04:37:04.433Z
 updated: 2026-09-13T16:45:21.397Z
 completed: 2026-09-13T16:45:21.397Z
+column: Done
 ---
 
 # MINOR: kanbn_initialize_board is a redundant duplicate of kanbn_init_board
@@ -46,4 +47,8 @@ It exists as an alias for MCP client convenience, but it inflates the tool list 
   date: 2026-09-13T16:45:21.397Z
   fromColumn: Todo
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T16:56:09.297Z
+  fromColumn: Done
   author: Kevin J. Duling

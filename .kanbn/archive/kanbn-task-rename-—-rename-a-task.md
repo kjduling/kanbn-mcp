@@ -2,6 +2,7 @@
 created: 2026-09-12T05:00:49.163Z
 updated: 2026-09-12T22:15:30.662Z
 completed: 2026-09-12T22:15:30.662Z
+column: Done
 ---
 
 # kanbn-task-rename — rename a task
@@ -32,4 +33,8 @@ Acceptance criteria:
   date: 2026-09-12T22:15:30.662Z
   fromColumn: Backlog
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T16:55:45.702Z
+  fromColumn: Done
   author: Kevin J. Duling

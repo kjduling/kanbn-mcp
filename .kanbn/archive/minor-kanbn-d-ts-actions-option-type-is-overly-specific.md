@@ -2,6 +2,7 @@
 created: 2026-09-10T04:37:04.425Z
 updated: 2026-09-13T16:37:09.994Z
 completed: 2026-09-13T16:37:09.994Z
+column: Done
 ---
 
 # MINOR: kanbn.d.ts 'actions' option type is overly specific
@@ -47,4 +48,8 @@ The `actions` property is typed as `boolean`, but the actual Kanbn library may a
   date: 2026-09-13T16:37:09.994Z
   fromColumn: Todo
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T16:56:04.030Z
+  fromColumn: Done
   author: Kevin J. Duling

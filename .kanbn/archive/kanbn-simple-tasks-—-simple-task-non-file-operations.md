@@ -2,6 +2,7 @@
 created: 2026-09-12T05:09:14.085Z
 updated: 2026-09-12T22:24:23.691Z
 completed: 2026-09-12T22:24:23.691Z
+column: Done
 ---
 
 # kanbn-simple-tasks — simple task (non-file) operations
@@ -45,4 +46,8 @@ Acceptance criteria:
   date: 2026-09-12T22:24:23.691Z
   fromColumn: Backlog
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T16:55:48.081Z
+  fromColumn: Done
   author: Kevin J. Duling

@@ -2,6 +2,7 @@
 created: 2026-09-12T04:59:25.167Z
 updated: 2026-09-12T22:39:09.924Z
 completed: 2026-09-12T22:39:09.924Z
+column: Done
 ---
 
 # kanbn-board-management — create, delete, rename, list boards
@@ -55,4 +56,8 @@ Acceptance criteria:
   date: 2026-09-12T22:39:09.924Z
   fromColumn: Backlog
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T16:55:50.616Z
+  fromColumn: Done
   author: Kevin J. Duling

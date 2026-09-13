@@ -3,6 +3,7 @@ created: 2026-09-10T04:30:19.097Z
 updated: 2026-09-12T21:28:52.048Z
 started: 2026-09-12T21:23:53.135Z
 completed: 2026-09-12T21:28:52.048Z
+column: Done
 ---
 
 # MEDIUM: operationQueue swallows errors and corrupts subsequent queued operations
@@ -54,4 +55,8 @@ There is no way to recover — the queue is now a dead chain that discards every
   date: 2026-09-12T21:28:52.048Z
   fromColumn: In Progress
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T16:55:33.870Z
+  fromColumn: Done
   author: Kevin J. Duling
