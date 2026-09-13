@@ -1792,14 +1792,14 @@ export const TOOLS: Tool[] = [
     },
     {
         name: "kanbn_create_task",
-        description: "Create a new task on the Kanbn board.",
+        description: "Create a new task on the Kanbn board. The 'name' field is required; all other fields are optional.",
         inputSchema: {
             type: "object",
             properties: {
                 path: { type: "string", description: "Path to the project root directory" },
                 taskData: { type: "object", description: "Kanbn task metadata object" },
                 column: { type: "string", description: "Target column for the new task (optional; defaults to the board's first column)" },
-                name: { type: "string", description: "Task title" },
+                name: { type: "string", description: "Task title (required)" },
                 description: { type: "string", description: "Task detailed description" },
                 assigned: { type: "string", description: "Assignee" },
                 subTasks: {
@@ -1826,6 +1826,7 @@ export const TOOLS: Tool[] = [
                     },
                 },
             },
+            required: ["name"],
         },
     },
     {

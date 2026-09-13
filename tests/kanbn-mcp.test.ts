@@ -5,6 +5,7 @@ import path from "node:path";
 import test, { describe, mock } from "node:test";
 
 import { buildTaskDataFromArgs, enqueueKanbnOperation, getArchiveMethod, getKanbnInstance, handleKanbnInitBoard, handleToolCall, isBoardInitialized, isMainEntry, listTools, registerInitializedMethod, resetOperationQueue } from "../src/server";
+import { TOOLS } from "../src/server";
 
 const KanbnClass = require("@basementuniverse/kanbn/src/main.js")?.Kanbn;
 
@@ -1270,6 +1271,20 @@ describe("kanbn_burndown", () => {
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }
+    });
+});
+
+describe("tool schema required fields", () => {
+    test("kanbn_create_task requires a name", () => {
+        const tool = TOOLS.find((t) => t.name === "kanbn_create_task");
+        assert.ok(tool);
+        assert.deepEqual(tool.inputSchema.required, ["name"]);
+    });
+
+    test("kanbn_board_exists requires a slug", () => {
+        const tool = TOOLS.find((t) => t.name === "kanbn_board_exists");
+        assert.ok(tool);
+        assert.deepEqual(tool.inputSchema.required, ["slug"]);
     });
 });
 
