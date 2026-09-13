@@ -2496,6 +2496,12 @@ describe("isMainEntry", () => {
         assert.equal(isMainEntry(["node", "/proj/bin/kanbn-mcp-server.mjs"]), true);
     });
 
+    test("detects the global and local kanbn-mcp bin entries", () => {
+        assert.equal(isMainEntry(["node", "/opt/local/bin/kanbn-mcp"]), true);
+        assert.equal(isMainEntry(["node", "/proj/node_modules/.bin/kanbn-mcp"]), true);
+        assert.equal(isMainEntry(["node", "/proj/node_modules/.bin/kanbn-mcp", "--version"]), true);
+    });
+
     test("honours --run-server for opaque launchers", () => {
         assert.equal(isMainEntry(["npx", "kanbn-mcp", "--run-server"]), true);
         assert.equal(isMainEntry(["node", "/opaque/launcher/entry.js", "--run-server"]), true);

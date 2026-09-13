@@ -3261,8 +3261,8 @@ export function isMainEntry(argv: string[] = process.argv): boolean {
     if (argv.includes("--run-server")) {
         return true;
     }
-    const base = path.basename(script).toLowerCase();
-    return base.includes("server");
+    const base = path.parse(script).name.toLowerCase();
+    return base.includes("server") || base === "kanbn-mcp";
 }
 
 if (isMainEntry()) {
