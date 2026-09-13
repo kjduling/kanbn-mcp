@@ -1497,6 +1497,75 @@ export async function handleKanbnValidateBoard(args: Record<string, any>): Promi
     };
 }
 
+const SEARCH_STRING_FILTERS = ["id", "name", "description", "column", "assigned", "sub-task", "tag", "relation", "comment"];
+const SEARCH_DATE_FILTERS = ["created", "updated", "started", "completed", "due", "plannedStart", "plannedFinish"];
+const SEARCH_NUMBER_FILTERS = ["workload", "progress", "count-sub-tasks", "count-tags", "count-relations", "count-comments"];
+const SEARCH_BOOLEAN_FILTERS = ["overdue", "is-started", "is-completed", "in-started-column", "in-completed-column"];
+
+/**
+ * Validate the search filters against the board's known filter keys, throwing on invalid filters.
+ * @param {Record<string, any>} filters The filter object to validate
+ * @param {any} index The board index (used for custom field filters)
+ * @returns {void}
+ */
+function validateSearchFilters(filters: Record<string, any>, index: any): void {
+    const customFieldKeys = (index?.options?.customFields ?? []).map((field: any) => field.name);
+    const stringKeys = [...SEARCH_STRING_FILTERS, ...customFieldKeys];
+    const allKeys = [...stringKeys, ...SEARCH_DATE_FILTERS, ...SEARCH_NUMBER_FILTERS, ...SEARCH_BOOLEAN_FILTERS];
+
+    for (const key of Object.keys(filters)) {
+        if (allKeys.indexOf(key) === -1) {
+            throw new Error(`Invalid filter: "${key}" is not a valid filter`);
+        }
+        const value = filters[key];
+        if (SEARCH_BOOLEAN_FILTERS.indexOf(key) !== -1) {
+            if (!(typeof value === "boolean" || (Array.isArray(value) && value.every((v: any) => typeof v === "boolean")))) {
+                throw new Error(`Invalid filter: "${key}" must be a boolean or an array of booleans`);
+            }
+        } else if (SEARCH_NUMBER_FILTERS.indexOf(key) !== -1) {
+            if (!(typeof value === "number" || (Array.isArray(value) && value.every((v: any) => typeof v === "number")))) {
+                throw new Error(`Invalid filter: "${key}" must be a number or an array of numbers`);
+            }
+        } else if (SEARCH_DATE_FILTERS.indexOf(key) !== -1) {
+            if (!(typeof value === "string" || typeof value === "number" || (Array.isArray(value) && value.every((v: any) => typeof v === "string" || typeof v === "number")))) {
+                throw new Error(`Invalid filter: "${key}" must be a date or an array of dates`);
+            }
+        } else if (!(typeof value === "string" || (Array.isArray(value) && value.every((v: any) => typeof v === "string")))) {
+            throw new Error(`Invalid filter: "${key}" must be a matching string or an array of matching strings`);
+        }
+    }
+}
+
+/**
+ * Handle the "kanbn_search" MCP tool call: search tasks across all columns with filters.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
+export async function handleKanbnSearch(args: Record<string, any>): Promise<{ content: { type: string; text: string; }[]; }> {
+    const boardPath = getKanbnPath(args.path as string | undefined);
+    const instance = getKanbnInstance(boardPath);
+    if (!instance) {
+        throw new Error(`Failed to instantiate Kanbn at ${boardPath}`);
+    }
+    if (!(await isBoardInitialized(instance, boardPath))) {
+        throw new Error(`No Kanbn board found at: ${boardPath}`);
+    }
+    const filters = args.filters ?? {};
+    if (filters === null || typeof filters !== "object" || Array.isArray(filters)) {
+        throw new Error(`Invalid filters: expected an object, received ${filters === null ? "null" : Array.isArray(filters) ? "array" : typeof filters}`);
+    }
+    const index = await getBoardIndex(instance);
+    validateSearchFilters(filters, index);
+    try {
+        const matches = await instance.search(filters, args.quiet === true);
+        return {
+            content: [{ type: "text", text: JSON.stringify(matches, null, 2) }],
+        };
+    } catch (error) {
+        throw new Error(`Failed to search board: ${(error as Error).message}`);
+    }
+}
+
 export const TOOLS: Tool[] = [
     {
         name: "kanbn_status",
@@ -2060,6 +2129,21 @@ export const TOOLS: Tool[] = [
             },
         },
     },
+    {
+        name: "kanbn_search",
+        description: "Search tasks on the board with filters (works across all columns).",
+        inputSchema: {
+            type: "object",
+            properties: {
+                path: { type: "string", description: "Path to the project root directory" },
+                filters: {
+                    type: "object",
+                    description: "Task filters: id, name, description, column, assigned, sub-task, tag, relation, comment (regex strings), created, updated, started, completed, due, plannedStart, plannedFinish (dates or ranges), workload, progress, count-sub-tasks, count-tags, count-relations, count-comments (numbers or ranges), overdue, is-started, is-completed, in-started-column, in-completed-column (booleans), plus any configured custom fields",
+                },
+                quiet: { type: "boolean", description: "If true, return only matching task IDs (default: false)" },
+            },
+        },
+    },
 ];
 
 /**
@@ -2159,6 +2243,8 @@ export async function handleToolCall(name: string, args: Record<string, any> = {
                 return handleKanbnGetWorkspaceOptions(args);
             case "kanbn_validate_board":
                 return handleKanbnValidateBoard(args);
+            case "kanbn_search":
+                return handleKanbnSearch(args);
             default:
                 throw new Error(`Unknown tool requested: ${name}`);
         }
@@ -2216,7 +2302,7 @@ TOOLS
   kanbn_sort_column, kanbn_comment,
   kanbn_get_config, kanbn_save_config, kanbn_get_action_rules,
   kanbn_find_action_warnings, kanbn_get_date_format, kanbn_get_task_template,
-  kanbn_get_workspace_options, kanbn_validate_board
+  kanbn_get_workspace_options, kanbn_validate_board, kanbn_search
 
 MCP CLIENT CONFIGURATION
 

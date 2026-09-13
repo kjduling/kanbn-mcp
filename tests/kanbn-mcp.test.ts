@@ -102,6 +102,7 @@ describe("MCP tool listing", () => {
             "kanbn_get_task_template",
             "kanbn_get_workspace_options",
             "kanbn_validate_board",
+            "kanbn_search",
         ]);
     });
 });
@@ -604,6 +605,232 @@ describe("kanbn config tools", () => {
                 handleToolCall("kanbn_get_action_rules", { path: dir }),
                 /No Kanbn board found at:/
             );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("kanbn_search", () => {
+    test("returns all tasks across columns when no filters are given", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Search Board",
+                columns: ["Backlog", "In Progress", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Bravo", column: "In Progress" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Charlie", column: "Done" });
+
+            const result = await handleToolCall("kanbn_search", { path: dir });
+            const matches = JSON.parse(result.content[0].text);
+            const names = matches.map((task: any) => task.name);
+            assert.equal(matches.length, 3);
+            assert.deepStrictEqual(names, ["Alpha", "Bravo", "Charlie"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("filters tasks by tag", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Tag Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Bugfix",
+                column: "Backlog",
+                tags: ["bug"],
+            });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Feature",
+                column: "Backlog",
+                tags: ["feature"],
+            });
+
+            const result = await handleToolCall("kanbn_search", {
+                path: dir,
+                filters: { tag: "bug" },
+            });
+            const matches = JSON.parse(result.content[0].text);
+            assert.equal(matches.length, 1);
+            assert.equal(matches[0].name, "Bugfix");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("filters tasks by assigned user", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Assignee Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Mine",
+                column: "Backlog",
+                assigned: "alice",
+            });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Not mine",
+                column: "Backlog",
+                assigned: "bob",
+            });
+
+            const result = await handleToolCall("kanbn_search", {
+                path: dir,
+                filters: { assigned: "alice" },
+            });
+            const matches = JSON.parse(result.content[0].text);
+            assert.equal(matches.length, 1);
+            assert.equal(matches[0].name, "Mine");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("filters tasks by due date", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Due Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Due task",
+                column: "Backlog",
+                due: "2026-09-20T00:00:00.000Z",
+            });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "No due date",
+                column: "Backlog",
+            });
+
+            const result = await handleToolCall("kanbn_search", {
+                path: dir,
+                filters: { due: "2026-09-20T00:00:00.000Z" },
+            });
+            const matches = JSON.parse(result.content[0].text);
+            assert.equal(matches.length, 1);
+            assert.equal(matches[0].name, "Due task");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("returns only task IDs when quiet is true", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Quiet Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Solo task",
+                column: "Backlog",
+                tags: ["bug"],
+            });
+
+            const result = await handleToolCall("kanbn_search", {
+                path: dir,
+                filters: { tag: "bug" },
+                quiet: true,
+            });
+            const matches = JSON.parse(result.content[0].text);
+            assert.ok(Array.isArray(matches));
+            assert.equal(matches.length, 1);
+            assert.equal(typeof matches[0], "string");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("rejects unknown filter keys", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Invalid Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            await assert.rejects(
+                handleToolCall("kanbn_search", {
+                    path: dir,
+                    filters: { bogus: "value" },
+                }),
+                /Invalid filter: "bogus" is not a valid filter/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("rejects filters with the wrong value type", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Typed Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            await assert.rejects(
+                handleToolCall("kanbn_search", {
+                    path: dir,
+                    filters: { overdue: "yes" },
+                }),
+                /Invalid filter: "overdue" must be a boolean/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("returns an empty array for filter values that match nothing", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "No Match Board",
+                columns: ["Backlog", "Done"],
+            });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Tagged task",
+                column: "Backlog",
+                tags: ["bug"],
+            });
+
+            const result = await handleToolCall("kanbn_search", {
+                path: dir,
+                filters: { tag: "zzz-no-such-tag" },
+            });
+            assert.deepStrictEqual(JSON.parse(result.content[0].text), []);
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }

@@ -139,6 +139,7 @@ npm test
 | `kanbn_get_task_template` | Get the board's task template string          |
 | `kanbn_get_workspace_options` | Get workspace-scoped Kanbn options          |
 | `kanbn_validate_board` | Validate the board (true or list of parsing errors) |
+| `kanbn_search` | Search tasks with filters (tag, assigned, due, etc.) across all columns |
 
 ## Example task metadata supported
 
