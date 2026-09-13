@@ -1,6 +1,16 @@
 declare module "@basementuniverse/kanbn" {
     export class Kanbn {
-        constructor(root?: any, options?: { board?: string, caches?: any, actions?: boolean });
+        /**
+         * `actions` is deliberately wider than the boolean the constructor's runtime only special-cases
+         * (`options.actions === false`). Strings and objects are accepted and pass through untouched,
+         * e.g. as workspace/board action rules (`actionsFile`-style config), so a bare `boolean`
+         * would reject valid values.
+         * @param {any} [root=null] The workspace root folder
+         * @param {{ board?: string, caches?: any, actions?: boolean | string | Record<string, any> }} [options={}] Instance options
+         * TODO: re-sync this with the library's own types (`@basementuniverse/kanbn/src/main.d.ts`)
+         * when it ships richer constructor options typing.
+         */
+        constructor(root?: any, options?: { board?: string, caches?: any, actions?: boolean | string | Record<string, any> });
         initialised(): Promise<boolean>;
         getIndex(): Promise<any>;
         getTask(taskId: string): Promise<any>;

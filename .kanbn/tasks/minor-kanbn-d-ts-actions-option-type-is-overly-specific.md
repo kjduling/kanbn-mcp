@@ -1,6 +1,7 @@
 ---
 created: 2026-09-10T04:37:04.425Z
-updated: 2026-09-12T22:44:30.380Z
+updated: 2026-09-13T16:37:09.994Z
+completed: 2026-09-13T16:37:09.994Z
 ---
 
 # MINOR: kanbn.d.ts 'actions' option type is overly specific
@@ -31,19 +32,19 @@ The `actions` property is typed as `boolean`, but the actual Kanbn library may a
 
 ## Sub-tasks
 
-- [ ] Widen actions type or add JSDoc noting it should be synced with Kanbn library
-- [ ] Add verification comment noting type sync responsibility
+- [x] Widen actions type or add JSDoc noting it should be synced with Kanbn library
+- [x] Add verification comment noting type sync responsibility
+
+## Comments
+
+- author: Jinx
+  date: 2026-09-13T03:05:00.000Z
+  Widened constructor options actions to boolean | string | Record<string, any> in kanbn.d.ts with a JSDoc comment explaining the runtime only special-cases options.actions === false (strings/objects pass through). TODO note added to re-sync with the lib's own src/main.d.ts when it typifies constructor options. Runtime verification tests confirm the library constructor accepts {}, 'rules.yaml', true and disables only on false. 104/104 tests pass, tsc clean.
 
 ## History
 
-- type: created
-  date: 2026-09-10T04:37:04.425Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
-  author: Kevin J. Duling
 - type: moved
-  date: 2026-09-12T22:44:30.380Z
-  fromColumn: Backlog
-  toColumn: Todo
+  date: 2026-09-13T16:37:09.994Z
+  fromColumn: Todo
+  toColumn: Done
   author: Kevin J. Duling

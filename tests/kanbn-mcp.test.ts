@@ -2612,3 +2612,30 @@ describe("kanbn_comment", () => {
         }
     });
 });
+
+describe("kanbn constructor actions option", () => {
+    test("non-false action values are accepted", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await new KanbnClass(dir, { actions: {} }).initialised();
+            await new KanbnClass(dir, { actions: "rules.yaml" }).initialised();
+            await new KanbnClass(dir, { actions: true }).initialised();
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("actions: false disables only that instance", async () => {
+        const dir = makeTempDir();
+
+        try {
+            const disabled = new KanbnClass(dir, { actions: false });
+            const enabled = new KanbnClass(dir, { actions: "rules.yaml" });
+            assert.equal(disabled.actionsEnabled, false);
+            assert.equal(enabled.actionsEnabled, true);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
