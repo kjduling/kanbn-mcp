@@ -1,18 +1,24 @@
 ---
 created: 2026-09-12T18:16:25.081Z
-updated: 2026-09-12T18:16:25.076Z
+updated: 2026-09-13T16:24:01.120Z
 assigned: 'Kevin J. Duling'
+completed: 2026-09-13T16:24:01.120Z
 ---
 
 # Add JSDoc for all methods
 
 Each method should have proper JSDoc entries.
 
+## Comments
+
+- author: Jinx
+  date: 2026-09-13T02:10:00.000Z
+  JSDoc added to all 43 methods in src/server.ts (exported handlers + internal helpers getKanbnInstance, convertDatesInObject, isBoardInitialized, main, etc.), each with description, @param and @returns tags. 97/97 tests pass, tsc clean; diff is pure insertion (216 lines, 0 deletions).
+
 ## History
 
-- type: created
-  date: 2026-09-12T18:16:25.081Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
+- type: moved
+  date: 2026-09-13T16:24:01.120Z
+  fromColumn: Backlog
+  toColumn: Done
   author: Kevin J. Duling

@@ -7,6 +7,11 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import path from "node:path";
 
+/**
+ * Create a Kanbn board instance for a directory.
+ * @param {string} boardPath Path to the project root directory (must contain a .kanbn folder)
+ * @returns {any} A Kanbn instance, or undefined if boards are not supported
+ */
 export function getKanbnInstance(boardPath: string): any {
     let mod: any;
     try {
@@ -48,10 +53,20 @@ const server = new Server(
 
 let sessionQueue: Promise<void> = Promise.resolve();
 
+/**
+ * Reset the shared operation queue state.
+ * @returns {void}
+ */
 export function resetOperationQueue(): void {
     sessionQueue = Promise.resolve();
 }
 
+/**
+ * Serialize a board operation through the shared session queue.
+ * @template T The operation result type
+ * @param {() => Promise<T>} op Async operation to run
+ * @returns {Promise<T>} A promise resolving to the operation result
+ */
 export function enqueueKanbnOperation<T>(op: () => Promise<T>): Promise<T> {
     const result = sessionQueue.then(op);
     // Tail must swallow the rejection: if it were `result` itself, a failure
@@ -66,6 +81,12 @@ export function enqueueKanbnOperation<T>(op: () => Promise<T>): Promise<T> {
     return result;
 }
 
+/**
+ * Resolve the board path from an explicit override, the KANBN_DEFAULT_PATH
+ * environment variable, or the server working directory.
+ * @param {string} [customPath] Optional explicit board path
+ * @returns {string} The resolved absolute board path
+ */
 export function getKanbnPath(customPath?: string): string {
     if (customPath) {
         return path.resolve(customPath);
@@ -77,7 +98,9 @@ export function getKanbnPath(customPath?: string): string {
 }
 
 /**
- * Helper to convert valid date strings to JS Date objects for Kanbn's schema validator
+ * Recursively convert ISO date strings in a task metadata object into Date values.
+ * @param {Record<string, any>} obj Object to convert
+ * @returns {Record<string, any>} A new object with dates converted
  */
 function convertDatesInObject(obj: Record<string, any>): Record<string, any> {
     const dateKeys = new Set([
@@ -101,6 +124,11 @@ function convertDatesInObject(obj: Record<string, any>): Record<string, any> {
     return obj;
 }
 
+/**
+ * Build a Kanbn task metadata object from MCP tool arguments.
+ * @param {Record<string, any>} args Raw MCP tool arguments
+ * @returns {Record<string, any>} A normalized Kanbn task metadata object
+ */
 export function buildTaskDataFromArgs(args: Record<string, any>): Record<string, any> {
     if (!args || typeof args !== "object") {
         return {};
@@ -185,6 +213,12 @@ export function buildTaskDataFromArgs(args: Record<string, any>): Record<string,
     return taskData;
 }
 
+/**
+ * Check whether the board at boardPath is already initialized.
+ * @param {any} instance A Kanbn instance
+ * @param {string} boardPath Path to the project root directory
+ * @returns {Promise<boolean>} True when the board is initialized
+ */
 async function isBoardInitialized(instance: any, boardPath: string): Promise<boolean> {
     if (!instance) return false;
     const fn = instance.initialised || instance.initialized || instance.isInitialized || instance.isInitialised;
@@ -200,6 +234,11 @@ async function isBoardInitialized(instance: any, boardPath: string): Promise<boo
     return false;
 }
 
+/**
+ * Handle the "kanbn_status" MCP tool call: return a board status summary.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnStatus(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -216,6 +255,11 @@ export async function handleKanbnStatus(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_init_board" / "kanbn_initialize_board" MCP tool call: initialize a new board.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnInitBoard(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -252,6 +296,11 @@ export async function handleKanbnInitBoard(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_ensure_board" MCP tool call: initialize a board if one is absent.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnEnsureBoard(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -264,6 +313,11 @@ export async function handleKanbnEnsureBoard(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_create_task" MCP tool call: create a task, falling back to an explicit column.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnCreateTask(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -320,6 +374,11 @@ export async function handleKanbnCreateTask(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_delete_task" MCP tool call: delete a task (or act on an already-archived one).
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnDeleteTask(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -351,10 +410,20 @@ export async function handleKanbnDeleteTask(args: Record<string, any>) {
     };
 }
 
+/**
+ * Resolve the archive method (archive or delete) available on a Kanbn instance.
+ * @param {any} instance A Kanbn instance
+ * @returns {((taskId: string) => unknown) | undefined} The archive method, if present
+ */
 export function getArchiveMethod(instance: any): ((taskId: string) => unknown) | undefined {
     return instance?.archiveTask ?? instance?.archive;
 }
 
+/**
+ * Handle the "kanbn_archive_task" MCP tool call: archive a task.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnArchiveTask(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -384,6 +453,11 @@ export async function handleKanbnArchiveTask(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_unarchive_task" / "kanbn_restore_task" MCP tool call: unarchive a task.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnUnarchiveTask(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -413,6 +487,11 @@ export async function handleKanbnUnarchiveTask(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_get_task" MCP tool call: retrieve a task by id.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnGetTask(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -442,6 +521,11 @@ export async function handleKanbnGetTask(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_edit_task" MCP tool call: edit fields on an existing task.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnEditTask(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -531,6 +615,11 @@ export async function handleKanbnEditTask(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_delete_board" MCP tool call: delete an entire board directory.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnDeleteBoard(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const fs = await import("node:fs");
@@ -555,6 +644,11 @@ export async function handleKanbnDeleteBoard(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_move_task" MCP tool call: move a task between columns.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnMoveTask(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -581,6 +675,11 @@ export async function handleKanbnMoveTask(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_rename_task" MCP tool call: rename a task, optionally moving it.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnRenameTask(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -624,6 +723,11 @@ export async function handleKanbnRenameTask(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_find_simple_tasks" MCP tool call: find non-file (simple) tasks by title.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnFindSimpleTasks(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -649,6 +753,11 @@ export async function handleKanbnFindSimpleTasks(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_get_simple_task" MCP tool call: resolve exactly one simple task by title.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnGetSimpleTask(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -678,6 +787,11 @@ export async function handleKanbnGetSimpleTask(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_move_simple_task" MCP tool call: move a simple task between columns.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnMoveSimpleTask(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -711,6 +825,11 @@ export async function handleKanbnMoveSimpleTask(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_move_simple_task_to_board" MCP tool call: move a simple task onto another board.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnMoveSimpleTaskToBoard(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -744,6 +863,11 @@ export async function handleKanbnMoveSimpleTaskToBoard(args: Record<string, any>
     };
 }
 
+/**
+ * Handle the "kanbn_delete_simple_task" MCP tool call: remove a simple task.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnDeleteSimpleTask(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -773,6 +897,11 @@ export async function handleKanbnDeleteSimpleTask(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_promote_simple_task" MCP tool call: convert a simple task into a task file.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnPromoteSimpleTask(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -802,6 +931,11 @@ export async function handleKanbnPromoteSimpleTask(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_create_board" MCP tool call: create a secondary board.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnCreateBoard(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -828,6 +962,11 @@ export async function handleKanbnCreateBoard(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_delete_board_file" MCP tool call: remove a secondary board file, returning orphaned task ids.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnDeleteBoardFile(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -855,6 +994,11 @@ export async function handleKanbnDeleteBoardFile(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_rename_board" MCP tool call: rename a secondary board.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnRenameBoard(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -879,6 +1023,11 @@ export async function handleKanbnRenameBoard(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_list_boards" MCP tool call: list all boards.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnListBoards(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -891,6 +1040,11 @@ export async function handleKanbnListBoards(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_boards_summary" MCP tool call: return per-board task statistics.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnBoardsSummary(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -903,6 +1057,11 @@ export async function handleKanbnBoardsSummary(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_board_exists" MCP tool call: check whether a board exists by slug.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnBoardExists(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -919,6 +1078,11 @@ export async function handleKanbnBoardExists(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_reserved_board_slugs" MCP tool call: list reserved board slugs.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnReservedBoardSlugs(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -931,6 +1095,11 @@ export async function handleKanbnReservedBoardSlugs(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_validate_board_slug" MCP tool call: validate a proposed board slug.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnValidateBoardSlug(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -947,6 +1116,11 @@ export async function handleKanbnValidateBoardSlug(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_find_orphaned_tasks" MCP tool call: find tasks only referenced by one board.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnFindOrphanedTasks(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -963,6 +1137,11 @@ export async function handleKanbnFindOrphanedTasks(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_cross_board_tasks" MCP tool call: find tasks that appear on more than one board.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnCrossBoardTasks(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -975,6 +1154,11 @@ export async function handleKanbnCrossBoardTasks(args: Record<string, any>) {
     };
 }
 
+/**
+ * Handle the "kanbn_tasks_on_other_boards" MCP tool call: map every task to other boards referencing it.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnTasksOnOtherBoards(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -990,6 +1174,11 @@ export async function handleKanbnTasksOnOtherBoards(args: Record<string, any>) {
 const VALID_SORT_FIELDS = ["name", "created", "modified", "due", "assigned", "progress"];
 const VALID_SORT_ORDERS = ["ascending", "descending"];
 
+/**
+ * Handle the "kanbn_sort_column" MCP tool call: sort a board column by the given sorters.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleKanbnSortColumn(args: Record<string, any>) {
     const boardPath = getKanbnPath(args.path as string | undefined);
     const instance = getKanbnInstance(boardPath);
@@ -1497,10 +1686,20 @@ export const TOOLS: Tool[] = [
     },
 ];
 
+/**
+ * List the available MCP tools.
+ * @returns {{tools: Tool[]}} An object containing the tool definitions
+ */
 export function listTools() {
     return { tools: TOOLS };
 }
 
+/**
+ * Dispatch an MCP tool call by name.
+ * @param {string} name The tool name
+ * @param {Record<string, any>} [args] The tool arguments
+ * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
+ */
 export async function handleToolCall(name: string, args: Record<string, any> = {}) {
     return enqueueKanbnOperation(async () => {
         switch (name) {
@@ -1659,16 +1858,30 @@ MCP CLIENT CONFIGURATION
   .kanbn directory, not into .kanbn itself.
 `;
 
+/**
+ * Print the help text to a stream.
+ * @param {NodeJS.WriteStream} [stream] The output stream
+ * @returns {void}
+ */
 export function printHelp(stream: NodeJS.WriteStream = process.stdout): void {
     stream.write(HELP_TEXT);
 }
 
+/**
+ * Run the MCP server over stdio.
+ * @returns {Promise<void>}
+ */
 async function main() {
     resetOperationQueue();
     const transport = new StdioServerTransport();
     await server.connect(transport);
 }
 
+/**
+ * Determine whether the entry script should run as the MCP server.
+ * @param {string[]} [argv] The process arguments
+ * @returns {boolean} True when the server should run
+ */
 export function isMainEntry(argv: string[] = process.argv): boolean {
     const script = argv[1];
     if (!script) {
