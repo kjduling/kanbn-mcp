@@ -537,6 +537,58 @@ describe("task creation and movement", () => {
             rmSync(dir, { recursive: true, force: true });
         }
     });
+
+    test("column fallback picks the first column when column is omitted", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Fallback Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Fallback task",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/\(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+
+            const index = await new KanbnClass(dir).getIndex();
+            assert.ok(
+                index.columns.Backlog.includes(taskIdMatch![1]),
+                "Task should be in the first column (Backlog)"
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("column fallback throws when the index cannot be read", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Failing Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            rmSync(path.join(dir, ".kanbn", "index.md"));
+
+            await assert.rejects(
+                handleToolCall("kanbn_create_task", {
+                    path: dir,
+                    name: "No index task",
+                }),
+                /Failed to determine fallback column/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
 });
 
 describe("kanbn_rename_task", () => {

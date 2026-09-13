@@ -1,6 +1,7 @@
 ---
 created: 2026-09-10T04:37:04.417Z
-updated: 2026-09-12T22:44:28.224Z
+updated: 2026-09-13T16:52:29.926Z
+completed: 2026-09-13T16:52:29.926Z
 ---
 
 # MINOR: kanbn_create_task column fallback has silent error and hidden disk read
@@ -38,21 +39,21 @@ If `getIndexFn` throws, the error is silently swallowed. The task is then create
 
 ## Sub-tasks
 
-- [ ] Log or re-throw error when column fallback fails
-- [ ] Update tool schema description to clarify column is optional
-- [ ] Add unit test for successful column fallback
-- [ ] Add unit test for failed column fallback
+- [x] Log or re-throw error when column fallback fails
+- [x] Update tool schema description to clarify column is optional
+- [x] Add unit test for successful column fallback
+- [x] Add unit test for failed column fallback
+
+## Comments
+
+- author: Jinx
+  date: 2026-09-13T05:00:00.000Z
+  Column fallback no longer swallows index errors: bare catch replaced with a wrapped re-throw ('Failed to determine fallback column for kanbn_create_task: ...') plus a comment explaining the fallback reads the board index for the first column. Schema description updated: 'Target column for the new task (optional; defaults to the board's first column)'; handler JSDoc clarified. 2 unit tests: omitted column lands in first column; deleting index.md makes fallback reject with the wrapped error. 111/111 tests pass, tsc clean.
 
 ## History
 
-- type: created
-  date: 2026-09-10T04:37:04.417Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
-  author: Kevin J. Duling
 - type: moved
-  date: 2026-09-12T22:44:28.224Z
-  fromColumn: Backlog
-  toColumn: Todo
+  date: 2026-09-13T16:52:29.926Z
+  fromColumn: Todo
+  toColumn: Done
   author: Kevin J. Duling

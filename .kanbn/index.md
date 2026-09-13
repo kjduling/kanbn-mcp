@@ -24,8 +24,6 @@ completedColumns:
 
 ## Todo
 
-- [minor-kanbn-create-task-column-fallback-has-silent-error-and-hidden-disk-read](tasks/minor-kanbn-create-task-column-fallback-has-silent-error-and-hidden-disk-read.md)
-
 ## In Progress
 
 ## Done
@@ -45,5 +43,6 @@ completedColumns:
 - [minor-kanbn-create-task-sub-task-schema-has-confusing-triple-alias-text-name-description](tasks/minor-kanbn-create-task-sub-task-schema-has-confusing-triple-alias-text-name-description.md)
 - [minor-kanbn-initialize-board-is-a-redundant-duplicate-of-kanbn-init-board](tasks/minor-kanbn-initialize-board-is-a-redundant-duplicate-of-kanbn-init-board.md)
 - [minor-title-to-name-mapping-is-redundant-and-can-leave-both-keys-set](tasks/minor-title-to-name-mapping-is-redundant-and-can-leave-both-keys-set.md)
+- [minor-kanbn-create-task-column-fallback-has-silent-error-and-hidden-disk-read](tasks/minor-kanbn-create-task-column-fallback-has-silent-error-and-hidden-disk-read.md)
 
 ## Blocked

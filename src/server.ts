@@ -319,7 +319,8 @@ export async function handleKanbnEnsureBoard(args: Record<string, any>) {
 }
 
 /**
- * Handle the "kanbn_create_task" MCP tool call: create a task, falling back to an explicit column.
+ * Handle the "kanbn_create_task" MCP tool call: create a task, falling back to the first column
+ * when none is given.
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<{content: {type: string; text: string}[]}>} The MCP content response
  */
@@ -339,6 +340,8 @@ export async function handleKanbnCreateTask(args: Record<string, any>) {
     delete taskData.column;
 
     if (!column) {
+        // Column fallback: read the board index and pick its first column. Failing loudly here beats
+        // creating a column-less task the caller never asked for.
         try {
             const getIndexFn = instance.getIndex || instance.index || instance.loadIndex;
             if (typeof getIndexFn === "function") {
@@ -348,7 +351,9 @@ export async function handleKanbnCreateTask(args: Record<string, any>) {
                     column = typeof cols[0] === "string" ? cols[0] : (cols[0].name || cols[0].id);
                 }
             }
-        } catch { }
+        } catch (error) {
+            throw new Error(`Failed to determine fallback column for kanbn_create_task: ${(error as Error).message}`);
+        }
     }
 
     const createFn = instance.createTask || instance.create || instance.addTask;
@@ -1312,7 +1317,7 @@ export const TOOLS: Tool[] = [
             properties: {
                 path: { type: "string", description: "Path to the project root directory" },
                 taskData: { type: "object", description: "Kanbn task metadata object" },
-                column: { type: "string", description: "Target column for the new task" },
+                column: { type: "string", description: "Target column for the new task (optional; defaults to the board's first column)" },
                 name: { type: "string", description: "Task title" },
                 description: { type: "string", description: "Task detailed description" },
                 assigned: { type: "string", description: "Assignee" },
