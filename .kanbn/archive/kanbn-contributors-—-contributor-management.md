@@ -2,6 +2,7 @@
 created: 2026-09-12T05:05:58.284Z
 updated: 2026-09-13T19:49:06.324Z
 completed: 2026-09-13T19:49:06.324Z
+column: Done
 ---
 
 # kanbn-contributors — contributor management
@@ -44,4 +45,8 @@ Acceptance criteria:
   date: 2026-09-13T19:49:06.324Z
   fromColumn: Todo
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T21:48:48.170Z
+  fromColumn: Done
   author: Kevin J. Duling

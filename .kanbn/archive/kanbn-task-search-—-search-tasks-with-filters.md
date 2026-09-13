@@ -2,6 +2,7 @@
 created: 2026-09-12T05:00:08.848Z
 updated: 2026-09-13T19:43:27.487Z
 completed: 2026-09-13T19:43:27.487Z
+column: Done
 ---
 
 # kanbn-task-search — search tasks with filters
@@ -34,4 +35,8 @@ Acceptance criteria:
   date: 2026-09-13T19:43:27.487Z
   fromColumn: Todo
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T21:48:46.164Z
+  fromColumn: Done
   author: Kevin J. Duling

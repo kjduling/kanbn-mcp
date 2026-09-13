@@ -2,6 +2,7 @@
 created: 2026-09-12T05:03:07.946Z
 updated: 2026-09-13T20:25:56.668Z
 completed: 2026-09-13T20:25:56.668Z
+column: Done
 ---
 
 # kanbn-sprints — start and manage sprints
@@ -32,4 +33,8 @@ Acceptance criteria:
   date: 2026-09-13T20:25:56.668Z
   fromColumn: Todo
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T21:49:01.679Z
+  fromColumn: Done
   author: Kevin J. Duling

@@ -2,6 +2,7 @@
 created: 2026-09-12T05:03:54.253Z
 updated: 2026-09-13T20:01:53.076Z
 completed: 2026-09-13T20:01:53.076Z
+column: Done
 ---
 
 # kanbn-burndown — burndown chart data
@@ -33,4 +34,8 @@ Acceptance criteria:
   date: 2026-09-13T20:01:53.076Z
   fromColumn: Todo
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T21:48:50.516Z
+  fromColumn: Done
   author: Kevin J. Duling

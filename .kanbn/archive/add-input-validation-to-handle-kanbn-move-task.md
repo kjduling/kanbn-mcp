@@ -2,6 +2,7 @@
 created: 2026-09-07T18:00:58.125Z
 updated: 2026-09-13T20:19:09.136Z
 completed: 2026-09-13T20:19:09.136Z
+column: Done
 ---
 
 # Add input validation to handleKanbnMoveTask
@@ -41,4 +42,8 @@ No check that `taskId` is non-empty or that `targetColumn` exists. The underlyin
   date: 2026-09-13T20:19:09.136Z
   fromColumn: Todo
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T21:48:57.242Z
+  fromColumn: Done
   author: Kevin J. Duling

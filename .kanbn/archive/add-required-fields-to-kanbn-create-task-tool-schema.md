@@ -2,6 +2,7 @@
 created: 2026-09-07T18:00:58.224Z
 updated: 2026-09-13T20:09:03.455Z
 completed: 2026-09-13T20:09:03.455Z
+column: Done
 ---
 
 # Add required fields to kanbn_create_task tool schema
@@ -31,4 +32,8 @@ Without `required` fields, LLM callers may omit essential parameters and produce
   date: 2026-09-13T20:09:03.455Z
   fromColumn: Todo
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T21:48:52.536Z
+  fromColumn: Done
   author: Kevin J. Duling

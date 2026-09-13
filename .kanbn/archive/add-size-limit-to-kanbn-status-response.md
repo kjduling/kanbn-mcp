@@ -2,6 +2,7 @@
 created: 2026-09-07T18:00:58.160Z
 updated: 2026-09-13T20:22:27.950Z
 completed: 2026-09-13T20:22:27.950Z
+column: Done
 ---
 
 # Add size limit to kanbn_status response
@@ -41,4 +42,8 @@ No size limit, no pagination. A board with hundreds of tasks could return megaby
   date: 2026-09-13T20:22:27.950Z
   fromColumn: Todo
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T21:48:59.500Z
+  fromColumn: Done
   author: Kevin J. Duling

@@ -3,6 +3,7 @@ created: 2026-09-12T05:07:35.653Z
 updated: 2026-09-13T18:56:03.329Z
 started: 2026-09-13T07:00:00.000Z
 completed: 2026-09-13T18:56:03.329Z
+column: Done
 ---
 
 # kanbn-config — get/save config, action rules, validation
@@ -51,4 +52,8 @@ Acceptance criteria:
   date: 2026-09-13T18:56:03.329Z
   fromColumn: Todo
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T21:48:44.082Z
+  fromColumn: Done
   author: Kevin J. Duling

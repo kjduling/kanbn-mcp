@@ -2,6 +2,7 @@
 created: 2026-09-12T05:04:44.022Z
 updated: 2026-09-13T20:12:08.738Z
 completed: 2026-09-13T20:12:08.738Z
+column: Done
 ---
 
 # kanbn-archived-tasks — list and load archived tasks
@@ -35,4 +36,8 @@ Acceptance criteria:
   date: 2026-09-13T20:12:08.738Z
   fromColumn: Todo
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T21:48:54.749Z
+  fromColumn: Done
   author: Kevin J. Duling

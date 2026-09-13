@@ -2,6 +2,7 @@
 created: 2026-09-12T05:01:41.427Z
 updated: 2026-09-13T20:38:41.851Z
 completed: 2026-09-13T20:38:41.851Z
+column: Done
 ---
 
 # kanbn-status-enhanced — status with untracked/due/sprint options
@@ -36,4 +37,8 @@ Acceptance criteria:
   date: 2026-09-13T20:38:41.851Z
   fromColumn: Todo
   toColumn: Done
+  author: Kevin J. Duling
+- type: archived
+  date: 2026-09-13T21:49:04.317Z
+  fromColumn: Done
   author: Kevin J. Duling
