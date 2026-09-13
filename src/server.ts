@@ -1606,12 +1606,12 @@ export function isMainEntry(argv: string[] = process.argv): boolean {
 }
 
 if (isMainEntry()) {
-    const cliArgs = process.argv.slice(2);
-    if (cliArgs.includes("--help") || cliArgs.includes("-h")) {
+    const cliArgs = new Set(process.argv.slice(2));
+    if (cliArgs.has("--help") || cliArgs.has("-h")) {
         printHelp();
         process.exit(0);
     }
-    if (cliArgs.includes("--version") || cliArgs.includes("-v")) {
+    if (cliArgs.has("--version") || cliArgs.has("-v")) {
         console.log(version);
         process.exit(0);
     }

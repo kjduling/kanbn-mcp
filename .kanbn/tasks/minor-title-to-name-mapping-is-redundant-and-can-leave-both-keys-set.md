@@ -1,5 +1,6 @@
 ---
 created: 2026-09-10T04:37:04.407Z
+updated: 2026-09-12T22:44:26.872Z
 ---
 
 # MINOR: title-to-name mapping is redundant and can leave both keys set
@@ -54,4 +55,9 @@ But if both are set, neither condition triggers — `taskData` ends up with both
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-12T22:44:26.872Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling

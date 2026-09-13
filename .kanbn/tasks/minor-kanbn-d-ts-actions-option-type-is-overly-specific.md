@@ -1,5 +1,6 @@
 ---
 created: 2026-09-10T04:37:04.425Z
+updated: 2026-09-12T22:44:30.380Z
 ---
 
 # MINOR: kanbn.d.ts 'actions' option type is overly specific
@@ -40,4 +41,9 @@ The `actions` property is typed as `boolean`, but the actual Kanbn library may a
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-12T22:44:30.380Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling

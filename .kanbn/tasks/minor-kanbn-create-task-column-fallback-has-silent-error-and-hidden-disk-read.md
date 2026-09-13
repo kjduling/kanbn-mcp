@@ -1,5 +1,6 @@
 ---
 created: 2026-09-10T04:37:04.417Z
+updated: 2026-09-12T22:44:28.224Z
 ---
 
 # MINOR: kanbn_create_task column fallback has silent error and hidden disk read
@@ -49,4 +50,9 @@ If `getIndexFn` throws, the error is silently swallowed. The task is then create
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-09-12T22:44:28.224Z
+  fromColumn: Backlog
+  toColumn: Todo
   author: Kevin J. Duling
