@@ -1,6 +1,7 @@
 ---
 created: 2026-09-10T04:37:04.407Z
-updated: 2026-09-12T22:44:26.872Z
+updated: 2026-09-13T16:48:24.956Z
+completed: 2026-09-13T16:48:24.956Z
 ---
 
 # MINOR: title-to-name mapping is redundant and can leave both keys set
@@ -44,20 +45,20 @@ But if both are set, neither condition triggers — `taskData` ends up with both
 
 ## Sub-tasks
 
-- [ ] Move title-to-name mapping into the main assignment loop
-- [ ] Add unit test for both title and name provided
-- [ ] Add unit test for title-only mapping to name
+- [x] Move title-to-name mapping into the main assignment loop
+- [x] Add unit test for both title and name provided
+- [x] Add unit test for title-only mapping to name
+
+## Comments
+
+- author: Jinx
+  date: 2026-09-13T04:30:00.000Z
+  title→name mapping now happens at assignment time: title removed from topLevelKeys and handled in the main loop — it maps to name only when name is unset, so name is canonical and wins regardless of input key order, and title never leaks as its own key. Second-pass band-aid deleted. 2 unit tests: title-only maps to name (no title key left); both provided in either order yield name only. 109/109 tests pass, tsc clean.
 
 ## History
 
-- type: created
-  date: 2026-09-10T04:37:04.407Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
-  author: Kevin J. Duling
 - type: moved
-  date: 2026-09-12T22:44:26.872Z
-  fromColumn: Backlog
-  toColumn: Todo
+  date: 2026-09-13T16:48:24.956Z
+  fromColumn: Todo
+  toColumn: Done
   author: Kevin J. Duling

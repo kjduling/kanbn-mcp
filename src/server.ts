@@ -153,7 +153,6 @@ export function buildTaskDataFromArgs(args: Record<string, any>): Record<string,
 
     const topLevelKeys = new Set([
         "name",
-        "title",
         "description",
         "subTasks",
         "comments",
@@ -171,15 +170,19 @@ export function buildTaskDataFromArgs(args: Record<string, any>): Record<string,
             continue;
         }
 
+        if (key === "title") {
+            // title is a deprecated alias for name; name is canonical and always wins
+            if (value && taskData.name === undefined) {
+                taskData.name = value;
+            }
+            continue;
+        }
+
         if (topLevelKeys.has(key)) {
             taskData[key] = value && typeof value === "object" ? structuredClone(value) : value;
         } else {
             metadata[key] = value && typeof value === "object" ? structuredClone(value) : value;
         }
-    }
-
-    if (taskData.title && !taskData.name) {
-        taskData.name = taskData.title;
     }
 
     // Convert date fields in metadata

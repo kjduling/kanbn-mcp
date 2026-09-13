@@ -195,6 +195,22 @@ describe("buildTaskDataFromArgs", () => {
         assert.deepStrictEqual(noText.subTasks, [{ text: "B", completed: false }]);
     });
 
+    test("title alone maps to name and leaves no title key", () => {
+        const taskData = buildTaskDataFromArgs({ title: "Titled task" });
+        assert.equal(taskData.name, "Titled task");
+        assert.equal(taskData.title, undefined);
+    });
+
+    test("name takes precedence when both title and name are provided", () => {
+        const titleFirst = buildTaskDataFromArgs({ title: "From title", name: "From name" });
+        assert.equal(titleFirst.name, "From name");
+        assert.equal(titleFirst.title, undefined);
+
+        const nameFirst = buildTaskDataFromArgs({ name: "From name", title: "From title" });
+        assert.equal(nameFirst.name, "From name");
+        assert.equal(nameFirst.title, undefined);
+    });
+
     test("is idempotent: same args twice yield equivalent output and input is unmutated", () => {
         const args = {
             name: "Plan the launch",
