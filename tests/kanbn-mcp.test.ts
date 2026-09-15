@@ -5,6 +5,7 @@ import path from "node:path";
 import test, { describe, mock } from "node:test";
 
 import { buildTaskDataFromArgs, enqueueKanbnOperation, getArchiveMethod, getKanbnInstance, handleKanbnInitBoard, handleToolCall, isBoardInitialized, isMainEntry, listTools, registerInitializedMethod, resetOperationQueue } from "../src/server";
+import { mergeExistingTaskData, normaliseRelationType } from "../src/server";
 import { TOOLS } from "../src/server";
 
 const KanbnClass = require("@basementuniverse/kanbn/src/main.js")?.Kanbn;
@@ -73,6 +74,9 @@ describe("MCP tool listing", () => {
             "kanbn_archive_task",
             "kanbn_get_task",
             "kanbn_edit_task",
+            "kanbn_add_relation",
+            "kanbn_remove_relation",
+            "kanbn_set_relations",
             "kanbn_delete_board",
             "kanbn_unarchive_task",
             "kanbn_restore_task",
@@ -296,6 +300,76 @@ describe("buildTaskDataFromArgs", () => {
         args.metadata.nested.deep = "mutated-after";
         assert.deepStrictEqual(taskData.metadata.tags, ["launch", "beta"]);
         assert.deepStrictEqual(taskData.metadata.nested, { deep: "value" });
+    });
+
+    test("maps relations through as top-level task data", () => {
+        const taskData = buildTaskDataFromArgs({
+            name: "Chained",
+            relations: [
+                { task: "model", type: "depends-on" },
+                { task: "view", type: "blocks" },
+            ],
+        });
+
+        assert.deepStrictEqual(taskData.relations, [
+            { task: "model", type: "depends-on" },
+            { task: "view", type: "blocks" },
+        ]);
+    });
+});
+
+describe("mergeExistingTaskData", () => {
+    test("keeps an explicitly supplied collection while backfilling everything else", () => {
+        const taskData = mergeExistingTaskData({
+            relations: [{ task: "view", type: "blocks" }],
+        }, {
+            name: "Alpha",
+            description: "Original description",
+            metadata: { assigned: "alice", tags: ["keep"] },
+            subTasks: [{ text: "Existing subtask" }],
+            comments: [{ author: "Bob", text: "Keep me" }],
+            relations: [{ task: "model", type: "depends-on" }],
+        });
+
+        assert.equal(taskData.name, "Alpha");
+        assert.equal(taskData.description, "Original description");
+        assert.equal(taskData.metadata.assigned, "alice");
+        assert.deepStrictEqual(taskData.metadata.tags, ["keep"]);
+        // The supplied relation collection wins (replace-all for that specific collection)...
+        assert.deepStrictEqual(taskData.relations, [{ task: "view", type: "blocks" }]);
+        // ...while untouched collections survive the merge.
+        assert.deepStrictEqual(taskData.subTasks, [{ text: "Existing subtask" }]);
+        assert.deepStrictEqual(taskData.comments, [{ author: "Bob", text: "Keep me" }]);
+    });
+
+    test("backfills every collection when the caller did not supply them", () => {
+        const taskData = mergeExistingTaskData({ name: "Renamed" }, {
+            name: "Old",
+            subTasks: [{ text: "Keep" }],
+            comments: [],
+            relations: [{ task: "model", type: "depends-on" }],
+        });
+
+        assert.equal(taskData.name, "Renamed");
+        assert.deepStrictEqual(taskData.relations, [{ task: "model", type: "depends-on" }]);
+        assert.deepStrictEqual(taskData.subTasks, [{ text: "Keep" }]);
+        assert.deepStrictEqual(taskData.comments, []);
+    });
+
+    test("keeps an explicit empty collection so callers can clear", () => {
+        const taskData = mergeExistingTaskData({ relations: [] }, {
+            relations: [{ task: "model", type: "depends-on" }],
+        });
+        assert.deepStrictEqual(taskData.relations, []);
+    });
+});
+
+describe("normaliseRelationType", () => {
+    test("kebab-cases and lowercases relation types", () => {
+        assert.equal(normaliseRelationType("depends on"), "depends-on");
+        assert.equal(normaliseRelationType("Blocks"), "blocks");
+        assert.equal(normaliseRelationType("  parent "), "parent");
+        assert.equal(normaliseRelationType(""), "");
     });
 });
 
@@ -2032,6 +2106,156 @@ describe("task creation and movement", () => {
                     `Subtask text should be a valid string, got: ${subtask.text}`
                 );
             }
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_create_task stores relations and renders them as links", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Relation Board",
+                columns: ["Backlog"],
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Model" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "View" });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Chained",
+                relations: [
+                    { task: "model", type: "depends-on" },
+                    { task: "view", type: "blocks" },
+                ],
+            });
+
+            const task = JSON.parse((await handleToolCall("kanbn_get_task", { path: dir, taskId: "chained" })).content[0].text);
+            assert.ok(Array.isArray(task.relations));
+            assert.equal(task.relations.length, 2);
+            const byTask = Object.fromEntries(task.relations.map((relation: any) => [relation.task, relation.type]));
+            assert.equal(byTask.model, "depends-on");
+            assert.equal(byTask.view, "blocks");
+
+            const file = readFileSync(path.join(dir, ".kanbn", "tasks", "chained.md"), "utf-8");
+            assert.match(file, /## Relations/);
+            assert.match(file, /- \[depends-on model\]\(model\.md\)/);
+            assert.match(file, /- \[blocks view\]\(view\.md\)/);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_add_relation merges, remove drops, set replaces and an empty array clears", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Relation Tools",
+                columns: ["Backlog"],
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Model" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "View" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Admin" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Role CRUD" });
+
+            await handleToolCall("kanbn_add_relation", { path: dir, taskId: "role-crud", task: "model", type: "depends-on" });
+            await handleToolCall("kanbn_add_relation", { path: dir, taskId: "role-crud", task: "view", type: "blocks" });
+
+            let relations = JSON.parse((await handleToolCall("kanbn_get_task", { path: dir, taskId: "role-crud" })).content[0].text).relations;
+            assert.equal(relations.length, 2, "add_relation must append, not replace");
+
+            // Duplicates (including normalised variants) are no-ops
+            await handleToolCall("kanbn_add_relation", { path: dir, taskId: "role-crud", task: "model", type: "depends-on" });
+            await handleToolCall("kanbn_add_relation", { path: dir, taskId: "role-crud", task: "model", type: "depends on" });
+            relations = JSON.parse((await handleToolCall("kanbn_get_task", { path: dir, taskId: "role-crud" })).content[0].text).relations;
+            assert.equal(relations.length, 2, "identical relation should not be added twice");
+
+            await handleToolCall("kanbn_remove_relation", { path: dir, taskId: "role-crud", task: "model", type: "depends-on" });
+            relations = JSON.parse((await handleToolCall("kanbn_get_task", { path: dir, taskId: "role-crud" })).content[0].text).relations;
+            assert.deepStrictEqual(relations, [{ task: "view", type: "blocks" }]);
+
+            await handleToolCall("kanbn_set_relations", {
+                path: dir,
+                taskId: "role-crud",
+                relations: [
+                    { task: "model", type: "depends-on" },
+                    { task: "admin", type: "depends-on" },
+                ],
+            });
+            relations = JSON.parse((await handleToolCall("kanbn_get_task", { path: dir, taskId: "role-crud" })).content[0].text).relations;
+            assert.equal(relations.length, 2, "set_relations must replace wholesale");
+            assert.ok(relations.some((relation: any) => relation.task === "admin"));
+
+            await handleToolCall("kanbn_set_relations", { path: dir, taskId: "role-crud", relations: [] });
+            relations = JSON.parse((await handleToolCall("kanbn_get_task", { path: dir, taskId: "role-crud" })).content[0].text).relations;
+            assert.deepStrictEqual(relations, [], "an empty set_relations array must clear all relations");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_add_relation validates that the target exists", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Relation Board",
+                columns: ["Backlog"],
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Role CRUD" });
+
+            await assert.rejects(
+                handleToolCall("kanbn_add_relation", { path: dir, taskId: "role-crud", task: "ghost", type: "depends-on" }),
+                /Task "role-crud" relates to missing task "ghost"/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_edit_task preserves collections it did not mention (regression)", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Merge Board",
+                columns: ["Backlog"],
+            });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Model" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Admin" });
+            await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Role CRUD",
+                subTasks: [{ text: "Keep me" }],
+                comments: [{ author: "Bob", text: "Keep this comment" }],
+            });
+
+            // First edit adds a relation
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: "role-crud",
+                relations: [{ task: "model", type: "depends-on" }],
+            });
+
+            // Second edit touches subTasks only — relations, name and comments must survive
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: "role-crud",
+                subTasks: [{ text: "Keep me" }, { text: "Added later" }],
+            });
+
+            const task = JSON.parse((await handleToolCall("kanbn_get_task", { path: dir, taskId: "role-crud" })).content[0].text);
+            assert.equal(task.name, "Role CRUD");
+            assert.equal(task.relations.length, 1, "relations must survive an edit that did not mention them");
+            assert.equal(task.relations[0].task, "model");
+            assert.equal(task.subTasks.length, 2);
+            assert.equal(task.comments.length, 1, "comments must survive an edit that did not mention them");
+            assert.equal(task.comments[0].text, "Keep this comment");
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }

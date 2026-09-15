@@ -33,3 +33,17 @@ export const COMMENTS_PROPERTY = {
     type: "array",
     items: COMMENT_ITEM_SCHEMA,
 };
+
+export const RELATION_ITEM_SCHEMA = {
+    type: "object",
+    properties: {
+        task: { type: "string", description: "Target task ID the relation points to" },
+        type: { type: "string", description: "Relation type, e.g. 'depends-on' or 'blocks' (normalised to kebab-case)" },
+    },
+};
+
+export const RELATIONS_PROPERTY = {
+    type: "array",
+    items: RELATION_ITEM_SCHEMA,
+    description: "Task relations: an array of {task, type} edges (e.g. {task: 'model', type: 'depends-on'}). WARNING: on edit this replaces the WHOLE relations collection — supply the full array, or use kanbn_add_relation / kanbn_remove_relation for merges.",
+};

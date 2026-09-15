@@ -1,8 +1,8 @@
 import { getRequiredString } from "../kanbn/args.js";
 import { getIndexMethod, readyBoard } from "../kanbn/instance.js";
 import { jsonResponse, McpResponse, textResponse } from "../kanbn/response.js";
-import { COMMENTS_PROPERTY, PATH_PROPERTY, SUBTASKS_PROPERTY } from "../kanbn/schema.js";
-import { buildTaskDataFromArgs } from "../kanbn/taskData.js";
+import { COMMENTS_PROPERTY, PATH_PROPERTY, RELATIONS_PROPERTY, SUBTASKS_PROPERTY } from "../kanbn/schema.js";
+import { buildTaskDataFromArgs, mergeExistingTaskData } from "../kanbn/taskData.js";
 import { aliasTool, defineTool, ToolDefinition, ToolHandler } from "../types.js";
 
 /**
@@ -166,21 +166,11 @@ export const handleKanbnEditTask: ToolHandler = async (args) => {
         try {
             const existingTask = await getFn.call(instance, taskId);
             if (existingTask && typeof existingTask === "object") {
-                if (!taskData.name && existingTask.name) {
-                    taskData.name = existingTask.name;
-                }
-                if (!taskData.description && existingTask.description) {
-                    taskData.description = existingTask.description;
-                }
-                if (!taskData.metadata) {
-                    taskData.metadata = {};
-                }
-                const existingMeta = existingTask.metadata || {};
-                for (const key of Object.keys(existingMeta)) {
-                    if (taskData.metadata[key] === undefined) {
-                        taskData.metadata[key] = existingMeta[key];
-                    }
-                }
+                // Merge-back: name/description/metadata AND the relations/subTasks/comments
+                // collections are backfilled from the existing task unless the caller supplied
+                // them, so a partial edit never silently wipes data it didn't mention.
+                // Supplying a collection still replaces that whole collection (library semantics).
+                mergeExistingTaskData(taskData, existingTask);
             }
         } catch {
             // Task may not exist yet; proceed with provided fields
@@ -224,6 +214,179 @@ export const handleKanbnEditTask: ToolHandler = async (args) => {
     await editFn.call(instance, taskId, taskData);
 
     return textResponse(`Edited task "${taskId}"`);
+};
+
+/**
+ * Normalise a relation type the same way Kanbn does: trimmed, lowercased and kebab-cased.
+ * @param {string} type The relation type text
+ * @returns {string} The normalised relation type
+ */
+export function normaliseRelationType(type: string): string {
+    return String(type || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-");
+}
+
+/**
+ * Slugify a task reference for tolerant relation matching (spaces vs hyphens, case).
+ * @param {string} taskId A task id or name
+ * @returns {string} The slugified reference
+ */
+function slugifyTaskId(taskId: string): string {
+    return String(taskId || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-");
+}
+
+/**
+ * Whether two task references refer to the same task (exact match or slug match).
+ * @param {string} a Reference a
+ * @param {string} b Reference b
+ * @returns {boolean} True when the references match
+ */
+function sameTask(a: string, b: string): boolean {
+    return String(a) === String(b) || slugifyTaskId(a) === slugifyTaskId(b);
+}
+
+/**
+ * Read the current relations array for a task, defaulting to an empty list.
+ * @param {any} instance A Kanbn instance
+ * @param {string} taskId The task id
+ * @returns {Promise<any[]>} The task's relations
+ */
+async function getTaskRelations(instance: any, taskId: string): Promise<any[]> {
+    const getFn = instance.getTask || instance.get || instance.fetchTask;
+    if (typeof getFn !== "function") {
+        throw new TypeError(`No getTask method found on Kanbn instance`);
+    }
+    const task = await getFn.call(instance, taskId);
+    return Array.isArray(task?.relations) ? structuredClone(task.relations) : [];
+}
+
+/**
+ * Throw a clear "missing task" error mirroring Kanbn's own dependency validation, used when a
+ * relation points at something that doesn't exist on the board.
+ * @param {string} sourceTaskId The task being edited
+ * @param {string} targetTaskId The relation target that couldn't be found
+ * @returns {never}
+ */
+function throwMissingRelationTarget(sourceTaskId: string, targetTaskId: string): never {
+    throw new Error(`Task "${sourceTaskId}" relates to missing task "${targetTaskId}"`);
+}
+
+/**
+ * Verify a relation target exists on the board, throwing a clear error when it doesn't.
+ * @param {any} instance A Kanbn instance
+ * @param {string} sourceTaskId The task being edited
+ * @param {string} targetTaskId The relation target to check
+ * @returns {Promise<void>}
+ */
+async function ensureRelationTargetExists(instance: any, sourceTaskId: string, targetTaskId: string): Promise<void> {
+    const getFn = instance.getTask || instance.get || instance.fetchTask;
+    if (typeof getFn === "function") {
+        try {
+            await getFn.call(instance, targetTaskId);
+        } catch {
+            throwMissingRelationTarget(sourceTaskId, targetTaskId);
+        }
+    }
+}
+
+/**
+ * Handle the "kanbn_add_relation" MCP tool call: append a relation unless an identical one already
+ * exists. Read-modify-write: the full relations array is re-supplied to editTask, which preserves
+ * every other task field.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<McpResponse>} The MCP content response
+ */
+export const handleKanbnAddRelation: ToolHandler = async (args) => {
+    const taskId = getRequiredString(args, "taskId");
+    const targetTask = getRequiredString(args, "task");
+    const type = getRequiredString(args, "type");
+
+    const { instance } = await readyBoard(args, false);
+    await ensureRelationTargetExists(instance, taskId, targetTask);
+
+    const current = await getTaskRelations(instance, taskId);
+    const normalisedType = normaliseRelationType(type);
+
+    const alreadyPresent = current.some(
+        (relation) =>
+            relation &&
+            sameTask(relation.task, targetTask) &&
+            normaliseRelationType(relation.type) === normalisedType
+    );
+    if (alreadyPresent) {
+        return textResponse(`Relation ${normalisedType} -> ${targetTask} already exists on task "${taskId}"`);
+    }
+
+    await handleKanbnEditTask({ path: args.path, taskId, relations: [...current, { task: targetTask, type: normalisedType }] });
+    return textResponse(`Added relation ${normalisedType} -> ${targetTask} to task "${taskId}"`);
+};
+
+/**
+ * Handle the "kanbn_remove_relation" MCP tool call: drop matching relation edges. A type filters
+ * the removal; omitting it removes every relation to the given task.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<McpResponse>} The MCP content response
+ */
+export const handleKanbnRemoveRelation: ToolHandler = async (args) => {
+    const taskId = getRequiredString(args, "taskId");
+    const targetTask = getRequiredString(args, "task");
+
+    const { instance } = await readyBoard(args, false);
+    const current = await getTaskRelations(instance, taskId);
+
+    const typeMatch = args.type !== undefined && args.type !== null && String(args.type).trim() !== ""
+        ? normaliseRelationType(String(args.type))
+        : null;
+
+    const kept = current.filter(
+        (relation) =>
+            !(relation && sameTask(relation.task, targetTask) &&
+                (typeMatch === null || normaliseRelationType(relation.type) === typeMatch))
+    );
+
+    const removed = current.length - kept.length;
+    if (removed === 0) {
+        return textResponse(`No matching relations to remove from task "${taskId}"`);
+    }
+
+    await handleKanbnEditTask({ path: args.path, taskId, relations: kept });
+    return textResponse(`Removed ${removed} relation${removed === 1 ? "" : "s"} from task "${taskId}"`);
+};
+
+/**
+ * Handle the "kanbn_set_relations" MCP tool call: authoritatively replace a task's whole relations
+ * collection. Passing an empty array clears all relations.
+ * @param {Record<string, any>} args MCP tool arguments
+ * @returns {Promise<McpResponse>} The MCP content response
+ */
+export const handleKanbnSetRelations: ToolHandler = async (args) => {
+    const taskId = getRequiredString(args, "taskId");
+    if (!Array.isArray(args.relations)) {
+        throw new Error(`Missing required parameter: relations (array of {task, type})`);
+    }
+
+    const { instance } = await readyBoard(args, false);
+
+    const relations = args.relations.map((relation: any, index: number) => {
+        const task = relation?.task;
+        const type = relation?.type;
+        if (typeof task !== "string" || task.trim() === "" || typeof type !== "string" || type.trim() === "") {
+            throw new Error(`Invalid relation at index ${index}: expected {task: string, type: string}`);
+        }
+        return { task: task.trim(), type: normaliseRelationType(type) };
+    });
+
+    for (const relation of relations) {
+        await ensureRelationTargetExists(instance, taskId, relation.task);
+    }
+
+    await handleKanbnEditTask({ path: args.path, taskId, relations });
+    return textResponse(`Set ${relations.length} relation${relations.length === 1 ? "" : "s"} on task "${taskId}"`);
 };
 
 /**
@@ -298,6 +461,7 @@ const taskTools: ToolDefinition[] = [
             assigned: { type: "string", description: "Assignee" },
             subTasks: SUBTASKS_PROPERTY,
             comments: COMMENTS_PROPERTY,
+            relations: RELATIONS_PROPERTY,
         },
         ["name"],
     ),
@@ -375,8 +539,44 @@ const taskTools: ToolDefinition[] = [
             tags: { type: "array", items: { type: "string" }, description: "Tags array" },
             subTasks: SUBTASKS_PROPERTY,
             comments: COMMENTS_PROPERTY,
+            relations: RELATIONS_PROPERTY,
         },
         ["taskId"],
+    ),
+    defineTool(
+        "kanbn_add_relation",
+        "Add a relation edge (e.g. {task, type: 'depends-on'}) to a task. Merges: existing relations are preserved and only the new edge is appended.",
+        handleKanbnAddRelation,
+        {
+            path: PATH_PROPERTY,
+            taskId: { type: "string", description: "ID or filename of the task to add the relation to" },
+            task: { type: "string", description: "Target task ID the relation points to" },
+            type: { type: "string", description: "Relation type, e.g. 'depends-on' or 'blocks' (normalised to kebab-case)" },
+        },
+        ["taskId", "task", "type"],
+    ),
+    defineTool(
+        "kanbn_remove_relation",
+        "Remove relation edge(s) from a task. A type filters the removal; omitting it removes every relation to the given task.",
+        handleKanbnRemoveRelation,
+        {
+            path: PATH_PROPERTY,
+            taskId: { type: "string", description: "ID or filename of the task to remove the relation from" },
+            task: { type: "string", description: "Target task ID to drop relations to" },
+            type: { type: "string", description: "Optional relation type to filter which edges are removed" },
+        },
+        ["taskId", "task"],
+    ),
+    defineTool(
+        "kanbn_set_relations",
+        "Authoritatively replace a task's entire relations collection with the supplied array. An empty array clears all relations. This is replace-all: supply every desired edge.",
+        handleKanbnSetRelations,
+        {
+            path: PATH_PROPERTY,
+            taskId: { type: "string", description: "ID or filename of the task to set relations on" },
+            relations: RELATIONS_PROPERTY,
+        },
+        ["taskId", "relations"],
     ),
 ];
 

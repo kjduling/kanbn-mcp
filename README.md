@@ -201,7 +201,29 @@ The MCP wrapper supports common Kanbn task fields including:
 - `created`
 - `updated`
 - `tags`
+- `subTasks`
+- `comments`
+- `relations` (see known issues — not yet a declared schema property)
 - custom metadata via `metadata`
+
+## Tips for AI agents
+
+This server is used heavily by LLM-driven agents, so a few behaviours matter more than they look:
+
+### Sub-tasks go in `subTasks`, not `description`
+
+A task's break-down lives in the `subTasks` field — pass it to `kanbn_create_task` / `kanbn_edit_task` as an array of strings (or `{text, completed}` objects). A bulleted "Sub-tasks:" list inside `description` is invisible to the board: it won't render as checkboxes, be tracked, or be counted by `kanbn_search`.
+
+The same shape applies at creation time. Create tickets with `subTasks` and `relations` filled in from the start rather than bolting them on later — `kanbn_edit_task` replaces (does not merge) whole collections.
+
+### Verify after every create/edit
+
+Task files are plain markdown and `kanbn_edit_task` writes each array wholesale, so a stale or abbreviated argument list can silently drop data. Rule of thumb: after `kanbn_create_task` or `kanbn_edit_task`, follow up with `kanbn_get_task` (or `kanbn_status`) and confirm the fields you intended, especially `subTasks`/`relations` arrays.
+
+## Known issues
+
+- **`kanbn_edit_task` replaces whole collections rather than merging.** `relations`, `subTasks` and `comments` are written as the exact array you supply. Passing one new relation to a task that has three silently drops the other two. Workaround today: `kanbn_get_task` first, re-supply the full arrays, then re-verify.
+- **`relations` is not yet a declared tool parameter.** The Kanbn model stores relations (`{task, type}[]`, e.g. `depends-on`/`blocks`) and this server will persist them, but until first-class relation tooling lands treat them as best-effort/undocumented.
 
 ## Relationship to the Kanbn ecosystem
 

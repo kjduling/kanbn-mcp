@@ -30,6 +30,51 @@ function convertDatesInObject(obj: Record<string, any>): Record<string, any> {
 }
 
 /**
+ * Collections that must be preserved across whole-document edits unless the caller explicitly
+ * supplied a replacement. Passing one of these replaces that entire collection; omitting it
+ * falls back to whatever the task already has.
+ */
+export const EDIT_COLLECTION_KEYS: readonly string[] = ["relations", "subTasks", "comments"];
+
+/**
+ * Merge the portion of an existing task that an edit did not mention into the outgoing task data.
+ *
+ * This is the middle ground between the library's whole-document updateTask semantics (every
+ * collection is an authoritative replace) and callers who expect partial edits. Fields the
+ * caller supplied are kept and replace their collection; fields it didn't supply (name,
+ * description, metadata keys, and the relations/subTasks/comments collections) are backfilled
+ * from the task that already exists, so an edit never silently clobbers data it didn't mention.
+ * @param {Record<string, any>} taskData Outgoing task data being built for the edit
+ * @param {Record<string, any>} existingTask The task currently on the board
+ * @returns {Record<string, any>} taskData, mutated and returned for chaining
+ */
+export function mergeExistingTaskData(taskData: Record<string, any>, existingTask: Record<string, any>): Record<string, any> {
+    if (existingTask && typeof existingTask === "object") {
+        if (!taskData.name && existingTask.name) {
+            taskData.name = existingTask.name;
+        }
+        if (!taskData.description && existingTask.description) {
+            taskData.description = existingTask.description;
+        }
+        if (!taskData.metadata) {
+            taskData.metadata = {};
+        }
+        const existingMeta = existingTask.metadata || {};
+        for (const key of Object.keys(existingMeta)) {
+            if (taskData.metadata[key] === undefined) {
+                taskData.metadata[key] = existingMeta[key];
+            }
+        }
+        for (const key of EDIT_COLLECTION_KEYS) {
+            if (taskData[key] === undefined && Array.isArray(existingTask[key])) {
+                taskData[key] = structuredClone(existingTask[key]);
+            }
+        }
+    }
+    return taskData;
+}
+
+/**
  * Build a Kanbn task metadata object from MCP tool arguments.
  * @param {Record<string, any>} args Raw MCP tool arguments
  * @returns {Record<string, any>} A normalized Kanbn task metadata object
