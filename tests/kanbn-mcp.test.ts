@@ -2731,10 +2731,27 @@ describe("isMainEntry", () => {
         assert.equal(isMainEntry(["node", "/opaque/launcher/entry.js", "--run-server"]), true);
     });
 
+    test("accepts a literal 'mcp' positional argument", () => {
+        assert.equal(isMainEntry(["node", "/opt/local/bin/kanbn-mcp", "mcp"]), true);
+        assert.equal(isMainEntry(["node", "/usr/local/bin/kanbn-mcp", "mcp", ""]), true);
+    });
+
+    test("mcp argument marks opaque or renamed entries as the server", () => {
+        assert.equal(isMainEntry(["node", "/opaque/launcher/entry.js", "mcp"]), true);
+        assert.equal(isMainEntry(["node", "/usr/local/bin/mybin", "mcp"]), true);
+    });
+
+    test("mcp argument works alongside the standard flags", () => {
+        assert.equal(isMainEntry(["node", "/usr/local/bin/kanbn-mcp", "mcp", "--help"]), true);
+        assert.equal(isMainEntry(["node", "/usr/local/bin/kanbn-mcp", "mcp", "-v"]), true);
+        assert.equal(isMainEntry(["node", "/usr/local/bin/kanbn-mcp", "mcp", "--run-server"]), true);
+    });
+
     test("does not fire for unrelated scripts", () => {
         assert.equal(isMainEntry(["node", "/proj/src/cli.js"]), false);
         assert.equal(isMainEntry(["tsx", "/proj/tests/kanbn-mcp.test.ts"]), false);
         assert.equal(isMainEntry(["node"]), false);
+        assert.equal(isMainEntry(["node", "/proj/src/cli.js", "submit"]), false);
     });
 });
 

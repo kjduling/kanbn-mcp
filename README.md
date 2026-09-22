@@ -70,7 +70,7 @@ The MCP server currently exposes tools for:
 npm install -g @kduling/kanbn-mcp
 ```
 
-This installs a `kanbn-mcp` binary on your PATH.
+This installs a `kanbn-mcp` binary on your PATH. Run `kanbn-mcp --help` to print usage and ready-to-paste configuration snippets for opencode, Claude Desktop, Cline, and other MCP hosts. The binary runs as the MCP server by default; hosts that pass a subcommand-style argument can call `kanbn-mcp mcp` instead.
 
 ### From source
 
@@ -81,35 +81,77 @@ npm install
 npm run build
 ```
 
+From a source checkout, run the server with `node dist/server.js` and use the same configuration snippets below with `"command": "node"` and `"args": ["/path/to/kanbn-mcp/dist/server.js"]`.
+
 ## MCP client configuration
 
-Run `node dist/server.js --help` (or `kanbn-mcp --help` when installed from npm) to print ready-to-paste configuration snippets for opencode, Claude Desktop, and other MCP hosts.
+Point your MCP client at the `kanbn-mcp` command from the global install. The important parts are:
 
-Configure your MCP client to launch the server using a local Node command. The exact path will depend on where you installed the project, but the structure should look like this:
+- `command`: `kanbn-mcp` (after `npm install -g @kduling/kanbn-mcp`)
+- `args`: usually empty; `kanbn-mcp` accepts a literal `mcp` argument for hosts that expect a subcommand-style arg (e.g. `"args": ["mcp"]`); some hosts (e.g. Cline) expect a placeholder such as `[""]`
+- `KANBN_DEFAULT_PATH`: optional — sets a fixed board regardless of working directory
+
+### opencode
+
+```jsonc
+// opencode.json (project) or ~/.config/opencode/opencode.json
+{
+  "mcp": {
+    "kanbn": {
+      "type": "local",
+      "command": ["kanbn-mcp"],
+      "enabled": true
+    }
+  }
+}
+```
+
+### Claude Desktop / other "mcpServers" hosts
 
 ```json
 {
   "mcpServers": {
-    "kanbn-mcp": {
-      "command": "node",
-      "args": [
-        "/absolute/path/to/kanbn-mcp/dist/server.js"
-      ],
-      "env": {
-        "KANBN_DEFAULT_PATH": "/absolute/path/to/your/project-or-board-root"
+    "kanbn": {
+      "command": "kanbn-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+### Cline
+
+```json
+{
+  "mcpServers": {
+    "kanbn": {
+      "transport": {
+        "type": "stdio",
+        "command": "kanbn-mcp",
+        "args": [""]
       }
     }
   }
 }
 ```
 
-Use this pattern in any MCP-compatible host such as a local editor or agent runtime. The important parts are:
+Use the same pattern in any other MCP-compatible host such as a local editor or agent runtime.
 
-- `command`: the Node executable used to launch the server
-- `args[0]`: the compiled server entry point, typically `dist/server.js`
-- `KANBN_DEFAULT_PATH`: (Optional) the project root directory, not the `.kanbn` folder itself
+### Which board does the server use?
 
-This should be the directory that contains the `.kanbn` subfolder. In other words, point it at the parent project directory, and let Kanbn manage the `.kanbn` directory underneath it.
+With no extra configuration the server reads the board from its **working directory** — the directory the MCP host launches the server in. Open the host in your project root (the directory containing the `.kanbn` folder) and it manages that board. When the host launches the server from your home directory (common for a globally installed command), the server looks there instead.
+
+`KANBN_DEFAULT_PATH` is optional; set it to pin a fixed board regardless of the working directory:
+
+```jsonc
+// opencode: add to the "kanbn" entry above
+"environment": { "KANBN_DEFAULT_PATH": "/path/to/project-root" }
+
+// Claude Desktop / other "mcpServers" hosts: add to the "kanbn" entry above
+"env": { "KANBN_DEFAULT_PATH": "/path/to/project-root" }
+```
+
+It should point at the project root that contains the `.kanbn` directory, not into `.kanbn` itself. Individual tools can also override the board per call with a `path` argument.
 
 ## Test
 

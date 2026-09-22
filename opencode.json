@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "kanbn-mcp": {
+      "type": "local",
+      "command": ["node", "/Users/kevin/Dev/kanbn-mcp/dist/server.js"],
+      "enabled": true,
+      "environment": {
+        "KANBN_DEFAULT_PATH": "/Users/kevin/Dev/kanbn-mcp"
+      }
+    }
+  }
+}

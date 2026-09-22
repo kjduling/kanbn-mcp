@@ -51,7 +51,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 export const HELP_TEXT = `kanbn-mcp ${version} - A Model Context Protocol server for Kanbn board management
 
 USAGE
-  node dist/server.js [options]
+  kanbn-mcp [options]                  after: npm install -g @kduling/kanbn-mcp
+  npx -y @kduling/kanbn-mcp [options]  run without installing
+  kanbn-mcp mcp [options]              explicit server mode: some MCP hosts
+                                       pass a literal 'mcp' argument
+  node dist/server.js [options]        from a source checkout
 
 OPTIONS
   -h, --help       Show this help message
@@ -59,16 +63,18 @@ OPTIONS
   --run-server     Start the MCP server even when the entry script is not
                    named 'server' (e.g. launches via npx or a renamed build)
 
-Run with no options to start the MCP server over stdio. The server starts
-when the entry script's filename contains "server" or --run-server is passed.
+Run with no options to start the MCP server over stdio. The server also
+starts when the entry script's filename contains "server", when a literal
+'mcp' positional argument is present, or when --run-server is passed.
 
 ENVIRONMENT
   KANBN_DEFAULT_PATH   Optional. Default board directory (must contain a .kanbn
-                       folder). If unset, defaults to the server's current
-                       working directory - usually the project the MCP host
-                       launched the server from, which keeps boards
-                       per project. Individual tools can override this
-                       per-call with a "path" argument.
+                       folder). If unset, the server resolves the board from its
+                       working directory - usually the directory the MCP host
+                       launched the server from (often the project root you have
+                       open, or the home directory for a global launch).
+                       Individual tools can override this per-call with a "path"
+                       argument.
 
 LIMITATION
   operationQueue serializes ops within a single session. No concurrent connections.
@@ -100,13 +106,17 @@ TOOLS
 
 MCP CLIENT CONFIGURATION
 
+  Install the MCP server first:
+
+    npm install -g @kduling/kanbn-mcp
+
   opencode (project or ~/.config/opencode/opencode.json / opencode.jsonc):
 
     {
       "mcp": {
         "kanbn": {
           "type": "local",
-          "command": ["node", "/absolute/path/to/kanbn-mcp/dist/server.js"],
+          "command": ["kanbn-mcp"],
           "enabled": true
         }
       }
@@ -117,13 +127,30 @@ MCP CLIENT CONFIGURATION
     {
       "mcpServers": {
         "kanbn": {
-          "command": "node",
-          "args": ["/absolute/path/to/kanbn-mcp/dist/server.js"]
+          "command": "kanbn-mcp",
+          "args": []
         }
       }
     }
 
-  In both cases the board root (the directory containing .kanbn) is taken from
+  Cline (cline_mcp_settings.json):
+
+    {
+      "mcpServers": {
+        "kanbn": {
+          "transport": {
+            "type": "stdio",
+            "command": "kanbn-mcp",
+            "args": [""]
+          }
+        }
+      }
+    }
+
+  Some hosts expect one subcommand-style argument. kanbn-mcp accepts a
+  literal 'mcp' argument for those hosts, e.g. "args": ["mcp"].
+
+  In all cases the board root (the directory containing .kanbn) is taken from
   the server's working directory, so each project configures its own board.
   To force a fixed board regardless of working directory, add an optional
   environment entry:
@@ -131,8 +158,8 @@ MCP CLIENT CONFIGURATION
     opencode:     "environment": { "KANBN_DEFAULT_PATH": "/path/to/project-root" }
     mcpServers:   "env": { "KANBN_DEFAULT_PATH": "/path/to/project-root" }
 
-  KANBN_DEFAULT_PATH should point at the project root that contains the
-  .kanbn directory, not into .kanbn itself.
+  KANBN_DEFAULT_PATH is optional and should point at the project root that
+  contains the .kanbn directory, not into .kanbn itself.
 `;
 
 /**
@@ -164,7 +191,9 @@ export function isMainEntry(argv: string[] = process.argv): boolean {
     if (!script) {
         return false;
     }
-    if (argv.includes("--run-server")) {
+    // A literal 'mcp' positional argument (common MCP-host convention) or
+    // --run-server marks this as the server entry, regardless of script name.
+    if (argv.slice(2).includes("mcp") || argv.includes("--run-server")) {
         return true;
     }
     const base = path.parse(script).name.toLowerCase();

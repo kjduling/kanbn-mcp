@@ -30,3 +30,4 @@ dist-ssr
 # continue
 .continue/
 AGENTS.md
+graphify-out/
