@@ -53,6 +53,8 @@ export interface WrittenTarget {
     path: string;
     host: string;
     kind: "block" | "file";
+    /** Whether this run's write changed the file on disk (plans: always true). */
+    changed: boolean;
 }
 
 export interface RegisteredTarget {

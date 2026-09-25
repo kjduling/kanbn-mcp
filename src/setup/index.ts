@@ -189,13 +189,71 @@ function listClientsAndTargets(): void {
     }
 }
 
-function printPlannedWrites(targets: WrittenTarget[], registrations: RegisteredTarget[], dryRun: boolean): void {
-    out(`${dryRun ? "would write" : "wrote"}:`);
-    for (const target of targets) {
-        out(`  - ${target.path}`);
+const ROLE_LABELS: Record<string, string> = {
+    universal: "universal guidance - every agent reads AGENTS.md",
+    opencode: "opencode project skill (.opencode/skills/kanbn/SKILL.md)",
+    claude: "Claude Code guidance (CLAUDE.md)",
+    windsurf: "Windsurf rule (.windsurf/rules/kanbn.md)",
+    cline: "Cline rule (.clinerules/kanbn.md)",
+    devin: "committed skill (Devin + global skill installs)",
+};
+
+const GLOBAL_LABELS: Record<string, string> = {
+    opencode: "global opencode skill (~/.config/opencode/skills/kanbn/SKILL.md)",
+    claude: "global Claude skill (~/.claude/skills/kanbn/SKILL.md)",
+};
+
+interface ReportEntry {
+    path: string;
+    label: string;
+    changed: boolean;
+}
+
+/** One display entry per written/planned target, with a human role label. */
+function describeWrites(written: WrittenTarget[], globalPaths: Set<string>): ReportEntry[] {
+    return written.map((t) => {
+        const base = ROLE_LABELS[t.host] ?? `${t.host} config`;
+        return {
+            path: t.path,
+            label: globalPaths.has(t.path) ? (GLOBAL_LABELS[t.host] ?? `global ${t.host} skill`) : base,
+            changed: t.changed !== false,
+        };
+    });
+}
+
+/** Print where `setup` stores things - the write-side mirror of uninstall's
+ * "Removed:" / "Left in place:" report. */
+function printWriteReport(writes: ReportEntry[], registrations: RegisteredTarget[], dryRun: boolean, manifestFile: string | null): void {
+    if (dryRun) {
+        out("Would write:");
+        for (const w of writes) {
+            out(`  - ${w.path} (${w.label})`);
+        }
+    } else {
+        const changed = writes.filter((w) => w.changed);
+        const current = writes.filter((w) => !w.changed);
+        if (changed.length > 0) {
+            out("Wrote:");
+            for (const w of changed) {
+                out(`  - ${w.path} (${w.label})`);
+            }
+        }
+        if (current.length > 0) {
+            out("Unchanged (already current):");
+            for (const w of current) {
+                out(`  - ${w.path}`);
+            }
+        }
     }
-    for (const reg of registrations) {
-        out(`  - ${reg.message}`);
+    if (registrations.length > 0) {
+        out(dryRun ? "Would register:" : "Registered:");
+        for (const reg of registrations) {
+            out(`  - ${reg.message}`);
+        }
+    }
+    if (manifestFile && !dryRun) {
+        out("Stored manifest:");
+        out(`  - ${manifestFile}`);
     }
 }
 
@@ -275,10 +333,14 @@ export async function runSetup(argv: string[], options: RunOptions = {}): Promis
     }
 
     if (args.dryRun) {
-        printPlannedWrites(plan.targets, planRegistrations(args.mcp, root, true, home), true);
-        for (const gs of globalSkills) {
-            out(`would write global skill: ${gs.path}`);
-        }
+        const globalPlans: WrittenTarget[] = globalSkills.map((gs) => ({ path: gs.path, host: gs.host, kind: "file", changed: true }));
+        const allPlanned = [...plan.targets, ...globalPlans];
+        printWriteReport(
+            describeWrites(allPlanned, new Set(globalSkills.map((gs) => gs.path))),
+            planRegistrations(args.mcp, root, true, home),
+            true,
+            null
+        );
         out("");
         out(body);
         return;
@@ -286,8 +348,8 @@ export async function runSetup(argv: string[], options: RunOptions = {}): Promis
 
     const written = applyRepoEmit(root, answers, hostSlugs);
     for (const gs of globalSkills) {
-        writeManagedFile(gs.path, renderSkill(answers));
-        written.push({ path: gs.path, host: gs.host, kind: "file" });
+        const changed = writeManagedFile(gs.path, renderSkill(answers));
+        written.push({ path: gs.path, host: gs.host, kind: "file", changed });
     }
 
     const registered: RegisteredTarget[] = [];
@@ -329,7 +391,7 @@ export async function runSetup(argv: string[], options: RunOptions = {}): Promis
     };
     writeManifest(root, manifest);
 
-    printPlannedWrites(written, registered, false);
+    printWriteReport(describeWrites(written, new Set(globalSkills.map((gs) => gs.path))), registered, false, manifestPath(root));
     out("");
     out("The canonical guidance body (every file above embeds this exact prose):");
     out("");

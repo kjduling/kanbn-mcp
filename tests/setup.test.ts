@@ -431,10 +431,29 @@ describe("runSetup end to end", () => {
         const dir = makeTempDir();
         try {
             const output = await captureStdout(() => runSetup(["setup", dir, "--yes", "--dry-run"]));
-            assert.match(output, /would write/);
+            assert.match(output, /would write/i);
             assert.match(output, /AGENTS\.md/);
             assert.equal(existsSync(join(dir, "AGENTS.md")), false);
             assert.equal(existsSync(join(dir, ".kanbn", "setup.json")), false);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("a real run reports every stored location with its role, then re-runs show unchanged files", async () => {
+        const dir = makeTempDir();
+        try {
+            const first = await captureStdout(() => runSetup(["setup", dir, "--yes"]));
+            assert.match(first, /Wrote:/);
+            assert.match(first, /AGENTS\.md \(universal guidance/);
+            assert.match(first, /\.opencode\/skills\/kanbn\/SKILL\.md \(opencode project skill/);
+            assert.match(first, /skills\/kanbn\/SKILL\.md \(committed skill/);
+            assert.match(first, /Stored manifest:/);
+            assert.match(first, /\.kanbn\/setup\.json/);
+            // second, idempotent run: no writes, files reported as current
+            const second = await captureStdout(() => runSetup(["setup", dir, "--yes"]));
+            assert.match(second, /Unchanged \(already current\):/);
+            assert.match(second, /AGENTS\.md/);
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }

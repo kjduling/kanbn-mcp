@@ -223,6 +223,7 @@ export function planRepoEmit(root: string, answers: SetupAnswers, hostSlugs: Hos
             path: path.join(root, target.file),
             host: target.host,
             kind: target.id === "universal" ? "block" : target.file.endsWith("SKILL.md") ? "file" : "block",
+            changed: true,
         });
     }
     return plan;
@@ -244,11 +245,12 @@ export function applyRepoEmit(root: string, answers: SetupAnswers, hostSlugs: Ho
         if (!include) {
             continue;
         }
-        target.write(root, answers);
+        const changed = target.write(root, answers);
         written.push({
             path: path.join(root, target.file),
             host: target.host,
             kind: target.id === "universal" ? "block" : target.file.endsWith("SKILL.md") ? "file" : "block",
+            changed,
         });
     }
     return written;

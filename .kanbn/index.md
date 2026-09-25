@@ -26,5 +26,7 @@ completedColumns:
 - [explore-a-setup-command-guided-board-configuration-that-bakes-answers-into-agent-visible-guidance](tasks/explore-a-setup-command-guided-board-configuration-that-bakes-answers-into-agent-visible-guidance.md)
 - [add-kanbn-mcp-setup-interactive-guided-configuration-squeez-unity-cli-style](tasks/add-kanbn-mcp-setup-interactive-guided-configuration-squeez-unity-cli-style.md)
 - [author-a-kanbn-skill-md-agent-facing-usage-guidance-tags-sub-tasks-relation-mirroring](tasks/author-a-kanbn-skill-md-agent-facing-usage-guidance-tags-sub-tasks-relation-mirroring.md)
+- [fix-setup-mcp-registers-cline-at-the-legacy-global-storage-path-instead-of-cline-data-settings](tasks/fix-setup-mcp-registers-cline-at-the-legacy-global-storage-path-instead-of-cline-data-settings.md)
+- [setup-output-should-report-where-it-stores-files-mirroring-uninstall-s-removed-left-in-place-report](tasks/setup-output-should-report-where-it-stores-files-mirroring-uninstall-s-removed-left-in-place-report.md)
 
 ## Blocked
