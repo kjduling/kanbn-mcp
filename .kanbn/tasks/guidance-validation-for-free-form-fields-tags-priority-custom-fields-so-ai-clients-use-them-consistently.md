@@ -26,3 +26,9 @@ Deliverable is a decision: guidance-only, validation-only, or guidance + enum su
 ## Relations
 
 - [related-to author-a-kanbn-skill-md-agent-facing-usage-guidance-tags-sub-tasks-relation-mirroring](author-a-kanbn-skill-md-agent-facing-usage-guidance-tags-sub-tasks-relation-mirroring.md)
+
+## Comments
+
+- author: Kevin J. Duling
+  date: 2026-09-25T18:11:02.725Z
+  Ownership moved (2026-09-25): the setup command now surfaces this ticket's decisions as answers with defaults - tag style (prefixed typ:/pri: vs plain), enforce vs guide-only (default guide-only -> guidance wording differs), custom fields (name:type[:required]). The canonical guidance body derives the wording. Kanbn-side schema/tag enforcement (actual validation) is NOT implemented - ticket stays open for that tooling piece.

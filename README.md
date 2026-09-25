@@ -9,6 +9,7 @@
     - [From npm](#from-npm)
     - [From source](#from-source)
   - [MCP client configuration](#mcp-client-configuration)
+  - [Agent guidance with kanbn-mcp setup](#agent-guidance-with-kanbn-mcp-setup)
   - [Test](#test)
   - [Available tools](#available-tools)
   - [Example task metadata supported](#example-task-metadata-supported)
@@ -59,8 +60,12 @@ The MCP server currently exposes tools for:
 ## Project structure
 
 - `src/server.ts` — the MCP server implementation and tool handlers
+- `src/setup/` — the `kanbn-mcp setup` command: questions, canonical guidance
+  renderer, per-client envelopes, MCP client registration, uninstall
+- `skills/kanbn/SKILL.md` — the generic agent-facing skill shipped with the package
 - `kanbn.d.ts` — type declarations for the Kanbn dependency
-- `tests/kanbn-mcp.test.ts` — unit tests covering commands and task field handling
+- `tests/kanbn-mcp.test.ts`, `tests/setup.test.ts` — unit tests covering commands,
+  task field handling, and setup emission/registration
 
 ## Installation
 
@@ -70,7 +75,7 @@ The MCP server currently exposes tools for:
 npm install -g @kduling/kanbn-mcp
 ```
 
-This installs a `kanbn-mcp` binary on your PATH. Run `kanbn-mcp --help` to print usage and ready-to-paste configuration snippets for opencode, Claude Desktop, Cline, and other MCP hosts. The binary runs as the MCP server by default; hosts that pass a subcommand-style argument can call `kanbn-mcp mcp` instead.
+This installs a `kanbn-mcp` binary on your PATH. Run `kanbn-mcp --help` to print usage and ready-to-paste configuration snippets for opencode, Claude Desktop, Cline, and other MCP hosts. The binary runs as the MCP server by default; hosts that pass a subcommand-style argument can call `kanbn-mcp mcp` instead. After install, run `kanbn-mcp setup` in a project to guide AI agents to the board's conventions — see [Agent guidance with kanbn-mcp setup](#agent-guidance-with-kanbn-mcp-setup).
 
 ### From source
 
@@ -152,6 +157,78 @@ With no extra configuration the server reads the board from its **working direct
 ```
 
 It should point at the project root that contains the `.kanbn` directory, not into `.kanbn` itself. Individual tools can also override the board per call with a `path` argument.
+
+## Agent guidance with kanbn-mcp setup
+
+Kanbn boards are markdown files; nothing stops a freshly launched agent from re-inventing the board's vocabulary (columns, tags, WIP limits). `kanbn-mcp setup` closes that loop: one short Q&A about how the board works, and the answers are written as AI-agnostic guidance into the files each client reads. Any agent that can see the repo — opencode, Claude, Windsurf, Cline, Devin, or a future one — knows the conventions before it touches a ticket.
+
+```bash
+kanbn-mcp setup
+```
+
+The questions (all with defaults — Enter accepts, and re-runs amend rather than re-ask from scratch):
+
+- board columns and what each means
+- type tags: `bug` / `feature` / `documentation` / `spike` (each with a description)
+- priority tags: `critical` / `high` / `medium` / `low`
+- tag style: `typ:bug` / `pri:critical` prefixes, or plain `bug` / `critical`
+- enforce type/priority tags on every ticket, or guide-only (default)
+- WIP limits per column (default: none)
+- custom fields (`name:type[:required]`, default: none)
+- mirror directed relations on both tasks (depends-on ⇄ blocks, duplicate-of ⇄ duplicated-by; default on)
+
+The answers render into **one canonical guidance body**, written to:
+
+| File | Readers |
+| --- | --- |
+| `AGENTS.md` (guarded block) | universal — opencode, Devin, most other agents |
+| `.opencode/skills/kanbn/SKILL.md` | opencode project skill |
+| `CLAUDE.md` (guarded block) | Claude Code |
+| `.clinerules/kanbn.md` | Cline |
+| `.windsurf/rules/kanbn.md` | Windsurf |
+| `skills/kanbn/SKILL.md` | committed copy for global skill installs |
+
+Answers and a write-manifest persist to `.kanbn/setup.json`, so re-runs amend instead of duplicating and `kanbn-mcp uninstall` removes everything.
+
+### Flags
+
+| Flag | Effect |
+| --- | --- |
+| `--yes` | non-interactive: accept defaults (or amend persisted answers) |
+| `--json <file>` | import answers from a JSON file (non-interactive) |
+| `--host=<slugs>` | guide only `opencode\|claude\|windsurf\|cline\|devin` (comma-separated); `opencode`/`claude` also install the global skill into `~/.config/opencode/skills/kanbn/SKILL.md` / `~/.claude/skills/kanbn/SKILL.md` |
+| `--repo-only` | write repo files only (the default) |
+| `--mcp[=clients]` | also register the kanbn MCP server in detected client configs — project `opencode.json`, `~/.claude.json` (Claude Code), `cline_mcp_settings.json`, `~/.codeium/windsurf/mcp_config.json`; limit with a comma list, e.g. `--mcp=opencode,claude` |
+| `--list` | list detected clients and target files; change nothing |
+| `--dry-run` | show what would be written; change nothing |
+| `--print` | print the canonical guidance + manual install instructions for any client; change nothing |
+| `--check` | report what `kanbn-mcp setup` has installed so far |
+
+The canonical body is client-neutral — it names only kanbn-mcp MCP tools, never a specific AI. `kanbn-mcp setup --print` gives copy-paste install instructions for any client, including ones setup does not know about (e.g. a future host): point its MCP config at the `kanbn-mcp` command and drop the printed prose into wherever that client reads rules. Configuration snippets for `--mcp` use the `kanbn-mcp` binary from the npm install (`npm install -g @kduling/kanbn-mcp`), never a `node dist/server.js` invocation.
+
+### Non-interactive runs (CI)
+
+`--yes` writes guidance with the defaults; `--json` imports a partial answers file — anything omitted falls back to defaults:
+
+```json
+{
+  "tagStyle": "plain",
+  "wipLimits": { "In Progress": 3 },
+  "customFields": [{ "name": "severity", "type": "string", "required": true }]
+}
+```
+
+### Installing the shipped skill by hand
+
+The npm package ships a generic skill at `skills/kanbn/SKILL.md`. To install it globally without `--host`, copy it into place:
+
+- opencode: `~/.config/opencode/skills/kanbn/SKILL.md`
+- Claude: `~/.claude/skills/kanbn/SKILL.md`
+- any other skill-reading client: its own skills directory
+
+### Removing
+
+`kanbn-mcp uninstall` removes every guidance block and registration `kanbn-mcp setup` wrote, using the manifest. It leaves user-authored content alone and will not remove a client config entry it did not create.
 
 ## Test
 

@@ -1,6 +1,7 @@
 ---
 created: 2026-09-18T20:18:25.950Z
-updated: 2026-09-25T01:03:27.585Z
+updated: 2026-09-25T18:01:26.655Z
+completed: 2026-09-25T18:01:26.655Z
 ---
 
 # Explore a 'setup' command - guided board configuration that bakes answers into agent-visible guidance
@@ -39,3 +40,14 @@ Deliverable: a decision on scope + a concrete proposal for the question set, out
 - author: Kevin J. Duling
   date: 2026-09-25T01:14:27.516Z
   Note (2026-09-25): AI-agnostic constraint applies to the output artefacts. The proposal must cover per-client envelopes generated from ONE canonical client-neutral body - opencode (.opencode/skills/kanbn/SKILL.md + AGENTS.md), claude (CLAUDE.md + .claude/skills), windsurf (.windsurf/rules/kanbn.md), cline (.clinerules/kanbn.md), devin (AGENTS.md + committed SKILL.md) - plus a human-setup fallback: if a client layout is unknown (any future AI), the canonical prose ships/prints with copy-paste install instructions so a human can wire it by hand. The setup and SKILL.md tickets carry the emitter matrix + content rules; keep this ticket's 'AGENTS.md-style prose' artefact aligned with that.
+- author: Kevin J. Duling
+  date: 2026-09-25T18:01:26.636Z
+  Proposal adopted (2026-09-25) -> implemented on the setup ticket. Decisions:\n- Question set: board root, columns + meanings, type tags (bug/feature/documentation/spike), priority tags (critical/high/medium/low), tag style (prefixed typ:/pri: vs plain), enforce vs guide-only (default guide-only), WIP limits, custom fields (name:type:required), relation mirroring (default on). All with defaults; re-runs amend from .kanbn/setup.json.\n- Output artefacts: ONE canonical client-neutral body rendered from answers (src/setup/guidance.ts) -> thin envelopes: AGENTS.md (universal, always), .opencode/skills/kanbn/SKILL.md, CLAUDE.md, .clinerules/kanbn.md, .windsurf/rules/kanbn.md, committed skills/kanbn/SKILL.md. Answers + write manifest in .kanbn/setup.json for idempotent amend + uninstall.\n- Agent surfacing: guidance-first - agents consume the committed files; no new kanbn_get_charter MCP tool this round (charter + skill cover it).\n- Client registration ADDED to scope (board decision): kanbn-mcp setup --mcp writes the MCP server entry into opencode.json, ~/.claude.json, cline_mcp_settings.json, ~/.codeium/windsurf/mcp_config.json - guarded merge, skip when kanbn already present.\n- Interplay: shared mechanism = answers -> one renderer -> all envelopes; setup owns the Q&A the free-form-fields and relation-hygiene tickets were circling (their decisions become setup answers + derived wording).\n- Human-setup fallback: kanbn-mcp setup --print emits the canonical body + per-client install paths for ANY client incl. unknown ones.\n- Reuse notes: modelled on squeez setup (detect hosts, --host= to target one, guarded idempotent writes, uninstall/--check parity); squeez mcp confirms the mcp-positional-argument convention already shipped.
+
+## History
+
+- type: moved
+  date: 2026-09-25T18:01:26.655Z
+  fromColumn: Backlog
+  toColumn: Done
+  author: Kevin J. Duling

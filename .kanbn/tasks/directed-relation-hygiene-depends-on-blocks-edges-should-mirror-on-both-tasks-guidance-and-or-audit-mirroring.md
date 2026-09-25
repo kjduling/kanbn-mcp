@@ -31,3 +31,9 @@ Deliverable is a decision: guidance-only, audit/report tool, or automatic mirror
 
 - [related-to guidance-validation-for-free-form-fields-tags-priority-custom-fields-so-ai-clients-use-them-consistently](guidance-validation-for-free-form-fields-tags-priority-custom-fields-so-ai-clients-use-them-consistently.md)
 - [related-to author-a-kanbn-skill-md-agent-facing-usage-guidance-tags-sub-tasks-relation-mirroring](author-a-kanbn-skill-md-agent-facing-usage-guidance-tags-sub-tasks-relation-mirroring.md)
+
+## Comments
+
+- author: Kevin J. Duling
+  date: 2026-09-25T18:11:02.758Z
+  Guidance half delivered (2026-09-25): setup asks mirrorRelations (default on) and the canonical body instructs both-direction edges (depends-on <-> blocks, duplicate-of <-> duplicated-by, related-to once), plus the read-before-write note for kanbn_edit_task/kanbn_set_relations which replace the relations array wholesale. No audit/mirror MCP tool implemented - ticket stays open for that piece.

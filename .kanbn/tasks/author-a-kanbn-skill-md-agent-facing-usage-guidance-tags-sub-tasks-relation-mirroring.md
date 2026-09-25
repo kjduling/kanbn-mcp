@@ -1,6 +1,7 @@
 ---
 created: 2026-09-25T01:09:06.417Z
-updated: 2026-09-25T01:14:27.487Z
+updated: 2026-09-25T18:11:02.696Z
+completed: 2026-09-25T18:11:02.696Z
 ---
 
 # Author a Kanbn SKILL.md - agent-facing usage guidance (tags, sub-tasks, relation mirroring)
@@ -91,3 +92,17 @@ AI-agnostic requirement (hard constraint, added 2026-09-25): the CONTENT must be
 - [related-to directed-relation-hygiene-depends-on-blocks-edges-should-mirror-on-both-tasks-guidance-and-or-audit-mirroring](directed-relation-hygiene-depends-on-blocks-edges-should-mirror-on-both-tasks-guidance-and-or-audit-mirroring.md)
 - [related-to add-kanbn-mcp-setup-interactive-guided-configuration-squeez-unity-cli-style](add-kanbn-mcp-setup-interactive-guided-configuration-squeez-unity-cli-style.md)
 - [related-to fix-kanbn-mcp-help-so-it-s-correct-for-someone-installing-the-npm-module](fix-kanbn-mcp-help-so-it-s-correct-for-someone-installing-the-npm-module.md)
+
+## Comments
+
+- author: Kevin J. Duling
+  date: 2026-09-25T18:11:02.684Z
+  DONE (2026-09-25). SKILL.md body is the setup command's canonical renderer: guidance.ts renderSkill() emits frontmatter (name: kanbn, description, version) + the client-neutral body, and `kanbn-mcp setup` writes per-project skills (.opencode/skills/kanbn/SKILL.md, skills/kanbn/SKILL.md). Shipped repo file skills/kanbn/SKILL.md is generated from renderSkill(skillPlaceholderAnswers()) and a test pins it to the renderer so it can't drift. package.json files now includes skills/; README has a hand-install section (copy to ~/.config/opencode/skills/kanbn/SKILL.md, ~/.claude/skills/kanbn/SKILL.md). Body covers tags (type + priority, prefixed vs plain), subTasks for breakdown/acceptance/test, relation mirroring (depends-on <-> blocks, duplicate-of <-> duplicated-by, related-to once), verify-after-create, WIP limits and custom fields when configured.
+
+## History
+
+- type: moved
+  date: 2026-09-25T18:11:02.696Z
+  fromColumn: Backlog
+  toColumn: Done
+  author: Kevin J. Duling

@@ -1,6 +1,7 @@
 ---
 created: 2026-09-25T01:03:16.432Z
-updated: 2026-09-25T01:14:27.450Z
+updated: 2026-09-25T18:11:02.655Z
+completed: 2026-09-25T18:11:02.655Z
 ---
 
 # Add kanbn-mcp setup - interactive guided configuration, squeez/unity-cli style
@@ -44,3 +45,20 @@ Design rules:
 
 - [related-to explore-a-setup-command-guided-board-configuration-that-bakes-answers-into-agent-visible-guidance](explore-a-setup-command-guided-board-configuration-that-bakes-answers-into-agent-visible-guidance.md)
 - [related-to author-a-kanbn-skill-md-agent-facing-usage-guidance-tags-sub-tasks-relation-mirroring](author-a-kanbn-skill-md-agent-facing-usage-guidance-tags-sub-tasks-relation-mirroring.md)
+
+## Comments
+
+- author: Kevin J. Duling
+  date: 2026-09-25T18:01:26.689Z
+  Scope settled (2026-09-25): board-scoped AND client registration. Final surface:\n  kanbn-mcp setup [--yes | --json <file>] [--host=opencode,claude,...] [--repo-only] [--mcp[=opencode,claude,cline,windsurf]] [--list] [--dry-run] [--print] [--check] [<board-root>]\n  kanbn-mcp uninstall\nModel: squeez setup - detect hosts, --host to target one, guarded idempotent writes, uninstall + --check parity. One canonical client-neutral body -> thin envelopes; AGENTS.md universal; unknown clients -> --print manual fallback. Answers + write manifest in .kanbn/setup.json; --yes/--json non-interactive. Client registration: opencode.json (project), ~/.claude.json, cline_mcp_settings.json, ~/.codeium/windsurf/mcp_config.json. Subtasks updated to implementation list.
+- author: Kevin J. Duling
+  date: 2026-09-25T18:11:02.641Z
+  IMPLEMENTED (2026-09-25). CLI: kanbn-mcp setup / kanbn-mcp uninstall dispatched in src/server.ts isMainEntry block; unknown positionals still boot the server; `kanbn-mcp mcp` unchanged. src/setup/: types.ts, guidance.ts (canonical client-neutral body - names only kanbn-mcp tool names), envelopes.ts (guarded blocks: AGENTS.md universal, CLAUDE.md, .windsurf/rules/kanbn.md, .clinerules/kanbn.md; whole-file managed SKILL.md targets; idempotent upsert + uninstall-safe), hosts.ts (detection + JSON-merging registration), questions.ts (defaults + .kanbn/setup.json persistence, amend-on-rerun), index.ts (flags, EPIPE-safe output). Flags: --yes, --json <file>, --host=<slugs>, --repo-only, --mcp[=clients], --list, --dry-run, --print, --check. Client registration ADDED to scope (per board decision): opencode.json (project), ~/.claude.json, cline_mcp_settings.json, ~/.codeium/windsurf/mcp_config.json - guarded merge, never duplicates, uninstall removes only generated shapes. Human-setup fallback: --print emits canonical body + per-client copy-paste instructions (covers unknown/future clients like bobs-nose). Config snippets use the kanbn-mcp binary (npm install -g @kduling/kanbn-mcp), never node dist/server.js. KANBN_DEFAULT_PATH documented optional. Tests: tests/setup.test.ts (36 cases; suite 235/235): renderer neutrality, block upsert idempotency, SKILL.md collision guard, registration merge shapes, runSetup e2e in temp dirs (home-isolated), uninstall reverse, --mcp gating (no registration without --mcp). Docs: HELP_TEXT SETUP section + README 'Agent guidance with kanbn-mcp setup'. package.json ships skills/.
+
+## History
+
+- type: moved
+  date: 2026-09-25T18:11:02.655Z
+  fromColumn: Backlog
+  toColumn: Done
+  author: Kevin J. Duling
