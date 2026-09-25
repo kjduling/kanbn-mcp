@@ -194,13 +194,14 @@ const ROLE_LABELS: Record<string, string> = {
     opencode: "opencode project skill (.opencode/skills/kanbn/SKILL.md)",
     claude: "Claude Code guidance (CLAUDE.md)",
     windsurf: "Windsurf rule (.windsurf/rules/kanbn.md)",
-    cline: "Cline rule (.clinerules/kanbn.md)",
+    cline: "Cline rules + project skill (.clinerules/kanbn.md, .cline/skills/kanbn/SKILL.md)",
     devin: "committed skill (Devin + global skill installs)",
 };
 
 const GLOBAL_LABELS: Record<string, string> = {
     opencode: "global opencode skill (~/.config/opencode/skills/kanbn/SKILL.md)",
     claude: "global Claude skill (~/.claude/skills/kanbn/SKILL.md)",
+    cline: "global Cline skill (~/.cline/skills/kanbn/SKILL.md)",
 };
 
 interface ReportEntry {
@@ -263,6 +264,9 @@ function globalSkillForHost(slug: string, home: string): string | null {
     }
     if (slug === "claude") {
         return path.join(home, ".claude", "skills", "kanbn", "SKILL.md");
+    }
+    if (slug === "cline") {
+        return path.join(home, ".cline", "skills", "kanbn", "SKILL.md");
     }
     return null;
 }

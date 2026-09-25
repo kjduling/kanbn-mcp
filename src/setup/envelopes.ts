@@ -115,7 +115,7 @@ const HOST_REPO_TARGETS: Record<HostSlug, string[]> = {
     opencode: ["universal", "opencode"],
     claude: ["claude"],
     windsurf: ["windsurf"],
-    cline: ["cline"],
+    cline: ["cline", "cline-skill"],
     devin: ["universal", "devin"],
 };
 
@@ -173,6 +173,15 @@ export function repoTargets(): RepoTarget[] {
                     path.join(root, ".clinerules", "kanbn.md"),
                     renderBlock(renderCanonical(answers))
                 ),
+        },
+        {
+            // Cline's recommended project skill location (docs: .cline/skills/).
+            // Kept alongside the .clinerules/kanbn.md rules file: rules are
+            // always injected, the skill is auto-triggered by description.
+            id: "cline-skill",
+            host: "cline",
+            file: ".cline/skills/kanbn/SKILL.md",
+            write: (root, answers) => writeManagedFile(path.join(root, ".cline", "skills", "kanbn", "SKILL.md"), renderSkill(answers)),
         },
         {
             id: "devin",

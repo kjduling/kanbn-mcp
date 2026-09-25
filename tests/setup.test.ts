@@ -300,6 +300,7 @@ describe("host slugs", () => {
                 "/tmp/proj/CLAUDE.md",
                 "/tmp/proj/.windsurf/rules/kanbn.md",
                 "/tmp/proj/.clinerules/kanbn.md",
+                "/tmp/proj/.cline/skills/kanbn/SKILL.md",
                 "/tmp/proj/skills/kanbn/SKILL.md",
             ]
         );
@@ -482,6 +483,7 @@ describe("runSetup end to end", () => {
                 "CLAUDE.md",
                 ".windsurf/rules/kanbn.md",
                 ".clinerules/kanbn.md",
+                ".cline/skills/kanbn/SKILL.md",
                 "skills/kanbn/SKILL.md",
             ];
             for (const file of expected) {
@@ -627,6 +629,7 @@ describe("runSetup end to end", () => {
             assert.equal(existsSync(join(dir, "AGENTS.md")), false);
             assert.equal(existsSync(join(dir, ".opencode", "skills", "kanbn", "SKILL.md")), false);
             assert.equal(existsSync(join(dir, ".clinerules", "kanbn.md")), false);
+            assert.equal(existsSync(join(dir, ".cline", "skills", "kanbn", "SKILL.md")), false);
             assert.equal(existsSync(join(dir, ".kanbn", "setup.json")), false);
             // project opencode.json is now empty of mcp
             const config = existsSync(join(dir, "opencode.json")) ? readJsonLoose(join(dir, "opencode.json")) : null;
@@ -643,7 +646,7 @@ describe("runSetup end to end", () => {
             await runSetup(["setup", dir, "--yes"]);
             const output = await captureStdout(() => runSetup(["setup", dir, "--check"]));
             assert.match(output, /kanbn-mcp setup state/);
-            assert.match(output, /written: 6/);
+            assert.match(output, /written: 7/);
             const empty = makeTempDir();
             try {
                 const none = await captureStdout(() => runSetup(["setup", empty, "--check"]));

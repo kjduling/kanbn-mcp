@@ -128,6 +128,8 @@ Point your MCP client at the `kanbn-mcp` command from the global install. The im
 
 Current Cline (extension, CLI, and SDK) reads one unified config at `~/.cline/data/settings/cline_mcp_settings.json`; the legacy VS Code extension path (`Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`) is migrated to it automatically and kept as a fallback.
 
+Guidance-wise Cline reads project rules from `.clinerules/` at the workspace root, and skills from `.cline/skills/`, `.clinerules/skills/`, `.claude/skills/`, or `.agents/skills/`. `setup` writes both `.clinerules/kanbn.md` (always-injected rules) and `.cline/skills/kanbn/SKILL.md` (auto-triggered project skill), plus the global skill at `~/.cline/skills/kanbn/SKILL.md` via `--host=cline`. Rules only apply to the folder you have open as the Cline workspace root — for guidance on other folders run `setup` in each project or rely on the global skill.
+
 ```json
 {
   "mcpServers": {
@@ -186,7 +188,8 @@ The answers render into **one canonical guidance body**, written to:
 | `AGENTS.md` (guarded block) | universal — opencode, Devin, most other agents |
 | `.opencode/skills/kanbn/SKILL.md` | opencode project skill |
 | `CLAUDE.md` (guarded block) | Claude Code |
-| `.clinerules/kanbn.md` | Cline |
+| `.clinerules/kanbn.md` | Cline rules |
+| `.cline/skills/kanbn/SKILL.md` | Cline project skill |
 | `.windsurf/rules/kanbn.md` | Windsurf |
 | `skills/kanbn/SKILL.md` | committed copy for global skill installs |
 
@@ -198,7 +201,7 @@ Answers and a write-manifest persist to `.kanbn/setup.json`, so re-runs amend in
 | --- | --- |
 | `--yes` | non-interactive: accept defaults (or amend persisted answers) |
 | `--json <file>` | import answers from a JSON file (non-interactive) |
-| `--host=<slugs>` | guide only `opencode\|claude\|windsurf\|cline\|devin` (comma-separated); `opencode`/`claude` also install the global skill into `~/.config/opencode/skills/kanbn/SKILL.md` / `~/.claude/skills/kanbn/SKILL.md` |
+| `--host=<slugs>` | guide only `opencode\|claude\|windsurf\|cline\|devin` (comma-separated); `opencode`/`claude`/`cline` also install the global skill into `~/.config/opencode/skills/kanbn/SKILL.md` / `~/.claude/skills/kanbn/SKILL.md` / `~/.cline/skills/kanbn/SKILL.md` |
 | `--repo-only` | write repo files only (the default) |
 | `--mcp[=clients]` | also register the kanbn MCP server in detected client configs — project `opencode.json`, `~/.claude.json` (Claude Code), `cline_mcp_settings.json`, `~/.codeium/windsurf/mcp_config.json`; limit with a comma list, e.g. `--mcp=opencode,claude` |
 | `--list` | list detected clients and target files; change nothing |

@@ -54,7 +54,7 @@ export function detectHosts(home: string = os.homedir()): HostInfo[] {
                 exists(path.join(home, ".cline")) ||
                 exists(path.join(home, "Documents", "Cline")) ||
                 exists(path.join(home, ".clinerules")),
-            feedback: "project .clinerules/kanbn.md",
+            feedback: "project .clinerules/kanbn.md + .cline/skills/kanbn/SKILL.md; global skill at ~/.cline/skills/kanbn/SKILL.md via --host=cline",
         },
         {
             slug: "devin",
@@ -319,7 +319,7 @@ export function manualInstallText(): string {
         "   - .opencode/skills/kanbn/SKILL.md - opencode project skill.",
         "   - CLAUDE.md (project root) - Claude Code.",
         "   - .windsurf/rules/kanbn.md - Windsurf.",
-        "   - .clinerules/kanbn.md - Cline.",
+        "   - .clinerules/kanbn.md + .cline/skills/kanbn/SKILL.md - Cline (rules + project skill).",
         "   - skills/kanbn/SKILL.md - commit it; Devin and global skill installs read committed SKILL.md files.",
         "   For an unknown client, put the prose wherever that client reads rules or instructions.",
         "2. MCP server - register the kanbn-mcp command in the client's MCP server config:",
