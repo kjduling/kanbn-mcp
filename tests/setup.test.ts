@@ -321,7 +321,7 @@ describe("MCP client registration", () => {
             const configPaths: Record<string, string> = {
                 opencode: join(dir, "proj", "opencode.json"),
                 claude: join(home, ".claude.json"),
-                cline: join(home, "Documents", "Cline", "cline_mcp_settings.json"),
+                cline: join(home, ".cline", "data", "settings", "cline_mcp_settings.json"),
                 windsurf: join(home, ".codeium", "windsurf", "mcp_config.json"),
             };
             mkdirSync(join(dir, "proj"), { recursive: true });
@@ -366,6 +366,28 @@ describe("MCP client registration", () => {
             const again = registerClient("opencode", { root: join(dir, "proj"), home });
             assert.equal(again.changed, false);
             assert.match(again.message, /already present/);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("registerClient prefers the modern ~/.cline config over the legacy globalStorage file", () => {
+        const dir = makeTempDir();
+        try {
+            const home = join(dir, "home");
+            const modern = join(home, ".cline", "data", "settings", "cline_mcp_settings.json");
+            const legacy = join(home, "Library", "Application Support", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json");
+            for (const file of [modern, legacy]) {
+                mkdirSync(join(file, ".."), { recursive: true });
+                writeFileSync(file, JSON.stringify({ mcpServers: { unity: { command: "/usr/bin/unity", args: ["mcp"] } } }, null, 2));
+            }
+            const outcome = registerClient("cline", { root: dir, home });
+            assert.equal(outcome.path, modern);
+            // legacy file untouched: no kanbn added there
+            const legacyConfig = readJsonLoose(legacy);
+            assert.deepEqual(Object.keys(legacyConfig.config?.mcpServers ?? {}), ["unity"]);
+            // modern file carries the kanbn entry
+            assert.ok("kanbn" in (readJsonLoose(modern).config?.mcpServers ?? {}));
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }
@@ -514,6 +536,43 @@ describe("runSetup end to end", () => {
             const manifest = readManifest(dir);
             const clients = manifest?.registered.map((r) => r.client).sort();
             assert.deepEqual(clients, ["claude", "opencode"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
+    test("re-running after a client config path moves re-registers and cleans the stale entry", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            // Seed the legacy Cline layout (old globalStorage path) exactly as a
+            // 1.2.0 run would have left it: unity preserved + kanbn merged in.
+            const legacy = join(home, "Library", "Application Support", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json");
+            mkdirSync(join(legacy, ".."), { recursive: true });
+            writeFileSync(legacy, JSON.stringify({
+                mcpServers: {
+                    unity: { command: "unity", args: ["mcp"] },
+                    kanbn: { transport: { type: "stdio", command: "kanbn-mcp", args: [""] } },
+                },
+            }, null, 2));
+            // First run: only the legacy file exists, so cline registers there.
+            await runSetup(["setup", dir, "--yes", "--mcp=cline"], { home });
+            // Now the user's Cline migrates to the modern ~/.cline layout.
+            const modern = join(home, ".cline", "data", "settings", "cline_mcp_settings.json");
+            mkdirSync(join(modern, ".."), { recursive: true });
+            writeFileSync(modern, JSON.stringify(
+                { mcpServers: { unity: { transport: { type: "stdio", command: "unity", args: ["mcp"] } } } },
+                null, 2
+            ));
+            // Second run: the modern path wins; the stale legacy entry is removed.
+            await runSetup(["setup", dir, "--yes", "--mcp=cline"], { home });
+            assert.ok("kanbn" in (readJsonLoose(modern).config?.mcpServers ?? {}));
+            const legacyAfter = readJsonLoose(legacy);
+            assert.deepEqual(Object.keys(legacyAfter.config?.mcpServers ?? {}), ["unity"]);
+            const manifest = readManifest(dir);
+            const clineRecord = manifest?.registered.find((r) => r.client === "cline");
+            assert.equal(clineRecord?.path, modern);
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });

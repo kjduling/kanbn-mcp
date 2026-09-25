@@ -292,6 +292,9 @@ export async function runSetup(argv: string[], options: RunOptions = {}): Promis
 
     const registered: RegisteredTarget[] = [];
     if (mcpClients.length > 0) {
+        // Prior run's records, in case a client's config path changed since
+        // (e.g. Cline moved from the legacy globalStorage file to ~/.cline).
+        const prior = readManifest(root);
         for (const slug of mcpClients) {
             const client = CLIENTS.find((c) => c.client === slug);
             if (!client) {
@@ -299,7 +302,18 @@ export async function runSetup(argv: string[], options: RunOptions = {}): Promis
                 continue;
             }
             try {
-                registered.push(registerClient(slug, { root, home }));
+                const outcome = registerClient(slug, { root, home });
+                registered.push(outcome);
+                // Clean up a registration this client previously recorded at a
+                // different path so `uninstall` stays complete. Best-effort:
+                // if the old entry was hand-edited, the guarded remove leaves it.
+                for (const stale of prior?.registered ?? []) {
+                    if (stale.client === slug && stale.path !== outcome.path) {
+                        if (unregisterClient(stale.path, slug)) {
+                            out(`cleaned up stale "${slug}" entry in ${stale.path}`);
+                        }
+                    }
+                }
             } catch (err) {
                 warn(`could not register ${slug}: ${(err as Error).message}`);
             }

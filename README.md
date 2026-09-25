@@ -126,6 +126,8 @@ Point your MCP client at the `kanbn-mcp` command from the global install. The im
 
 ### Cline
 
+Current Cline (extension, CLI, and SDK) reads one unified config at `~/.cline/data/settings/cline_mcp_settings.json`; the legacy VS Code extension path (`Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`) is migrated to it automatically and kept as a fallback.
+
 ```json
 {
   "mcpServers": {

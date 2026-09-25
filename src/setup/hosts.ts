@@ -50,7 +50,10 @@ export function detectHosts(home: string = os.homedir()): HostInfo[] {
         {
             slug: "cline",
             label: "Cline",
-            detected: exists(path.join(home, "Documents", "Cline")) || exists(path.join(home, ".clinerules")),
+            detected:
+                exists(path.join(home, ".cline")) ||
+                exists(path.join(home, "Documents", "Cline")) ||
+                exists(path.join(home, ".clinerules")),
             feedback: "project .clinerules/kanbn.md",
         },
         {
@@ -150,11 +153,16 @@ export const CLIENTS: ClientRegistration[] = [
     {
         client: "cline",
         label: "Cline",
+        // Current Cline (extension, CLI, and SDK) reads the unified config at
+        // ~/.cline/data/settings/cline_mcp_settings.json; the extension migrates
+        // the legacy globalStorage file there. Prefer the modern layout, then
+        // the legacy VSCode extension file, then the old Documents/Cline path.
         candidates: (home) => [
+            path.join(home, ".cline", "data", "settings", "cline_mcp_settings.json"),
             path.join(home, "Library", "Application Support", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json"),
             path.join(home, "Documents", "Cline", "cline_mcp_settings.json"),
         ],
-        defaultPath: (home) => path.join(home, "Documents", "Cline", "cline_mcp_settings.json"),
+        defaultPath: (home) => path.join(home, ".cline", "data", "settings", "cline_mcp_settings.json"),
         merge: (config) => {
             const mcp = (config.mcpServers ?? {}) as Record<string, unknown>;
             const changed = mergeOnce(mcp, "kanbn", CLINE_ENTRY);
