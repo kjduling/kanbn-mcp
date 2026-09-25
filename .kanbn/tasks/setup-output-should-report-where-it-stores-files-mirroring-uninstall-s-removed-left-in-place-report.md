@@ -4,6 +4,7 @@ tags:
   - 'pri:medium'
 created: 2026-09-25T18:47:00.260Z
 completed: 2026-09-25T18:47:00.260Z
+updated: 2026-09-25T18:47:21.599Z
 ---
 
 # setup output should report where it stores files, mirroring uninstall's Removed/Left-in-place report
@@ -24,12 +25,6 @@ kanbn-mcp uninstall prints where it removes things (Removed: / Left in place: wi
 - author: jinx
   date: 2026-09-25T19:00:00.000Z
   Implemented: replace printPlannedWrites with printWriteReport (role labels per host, changed/unchanged split, registrations, manifest). 238/238 tests green; demoed Wrote:/Unchanged:/Stored manifest: live + the dry-run Would write: mirror. Not yet committed when this ticket was logged.
-
-## History
-
-- type: created
-  date: 2026-09-25T18:47:00.260Z
-  column: Done
-  fromProgress: 0
-  toProgress: 0
-  author: Kevin J. Duling
+- author: jinx
+  date: 2026-09-25T19:15:00.000Z
+  Committed as fd253e9. Live demo: first run shows Wrote: (6 role-labelled paths) + Registered: + Stored manifest:; idempotent re-run shows Unchanged (already current):; dry-run shows Would write: / Would register:.
