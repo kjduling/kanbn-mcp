@@ -448,7 +448,7 @@ describe("runSetup end to end", () => {
             }
             const agents = readFileSync(join(dir, "AGENTS.md"), "utf8");
             assert.equal(agents.split(BLOCK_START).length - 1, 1);
-            assert.ok(agents.includes("## Kanbn board guidance"));
+            assert.ok(agents.includes("# Kanbn board guidance"));
 
             const skill = readFileSync(join(dir, ".opencode", "skills", "kanbn", "SKILL.md"), "utf8");
             assert.ok(skill.startsWith(SKILL_FRONTMATTER));
