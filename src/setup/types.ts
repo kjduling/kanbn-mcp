@@ -47,7 +47,7 @@ export interface SetupAnswers {
     mirrorRelations: boolean;
 }
 
-export type HostSlug = "opencode" | "claude" | "windsurf" | "cline" | "devin";
+export type HostSlug = "opencode" | "claude" | "windsurf" | "cline" | "devin" | "copilot";
 
 export interface WrittenTarget {
     path: string;

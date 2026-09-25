@@ -146,6 +146,30 @@ Guidance-wise Cline reads project rules from `.clinerules/` at the workspace roo
 
 Use the same pattern in any other MCP-compatible host such as a local editor or agent runtime.
 
+### GitHub Copilot (VS Code)
+
+VS Code's Copilot Chat integration reads one unified MCP config per user at `~/Library/Application Support/Code/User/mcp.json` (Linux: `~/.config/Code/User/mcp.json`; Windows: `%APPDATA%\Code\User\mcp.json`). `setup --mcp` registers into it:
+
+```json
+{
+  "servers": {
+    "kanbn-mcp": {
+      "command": "kanbn-mcp",
+      "type": "stdio"
+    }
+  },
+  "inputs": []
+}
+```
+
+VS Code launches the server with the open workspace root as its working directory, so the board resolves per-project exactly as with the other clients — open/or set up the project containing `.kanbn` and Copilot manages that board. After registering, open Copilot Chat → model picker → MCP servers and enable **kanbn-mcp**. The project-scoped alternative is `.vscode/mcp.json` in the repo (same `servers` shape).
+
+Copilot reads the board guidance the same way it reads everything else in a project:
+
+- **`AGENTS.md`** at the workspace root — always-on, read automatically (the universal envelope, emitted by default).
+- **`.github/skills/kanbn/SKILL.md`** — Copilot's workspace skill (`--host=copilot` emits it alongside `AGENTS.md`).
+- **`~/.copilot/skills/kanbn/SKILL.md`** — Copilot's personal skill, installed globally as part of `--host=copilot`, alongside the same setup's `~/.cline/skills/` / `~/.config/opencode/skills/` global skills for the other clients.
+
 ### Which board does the server use?
 
 With no extra configuration the server reads the board from its **working directory** — the directory the MCP host launches the server in. Open the host in your project root (the directory containing the `.kanbn` folder) and it manages that board. When the host launches the server from your home directory (common for a globally installed command), the server looks there instead.
@@ -191,6 +215,7 @@ The answers render into **one canonical guidance body**, written to:
 | `.clinerules/kanbn.md` | Cline rules |
 | `.cline/skills/kanbn/SKILL.md` | Cline project skill |
 | `.windsurf/rules/kanbn.md` | Windsurf |
+| `.github/skills/kanbn/SKILL.md` | GitHub Copilot workspace skill |
 | `skills/kanbn/SKILL.md` | committed copy for global skill installs |
 
 Answers and a write-manifest persist to `.kanbn/setup.json`, so re-runs amend instead of duplicating and `kanbn-mcp uninstall` removes everything.
@@ -201,9 +226,9 @@ Answers and a write-manifest persist to `.kanbn/setup.json`, so re-runs amend in
 | --- | --- |
 | `--yes` | non-interactive: accept defaults (or amend persisted answers) |
 | `--json <file>` | import answers from a JSON file (non-interactive) |
-| `--host=<slugs>` | guide only `opencode\|claude\|windsurf\|cline\|devin` (comma-separated); `opencode`/`claude`/`cline` also install the global skill into `~/.config/opencode/skills/kanbn/SKILL.md` / `~/.claude/skills/kanbn/SKILL.md` / `~/.cline/skills/kanbn/SKILL.md` |
+| `--host=<slugs>` | guide only `opencode\|claude\|windsurf\|cline\|devin\|copilot` (comma-separated); `opencode`/`claude`/`cline`/`copilot` also install the global skill into `~/.config/opencode/skills/kanbn/SKILL.md` / `~/.claude/skills/kanbn/SKILL.md` / `~/.cline/skills/kanbn/SKILL.md` / `~/.copilot/skills/kanbn/SKILL.md`; `copilot` emits the universal `AGENTS.md` it reads from the workspace root plus its workspace skill at `.github/skills/kanbn/SKILL.md` |
 | `--repo-only` | write repo files only (the default) |
-| `--mcp[=clients]` | also register the kanbn MCP server in detected client configs — project `opencode.json`, `~/.claude.json` (Claude Code), `cline_mcp_settings.json`, `~/.codeium/windsurf/mcp_config.json`; limit with a comma list, e.g. `--mcp=opencode,claude` |
+| `--mcp[=clients]` | also register the kanbn MCP server in detected client configs — project `opencode.json`, `~/.claude.json` (Claude Code), `cline_mcp_settings.json`, `~/.codeium/windsurf/mcp_config.json`, VS Code user `mcp.json` (GitHub Copilot); limit with a comma list, e.g. `--mcp=opencode,claude` |
 | `--list` | list detected clients and target files; change nothing |
 | `--dry-run` | show what would be written; change nothing |
 | `--print` | print the canonical guidance + manual install instructions for any client; change nothing |

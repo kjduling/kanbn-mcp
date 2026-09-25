@@ -286,6 +286,7 @@ describe("host slugs", () => {
     test("resolveHostSlugs filters and validates", () => {
         assert.equal(resolveHostSlugs(undefined), null);
         assert.deepEqual(resolveHostSlugs("opencode,claude"), ["opencode", "claude"]);
+        assert.deepEqual(resolveHostSlugs("copilot"), ["copilot"]);
         assert.throws(() => resolveHostSlugs("bobs-nose"), /Unknown host "bobs-nose"/);
     });
 
@@ -302,6 +303,7 @@ describe("host slugs", () => {
                 "/tmp/proj/.clinerules/kanbn.md",
                 "/tmp/proj/.cline/skills/kanbn/SKILL.md",
                 "/tmp/proj/skills/kanbn/SKILL.md",
+                "/tmp/proj/.github/skills/kanbn/SKILL.md",
             ]
         );
         const windsurfOnly = planRepoEmit("/tmp/proj", answers, ["windsurf"]);
@@ -311,6 +313,12 @@ describe("host slugs", () => {
             opencode.targets.map((t) => t.path),
             ["/tmp/proj/AGENTS.md", "/tmp/proj/.opencode/skills/kanbn/SKILL.md"]
         );
+        // copilot reads AGENTS.md from the workspace root plus its workspace skill
+        const copilot = planRepoEmit("/tmp/proj", answers, ["copilot"]);
+        assert.deepEqual(copilot.targets.map((t) => t.path), [
+            "/tmp/proj/AGENTS.md",
+            "/tmp/proj/.github/skills/kanbn/SKILL.md",
+        ]);
     });
 });
 
@@ -324,6 +332,7 @@ describe("MCP client registration", () => {
                 claude: join(home, ".claude.json"),
                 cline: join(home, ".cline", "data", "settings", "cline_mcp_settings.json"),
                 windsurf: join(home, ".codeium", "windsurf", "mcp_config.json"),
+                copilot: join(home, "Library", "Application Support", "Code", "User", "mcp.json"),
             };
             mkdirSync(join(dir, "proj"), { recursive: true });
             for (const [client, cfgPath] of Object.entries(configPaths)) {
@@ -331,12 +340,15 @@ describe("MCP client registration", () => {
                 mkdirSync(join(cfgPath, ".."), { recursive: true });
                 if (client === "opencode") {
                     writeFileSync(cfgPath, JSON.stringify({ mcp: { github: { type: "local", command: ["gh"] } } }, null, 2));
+                } else if (client === "copilot") {
+                    // VS Code's unified user mcp.json shape: servers map + inputs
+                    writeFileSync(cfgPath, JSON.stringify({ servers: { squeez: { command: "npx", args: ["-y", "squeez", "mcp"] } }, inputs: [] }, null, 2));
                 } else {
                     writeFileSync(cfgPath, JSON.stringify({ mcpServers: { other: { command: "other" } } }, null, 2));
                 }
                 const outcome = registerClient(client, { root: join(dir, "proj"), home });
                 assert.equal(outcome.changed, true, `${client} should register`);
-                assert.ok(outcome.message.includes('added "kanbn"'));
+                assert.ok(outcome.message.includes('added "kanbn'), client);
             }
 
             const opencodeConfig = readJsonLoose(configPaths.opencode);
@@ -363,10 +375,22 @@ describe("MCP client registration", () => {
                 kanbn: { command: "kanbn-mcp", args: [] },
             });
 
+            const copilotConfig = readJsonLoose(configPaths.copilot);
+            assert.deepEqual(copilotConfig.config?.servers, {
+                squeez: { command: "npx", args: ["-y", "squeez", "mcp"] },
+                "kanbn-mcp": { command: "kanbn-mcp", type: "stdio" },
+            });
+            assert.deepEqual(copilotConfig.config?.inputs, []);
+
             // re-registering never duplicates
             const again = registerClient("opencode", { root: join(dir, "proj"), home });
             assert.equal(again.changed, false);
             assert.match(again.message, /already present/);
+
+            // copilot re-register with same root: idempotent
+            const copilotAgain = registerClient("copilot", { root: join(dir, "proj"), home });
+            assert.equal(copilotAgain.changed, false);
+            assert.match(copilotAgain.message, /already present/);
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }
@@ -421,8 +445,46 @@ describe("MCP client registration", () => {
         }
     });
 
+    test("copilot treats an existing kanbn-mcp entry as already present and uninstalls cleanly", () => {
+        const dir = makeTempDir();
+        try {
+            const home = join(dir, "home");
+            const mcpPath = join(home, "Library", "Application Support", "Code", "User", "mcp.json");
+            mkdirSync(join(mcpPath, ".."), { recursive: true });
+            // the shape Copilot users hand-write (and which setup generates)
+            writeFileSync(mcpPath, JSON.stringify({
+                servers: { "kanbn-mcp": { command: "kanbn-mcp", type: "stdio" }, squeez: { command: "npx" } },
+                inputs: [],
+            }, null, 2));
+            const outcome = registerClient("copilot", { root: join(dir, "proj"), home });
+            assert.equal(outcome.changed, false);
+            assert.match(outcome.message, /already present/);
+            // unregister removes only the kanbn-mcp entry
+            assert.equal(unregisterClient(mcpPath, "copilot"), true);
+            const after = readJsonLoose(mcpPath);
+            assert.deepEqual(Object.keys(after.config?.servers ?? {}), ["squeez"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("copilot unregister refuses to remove a different server on the same id", () => {
+        const dir = makeTempDir();
+        try {
+            const home = join(dir, "home");
+            const mcpPath = join(home, "Library", "Application Support", "Code", "User", "mcp.json");
+            mkdirSync(join(mcpPath, ".."), { recursive: true });
+            writeFileSync(mcpPath, JSON.stringify({ servers: { "kanbn-mcp": { command: "something-else" } } }, null, 2));
+            assert.equal(unregisterClient(mcpPath, "copilot"), false);
+            const config = readJsonLoose(mcpPath);
+            assert.ok("kanbn-mcp" in (config.config?.servers ?? {}));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
     test("known client slugs are the canonical matrix", () => {
-        assert.deepEqual(CLIENTS.map((c) => c.client), ["opencode", "claude", "cline", "windsurf"]);
+        assert.deepEqual(CLIENTS.map((c) => c.client), ["opencode", "claude", "cline", "windsurf", "copilot"]);
         assert.ok(manualInstallText().includes("Any other client"));
     });
 });
@@ -485,6 +547,7 @@ describe("runSetup end to end", () => {
                 ".clinerules/kanbn.md",
                 ".cline/skills/kanbn/SKILL.md",
                 "skills/kanbn/SKILL.md",
+                ".github/skills/kanbn/SKILL.md",
             ];
             for (const file of expected) {
                 assert.equal(existsSync(join(dir, file)), true, `${file} should exist`);
@@ -521,6 +584,29 @@ describe("runSetup end to end", () => {
             assert.equal(existsSync(join(dir, "CLAUDE.md")), false);
         } finally {
             rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("--host=copilot writes the workspace skill + AGENTS.md and the global personal skill", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            await runSetup(["setup", dir, "--yes", "--host=copilot"], { home });
+            // workspace: universal AGENTS.md (always-on for Copilot) + project skill
+            assert.equal(existsSync(join(dir, "AGENTS.md")), true);
+            const projectSkill = join(dir, ".github", "skills", "kanbn", "SKILL.md");
+            assert.equal(existsSync(projectSkill), true);
+            assert.ok(readFileSync(projectSkill, "utf8").startsWith(SKILL_FRONTMATTER));
+            // personal: global skill in the Copilot personal skills dir
+            const personalSkill = join(home, ".copilot", "skills", "kanbn", "SKILL.md");
+            assert.equal(existsSync(personalSkill), true);
+            assert.ok(readFileSync(personalSkill, "utf8").startsWith(SKILL_FRONTMATTER));
+            // no other clients' envelopes
+            assert.equal(existsSync(join(dir, "CLAUDE.md")), false);
+            assert.equal(existsSync(join(dir, ".clinerules")), false);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
         }
     });
 
@@ -619,6 +705,27 @@ describe("runSetup end to end", () => {
         }
     });
 
+    test("--mcp=copilot registers in the VS Code user mcp.json", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            await runSetup(["setup", dir, "--yes", "--mcp=copilot"], { home });
+            const mcpPath = join(home, "Library", "Application Support", "Code", "User", "mcp.json");
+            assert.equal(existsSync(mcpPath), true);
+            const config = readJsonLoose(mcpPath);
+            assert.deepEqual(config.config?.servers, {
+                "kanbn-mcp": { command: "kanbn-mcp", type: "stdio" },
+            });
+            const manifest = readManifest(dir);
+            assert.equal(manifest?.registered.length, 1);
+            assert.equal(manifest?.registered[0].client, "copilot");
+            assert.equal(manifest?.registered[0].path, mcpPath);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
     test("uninstall reverses a real run via the manifest", async () => {
         const dir = makeTempDir();
         const home = makeTempDir();
@@ -646,7 +753,7 @@ describe("runSetup end to end", () => {
             await runSetup(["setup", dir, "--yes"]);
             const output = await captureStdout(() => runSetup(["setup", dir, "--check"]));
             assert.match(output, /kanbn-mcp setup state/);
-            assert.match(output, /written: 7/);
+            assert.match(output, /written: 8/);
             const empty = makeTempDir();
             try {
                 const none = await captureStdout(() => runSetup(["setup", empty, "--check"]));

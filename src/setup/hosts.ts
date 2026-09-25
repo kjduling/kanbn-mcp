@@ -62,12 +62,31 @@ export function detectHosts(home: string = os.homedir()): HostInfo[] {
             detected: true,
             feedback: "repo AGENTS.md block + committed skills/kanbn/SKILL.md (Devin reads committed guidance)",
         },
+        {
+            slug: "copilot",
+            label: "GitHub Copilot (VS Code)",
+            detected: exists(path.join(vscodeUserConfigDir(home), "mcp.json")),
+            feedback: "user-level VS Code mcp.json (servers.kanbn-mcp); enable kanbn-mcp in the Copilot Chat MCP picker",
+        },
     ];
+}
+
+/** VS Code user-data config dir (hosts the unified user-level mcp.json). */
+function vscodeUserConfigDir(home: string): string {
+    if (process.platform === "win32") {
+        return path.join(home, "AppData", "Roaming", "Code", "User");
+    }
+    if (process.platform === "darwin") {
+        return path.join(home, "Library", "Application Support", "Code", "User");
+    }
+    return path.join(home, ".config", "Code", "User");
 }
 
 interface ClientRegistration {
     client: string;
     label: string;
+    /** The config key this client stores the kanbn entry under. */
+    server: string;
     candidates: (home: string, root: string) => string[];
     defaultPath: (home: string, root: string) => string;
     merge: (config: Record<string, unknown>) => boolean;
@@ -79,6 +98,12 @@ const OPENCODE_ENTRY = { type: "local", command: ["kanbn-mcp"], enabled: true };
 const CLAUDE_ENTRY = { command: "kanbn-mcp", args: [] };
 const CLINE_ENTRY = { transport: { type: "stdio", command: "kanbn-mcp", args: [""] } };
 const WINDSURF_ENTRY = { command: "kanbn-mcp", args: [] };
+/**
+ * GitHub Copilot / VS Code unified user mcp.json entry. VS Code launches the
+ * server with the open workspace root as its working directory, so the board
+ * resolves from there - no env needed, same as the other clients.
+ */
+const COPILOT_ENTRY = { command: "kanbn-mcp", type: "stdio" };
 
 function mergeOnce(config: Record<string, unknown>, key: string, entry: unknown): boolean {
     if (config[key] === undefined) {
@@ -108,6 +133,7 @@ function removeOnce(config: Record<string, unknown>, key: string, entry?: unknow
 export const CLIENTS: ClientRegistration[] = [
     {
         client: "opencode",
+        server: "kanbn",
         label: "opencode",
         candidates: (home, root) => [
             path.join(root, "opencode.json"),
@@ -134,6 +160,7 @@ export const CLIENTS: ClientRegistration[] = [
     },
     {
         client: "claude",
+        server: "kanbn",
         label: "Claude (Code)",
         candidates: (home) => [path.join(home, ".claude.json")],
         defaultPath: (home) => path.join(home, ".claude.json"),
@@ -152,6 +179,7 @@ export const CLIENTS: ClientRegistration[] = [
     },
     {
         client: "cline",
+        server: "kanbn",
         label: "Cline",
         // Current Cline (extension, CLI, and SDK) reads the unified config at
         // ~/.cline/data/settings/cline_mcp_settings.json; the extension migrates
@@ -178,6 +206,7 @@ export const CLIENTS: ClientRegistration[] = [
     },
     {
         client: "windsurf",
+        server: "kanbn",
         label: "Windsurf",
         candidates: (home) => [path.join(home, ".codeium", "windsurf", "mcp_config.json")],
         defaultPath: (home) => path.join(home, ".codeium", "windsurf", "mcp_config.json"),
@@ -193,6 +222,32 @@ export const CLIENTS: ClientRegistration[] = [
             return changed;
         },
         snippet: () => JSON.stringify({ mcpServers: { kanbn: WINDSURF_ENTRY } }, null, 4),
+    },
+    {
+        client: "copilot",
+        server: "kanbn-mcp",
+        label: "GitHub Copilot (VS Code)",
+        // VS Code >= 1.104 reads one unified user mcp.json for Copilot Chat's
+        // MCP integration; the workspace variant is <project>/.vscode/mcp.json.
+        candidates: (home) => [path.join(vscodeUserConfigDir(home), "mcp.json")],
+        defaultPath: (home) => path.join(vscodeUserConfigDir(home), "mcp.json"),
+        merge: (config) => {
+            const servers = (config.servers ?? {}) as Record<string, unknown>;
+            const changed = mergeOnce(servers, "kanbn-mcp", COPILOT_ENTRY);
+            config.servers = servers;
+            return changed;
+        },
+        remove: (config) => {
+            const servers = (config.servers ?? {}) as Record<string, unknown>;
+            const changed = removeOnce(servers, "kanbn-mcp", COPILOT_ENTRY);
+            return changed;
+        },
+        snippet: () =>
+            JSON.stringify(
+                { servers: { "kanbn-mcp": COPILOT_ENTRY }, inputs: [] },
+                null,
+                4
+            ),
     },
 ];
 
@@ -253,7 +308,7 @@ export function registerClient(
 ): RegisterOutcome {
     const client = clientFor(slug);
     if (!client) {
-        throw new Error(`Unknown MCP client "${slug}". Known clients: opencode, claude, cline, windsurf.`);
+        throw new Error(`Unknown MCP client "${slug}". Known clients: ${CLIENTS.map((c) => c.client).join(", ")}.`);
     }
     const home = options.home ?? os.homedir();
     const filePath = choosePath(client, home, options.root);
@@ -281,10 +336,10 @@ export function registerClient(
             path: filePath,
             client: slug,
             changed: true,
-            message: `added "kanbn" to ${filePath}`,
+            message: `added "${client.server}" to ${filePath}`,
         };
     }
-    return { path: filePath, client: slug, changed: false, message: `"kanbn" already present in ${filePath}` };
+    return { path: filePath, client: slug, changed: false, message: `"${client.server}" already present in ${filePath}` };
 }
 
 /**
@@ -320,6 +375,7 @@ export function manualInstallText(): string {
         "   - CLAUDE.md (project root) - Claude Code.",
         "   - .windsurf/rules/kanbn.md - Windsurf.",
         "   - .clinerules/kanbn.md + .cline/skills/kanbn/SKILL.md - Cline (rules + project skill).",
+        "   - .github/skills/kanbn/SKILL.md - Copilot (VS Code) workspace skill.",
         "   - skills/kanbn/SKILL.md - commit it; Devin and global skill installs read committed SKILL.md files.",
         "   For an unknown client, put the prose wherever that client reads rules or instructions.",
         "2. MCP server - register the kanbn-mcp command in the client's MCP server config:",

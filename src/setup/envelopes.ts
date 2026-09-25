@@ -117,6 +117,9 @@ const HOST_REPO_TARGETS: Record<HostSlug, string[]> = {
     windsurf: ["windsurf"],
     cline: ["cline", "cline-skill"],
     devin: ["universal", "devin"],
+    // GitHub Copilot (VS Code) reads AGENTS.md from the workspace root
+    // (universal) plus its workspace skill at .github/skills/kanbn/SKILL.md.
+    copilot: ["universal", "copilot-skill"],
 };
 
 export interface RepoTarget {
@@ -189,6 +192,15 @@ export function repoTargets(): RepoTarget[] {
             file: "skills/kanbn/SKILL.md",
             write: (root, answers) => writeManagedFile(path.join(root, "skills", "kanbn", "SKILL.md"), renderSkill(answers)),
         },
+        {
+            // Copilot's workspace skill location (SDK: "Project: .github/skills/,
+            // .agents/skills/, or .claude/skills/"). Skilled alongside the universal
+            // AGENTS.md, which Copilot reads always-on at the workspace root.
+            id: "copilot-skill",
+            host: "copilot",
+            file: ".github/skills/kanbn/SKILL.md",
+            write: (root, answers) => writeManagedFile(path.join(root, ".github", "skills", "kanbn", "SKILL.md"), renderSkill(answers)),
+        },
     ];
 }
 
@@ -207,8 +219,8 @@ export function resolveHostSlugs(hostFilter: string | undefined): HostSlug[] | n
     }
     const slugs = hostFilter.split(",").map((s) => s.trim().toLowerCase());
     for (const slug of slugs) {
-        if (!["opencode", "claude", "windsurf", "cline", "devin"].includes(slug)) {
-            throw new Error(`Unknown host "${slug}". Known hosts: opencode, claude, windsurf, cline, devin.`);
+        if (!["opencode", "claude", "windsurf", "cline", "devin", "copilot"].includes(slug)) {
+            throw new Error(`Unknown host "${slug}". Known hosts: opencode, claude, windsurf, cline, devin, copilot.`);
         }
     }
     return slugs as HostSlug[];

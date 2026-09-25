@@ -160,7 +160,7 @@ function resolveRoot(positionals: string[], cwd: string): string {
 }
 
 /** Clients with a local config file `--mcp` can register into (devin is repo-side only). */
-const REGISTRABLE_CLIENTS = ["opencode", "claude", "cline", "windsurf"];
+const REGISTRABLE_CLIENTS = ["opencode", "claude", "cline", "windsurf", "copilot"];
 
 function selectedMcpClients(mcp: boolean | string[], detected: string[]): string[] {
     if (Array.isArray(mcp)) {
@@ -180,8 +180,8 @@ function listClientsAndTargets(): void {
     }
     out("");
     out("Guidance targets (from the board root):");
-    out("  AGENTS.md (universal) | .opencode/skills/kanbn/SKILL.md | CLAUDE.md | .windsurf/rules/kanbn.md | .clinerules/kanbn.md | skills/kanbn/SKILL.md");
-    out("  Global skills (--host=opencode / --host=claude): ~/.config/opencode/skills/kanbn/SKILL.md / ~/.claude/skills/kanbn/SKILL.md");
+    out("  AGENTS.md (universal) | .opencode/skills/kanbn/SKILL.md | CLAUDE.md | .windsurf/rules/kanbn.md | .clinerules/kanbn.md | skills/kanbn/SKILL.md | .github/skills/kanbn/SKILL.md");
+    out("  Global skills (--host=opencode / --host=claude / --host=cline / --host=copilot): ~/.config/opencode/skills/kanbn/SKILL.md / ~/.claude/skills/kanbn/SKILL.md / ~/.cline/skills/kanbn/SKILL.md / ~/.copilot/skills/kanbn/SKILL.md");
     out("");
     out("MCP client registration (--mcp):");
     for (const client of CLIENTS) {
@@ -196,12 +196,14 @@ const ROLE_LABELS: Record<string, string> = {
     windsurf: "Windsurf rule (.windsurf/rules/kanbn.md)",
     cline: "Cline rules + project skill (.clinerules/kanbn.md, .cline/skills/kanbn/SKILL.md)",
     devin: "committed skill (Devin + global skill installs)",
+    copilot: "Copilot project skill (.github/skills/kanbn/SKILL.md)",
 };
 
 const GLOBAL_LABELS: Record<string, string> = {
     opencode: "global opencode skill (~/.config/opencode/skills/kanbn/SKILL.md)",
     claude: "global Claude skill (~/.claude/skills/kanbn/SKILL.md)",
     cline: "global Cline skill (~/.cline/skills/kanbn/SKILL.md)",
+    copilot: "global Copilot skill (~/.copilot/skills/kanbn/SKILL.md)",
 };
 
 interface ReportEntry {
@@ -267,6 +269,9 @@ function globalSkillForHost(slug: string, home: string): string | null {
     }
     if (slug === "cline") {
         return path.join(home, ".cline", "skills", "kanbn", "SKILL.md");
+    }
+    if (slug === "copilot") {
+        return path.join(home, ".copilot", "skills", "kanbn", "SKILL.md");
     }
     return null;
 }
@@ -421,7 +426,7 @@ function planRegistrations(mcp: boolean | string[], root: string, dryRun: boolea
         plan.push({
             path: target,
             client: slug,
-            message: `would register "kanbn" in ${target}`,
+            message: `would register "${client.server}" in ${target}`,
         });
     }
     return plan;
@@ -463,7 +468,7 @@ export async function runUninstall(argv: string[], options: RunOptions = {}): Pr
             if (unregisterClient(reg.path, reg.client)) {
                 removed.push(reg.path);
             } else {
-                left.push(`${reg.path} (no kanbn entry or entry differs from the generated shape)`);
+                left.push(`${reg.path} (no ${reg.client} entry or entry differs from the generated shape)`);
             }
         } catch (err) {
             left.push(`${reg.path} (${(err as Error).message})`);

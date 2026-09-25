@@ -182,13 +182,17 @@ SETUP
     --yes              non-interactive: all defaults (or amend persisted answers)
     --json <file>      import answers from a JSON file (non-interactive)
     --host=<slugs>     emit for one client only: opencode|claude|windsurf|
-                       cline|devin (comma-separated). opencode/claude also
-                       install the global skill (~/.config/opencode/skills,
-                       ~/.claude/skills)
+                       cline|devin|copilot (comma-separated). opencode/claude/
+                       cline/copilot also install the global skill
+                       (~/.config/opencode/skills, ~/.claude/skills,
+                       ~/.cline/skills, ~/.copilot/skills); copilot emits the
+                       universal AGENTS.md it reads from the workspace root
+                       plus its workspace skill (.github/skills/kanbn/SKILL.md)
     --repo-only        write repo files only (the default)
     --mcp              also register the kanbn MCP server in detected client
                        configs: opencode.json, ~/.claude.json,
-                       cline_mcp_settings.json, ~/.codeium/windsurf/mcp_config.json
+                       cline_mcp_settings.json, ~/.codeium/windsurf/mcp_config.json,
+                       VS Code user mcp.json (GitHub Copilot)
     --mcp=<clients>    register only in the listed clients (comma-separated)
     --list             list detected clients and target files; change nothing
     --dry-run          show what would be written; change nothing
