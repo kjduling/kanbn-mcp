@@ -82,7 +82,7 @@ export const handleKanbnStatus: ToolHandler = async (args) => {
 export const handleKanbnInitBoard: ToolHandler = async (args) => {
     const { instance, boardPath } = await readyBoard(args, false);
     const boardName = (args.name as string) || "Project Board";
-    const columns = Array.isArray(args.columns) ? args.columns : undefined;
+    const hasColumns = Array.isArray(args.columns);
 
     const initFn = instance.initialise || instance.init || instance.initialize || instance.initBoard;
     if (typeof initFn !== "function") {
@@ -92,11 +92,19 @@ export const handleKanbnInitBoard: ToolHandler = async (args) => {
     let lastError: Error | null = null;
 
     try {
-        await initFn.call(instance, { name: boardName, columns });
+        if (hasColumns) {
+            await initFn.call(instance, { name: boardName, columns: args.columns });
+        } else {
+            await initFn.call(instance, { name: boardName });
+        }
     } catch (e) {
         lastError = e instanceof Error ? e : new Error(String(e));
         try {
-            await initFn.call(instance, boardName, columns);
+            if (hasColumns) {
+                await initFn.call(instance, boardName, args.columns);
+            } else {
+                await initFn.call(instance, boardName);
+            }
         } catch (e2) {
             lastError = e2 instanceof Error ? e2 : new Error(String(e2));
         }

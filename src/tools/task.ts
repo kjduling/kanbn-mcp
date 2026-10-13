@@ -172,8 +172,12 @@ export const handleKanbnEditTask: ToolHandler = async (args) => {
                 // Supplying a collection still replaces that whole collection (library semantics).
                 mergeExistingTaskData(taskData, existingTask);
             }
-        } catch {
-            // Task may not exist yet; proceed with provided fields
+        } catch (err: any) {
+            const msg = String(err?.message || err);
+            if (msg.includes("parse task") || msg.includes("Unable to parse") || msg.toLowerCase().includes("parse")) {
+                throw new Error(`Failed to parse task file for "${taskId}": ${msg}`);
+            }
+            // Task may not exist yet or other error; proceed with provided fields
         }
     }
 

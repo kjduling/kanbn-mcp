@@ -24,6 +24,7 @@ function getTaskForDir(dir: string, taskId: string) {
     
     const fallbackGetTask = async () => {
         const fs = await import("node:fs");
+        const path = await import("node:path");
         const taskPath = path.join(dir, ".kanbn", "tasks");
         if (fs.existsSync(taskPath)) {
             const files = fs.readdirSync(taskPath).filter((f: string) => f.endsWith(".md"));
@@ -3389,6 +3390,90 @@ describe("kanbn_edit_task", () => {
                 }),
                 /Cannot rename task.*already exists/i
             );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("preserves history on partial edit (regression for history append)", async () => {
+        const dir = makeTempDir();
+        try {
+            const initResult = await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "History Preserve Board",
+                columns: ["Backlog", "Done"],
+            });
+            const uniqueName = `History Task ${Math.random().toString(36).slice(2,8)}`;
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: uniqueName,
+                column: "Backlog",
+            });
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            // Verify initial history has at least 'created'
+            let task = await getTaskForDir(dir, taskId);
+            assert.ok(task, "Task should be retrievable");
+            assert.ok(task.history && task.history.length >= 1, "Task should have history with 'created'");
+            const initialHistoryCount = task.history.length;
+
+            // Partial edit: change description only
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: taskId,
+                description: "Updated description",
+            });
+
+            // History should be preserved (not replaced)
+            task = await getTaskForDir(dir, taskId);
+            assert.ok(task, "Task should be retrievable after edit");
+            assert.ok(task.history && task.history.length >= initialHistoryCount,
+                `History should be preserved (was ${initialHistoryCount}, now ${task.history.length})`);
+            // Original history events should still be present
+            assert.ok(task.history.some((e: any) => e.type === "created"), "Should still have 'created' event");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("explicit history replacement still works (regression)", async () => {
+        const dir = makeTempDir();
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "History Replace Board",
+                columns: ["Backlog", "Done"],
+            });
+            const uniqueName = `Replace Task ${Math.random().toString(36).slice(2,8)}`;
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: uniqueName,
+                column: "Backlog",
+            });
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            // Explicitly supply a new history array
+            const newHistory = [
+                { type: "created", date: "2026-01-01T00:00:00.000Z", column: "Backlog" },
+                { type: "custom", date: "2026-01-02T00:00:00.000Z", note: "manual entry", column: "Backlog" },
+            ];
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId: taskId,
+                history: newHistory,
+            });
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.ok(task, "Task should be retrievable after edit");
+            assert.ok(task.history);
+            assert.equal(task.history.length, 2, "Explicit history should replace entirely");
+            assert.equal(task.history[0].type, "created");
+            assert.equal(task.history[1].type, "custom");
+            assert.equal(task.history[1].note, "manual entry");
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }

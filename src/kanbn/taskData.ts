@@ -152,6 +152,15 @@ export function buildTaskDataFromArgs(args: Record<string, any>): Record<string,
         });
     }
 
+    if (Array.isArray(taskData.history)) {
+        taskData.history = taskData.history.map((entry: any) => {
+            if (entry && typeof entry.date === "string") {
+                return { ...entry, date: new Date(entry.date) };
+            }
+            return entry;
+        });
+    }
+
     if (Array.isArray(taskData.subTasks)) {
         taskData.subTasks = taskData.subTasks.map((sub: any) => {
             if (typeof sub === "string") {

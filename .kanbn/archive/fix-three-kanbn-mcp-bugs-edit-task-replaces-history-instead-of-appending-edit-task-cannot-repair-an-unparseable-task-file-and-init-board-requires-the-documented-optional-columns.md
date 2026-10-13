@@ -1,10 +1,11 @@
 ---
 tags:
   - bug
-  - high
+progress: 1
 assigned: 'Kevin J. Duling'
 created: 2026-10-01T17:33:32.467Z
-updated: 2026-10-13T22:01:04.016Z
+updated: 2026-10-13T22:38:57.611Z
+column: Backlog
 ---
 
 # Fix three kanbn-mcp bugs: edit_task replaces History instead of appending, edit_task cannot repair an unparseable task file, and init_board requires the documented-optional columns
@@ -73,3 +74,10 @@ Found while auditing kanbn-mcp from opencode. Bugs 2 and 3 are arg-forwarding sh
 - [ ] Fix init_board so omitting the documented-optional columns arg works, by defaulting to the library's default columns instead of passing explicit undefined (src/tools/board.ts:85).
 - [ ] Remove or fix the positional-retry fallback at src/tools/board.ts:99, which can never succeed and replaces the real error with a confusing one.
 - [ ] Add regression tests for History append-on-edit, the unparseable-task error message, and columns-less init_board.
+
+## History
+
+- type: archived
+  date: 2026-10-13T22:39:07.008Z
+  fromColumn: Backlog
+  author: Kevin J. Duling
