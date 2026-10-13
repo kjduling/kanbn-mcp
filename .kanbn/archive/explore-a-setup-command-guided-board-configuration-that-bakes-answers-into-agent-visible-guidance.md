@@ -1,7 +1,11 @@
 ---
+tags:
+  - feature
+  - medium
 created: 2026-09-18T20:18:25.950Z
-updated: 2026-09-25T18:01:26.655Z
+updated: 2026-10-13T22:03:07.662Z
 completed: 2026-09-25T18:01:26.655Z
+column: Done
 ---
 
 # Explore a 'setup' command - guided board configuration that bakes answers into agent-visible guidance
@@ -46,8 +50,7 @@ Deliverable: a decision on scope + a concrete proposal for the question set, out
 
 ## History
 
-- type: moved
-  date: 2026-09-25T18:01:26.655Z
-  fromColumn: Backlog
-  toColumn: Done
+- type: archived
+  date: 2026-10-13T22:03:36.391Z
+  fromColumn: Done
   author: Kevin J. Duling

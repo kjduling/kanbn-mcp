@@ -1,6 +1,9 @@
 ---
+tags:
+  - spike
+  - medium
 created: 2026-09-18T20:13:42.238Z
-updated: 2026-09-25T01:09:11.716Z
+updated: 2026-10-13T22:06:15.719Z
 ---
 
 # Directed relation hygiene - depends-on/blocks edges should mirror on both tasks (guidance and/or audit/mirroring)

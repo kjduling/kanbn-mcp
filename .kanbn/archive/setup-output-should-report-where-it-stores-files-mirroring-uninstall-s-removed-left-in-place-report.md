@@ -1,10 +1,11 @@
 ---
 tags:
-  - 'typ:feature'
-  - 'pri:medium'
+  - feature
+  - medium
 created: 2026-09-25T18:47:00.260Z
 completed: 2026-09-25T18:47:00.260Z
-updated: 2026-09-25T18:47:21.599Z
+updated: 2026-10-13T22:03:07.714Z
+column: Done
 ---
 
 # setup output should report where it stores files, mirroring uninstall's Removed/Left-in-place report
@@ -28,3 +29,10 @@ kanbn-mcp uninstall prints where it removes things (Removed: / Left in place: wi
 - author: jinx
   date: 2026-09-25T19:15:00.000Z
   Committed as fd253e9. Live demo: first run shows Wrote: (6 role-labelled paths) + Registered: + Stored manifest:; idempotent re-run shows Unchanged (already current):; dry-run shows Would write: / Would register:.
+
+## History
+
+- type: archived
+  date: 2026-10-13T22:03:36.496Z
+  fromColumn: Done
+  author: Kevin J. Duling

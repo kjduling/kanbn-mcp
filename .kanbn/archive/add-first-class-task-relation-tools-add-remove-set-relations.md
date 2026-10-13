@@ -1,7 +1,11 @@
 ---
+tags:
+  - feature
+  - high
 created: 2026-09-14T23:22:05.684Z
-updated: 2026-09-15T21:39:05.746Z
+updated: 2026-10-13T22:03:07.594Z
 completed: 2026-09-15T21:39:05.746Z
+column: Done
 ---
 
 # Add first-class task relation tools (add/remove/set relations)
@@ -35,14 +39,7 @@ Context: discovered while wiring a depends-on / blocks chain on the Museum board
 
 ## History
 
-- type: created
-  date: 2026-09-14T23:22:05.684Z
-  column: Todo
-  fromProgress: 0
-  toProgress: 0
-  author: Kevin J. Duling
-- type: moved
-  date: 2026-09-15T21:39:05.746Z
-  fromColumn: Todo
-  toColumn: Done
+- type: archived
+  date: 2026-10-13T22:03:36.280Z
+  fromColumn: Done
   author: Kevin J. Duling

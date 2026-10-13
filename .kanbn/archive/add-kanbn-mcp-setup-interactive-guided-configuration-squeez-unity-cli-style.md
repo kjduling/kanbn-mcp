@@ -1,7 +1,11 @@
 ---
+tags:
+  - feature
+  - high
 created: 2026-09-25T01:03:16.432Z
-updated: 2026-09-25T18:11:02.655Z
+updated: 2026-10-13T22:03:07.676Z
 completed: 2026-09-25T18:11:02.655Z
+column: Done
 ---
 
 # Add kanbn-mcp setup - interactive guided configuration, squeez/unity-cli style
@@ -57,8 +61,7 @@ Design rules:
 
 ## History
 
-- type: moved
-  date: 2026-09-25T18:11:02.655Z
-  fromColumn: Backlog
-  toColumn: Done
+- type: archived
+  date: 2026-10-13T22:03:36.417Z
+  fromColumn: Done
   author: Kevin J. Duling

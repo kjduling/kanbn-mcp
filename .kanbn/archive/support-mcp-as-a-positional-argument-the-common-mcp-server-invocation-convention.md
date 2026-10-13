@@ -1,7 +1,11 @@
 ---
+tags:
+  - feature
+  - medium
 created: 2026-09-25T01:03:16.336Z
-updated: 2026-09-25T17:43:21.641Z
+updated: 2026-10-13T22:03:07.649Z
 completed: 2026-09-25T17:43:21.641Z
+column: Done
 ---
 
 # Support 'mcp' as a positional argument - the common MCP-server invocation convention
@@ -48,8 +52,7 @@ Acceptance:
 
 ## History
 
-- type: moved
-  date: 2026-09-25T17:43:21.641Z
-  fromColumn: Backlog
-  toColumn: Done
+- type: archived
+  date: 2026-10-13T22:03:36.366Z
+  fromColumn: Done
   author: Kevin J. Duling

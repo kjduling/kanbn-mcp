@@ -34,7 +34,7 @@ function convertDatesInObject(obj: Record<string, any>): Record<string, any> {
  * supplied a replacement. Passing one of these replaces that entire collection; omitting it
  * falls back to whatever the task already has.
  */
-export const EDIT_COLLECTION_KEYS: readonly string[] = ["relations", "subTasks", "comments"];
+export const EDIT_COLLECTION_KEYS: readonly string[] = ["relations", "subTasks", "comments", "history"];
 
 /**
  * Merge the portion of an existing task that an edit did not mention into the outgoing task data.
@@ -107,6 +107,7 @@ export function buildTaskDataFromArgs(args: Record<string, any>): Record<string,
         "subTasks",
         "comments",
         "relations",
+        "history",
     ]);
 
     const ignoreKeys = new Set(["path", "column", "targetColumn", "taskId"]);

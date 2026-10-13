@@ -1,9 +1,11 @@
 ---
 tags:
-  - 'typ:bug'
-  - 'pri:high'
+  - bug
+  - high
 created: 2026-09-25T18:47:00.248Z
 completed: 2026-09-25T18:47:00.248Z
+updated: 2026-10-13T22:03:07.702Z
+column: Done
 ---
 
 # fix: setup --mcp registers Cline at the legacy globalStorage path instead of ~/.cline/data/settings
@@ -26,9 +28,7 @@ kanbn-mcp setup --mcp registered the kanbn MCP server into the legacy VS Code ex
 
 ## History
 
-- type: created
-  date: 2026-09-25T18:47:00.248Z
-  column: Done
-  fromProgress: 0
-  toProgress: 0
+- type: archived
+  date: 2026-10-13T22:03:36.473Z
+  fromColumn: Done
   author: Kevin J. Duling

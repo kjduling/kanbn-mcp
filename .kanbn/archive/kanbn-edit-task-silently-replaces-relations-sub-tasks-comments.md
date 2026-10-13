@@ -1,7 +1,11 @@
 ---
+tags:
+  - bug
+  - high
 created: 2026-09-14T23:25:02.023Z
-updated: 2026-09-15T21:39:06.049Z
+updated: 2026-10-13T22:03:07.610Z
 completed: 2026-09-15T21:39:06.049Z
+column: Done
 ---
 
 # kanbn_edit_task silently replaces relations/subTasks/comments
@@ -40,8 +44,7 @@ Likely files: src/tools/task.ts (backfill logic), src/kanbn/taskData.ts (collect
 
 ## History
 
-- type: moved
-  date: 2026-09-15T21:39:06.049Z
-  fromColumn: Todo
-  toColumn: Done
+- type: archived
+  date: 2026-10-13T22:03:36.305Z
+  fromColumn: Done
   author: Kevin J. Duling

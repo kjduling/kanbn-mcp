@@ -1,7 +1,11 @@
 ---
+tags:
+  - bug
+  - medium
 created: 2026-09-25T01:03:16.397Z
-updated: 2026-09-25T17:40:15.076Z
+updated: 2026-10-13T22:03:07.637Z
 completed: 2026-09-25T17:40:15.076Z
+column: Done
 ---
 
 # Fix kanbn-mcp --help so it's correct for someone installing the npm module
@@ -38,8 +42,7 @@ Work:
 
 ## History
 
-- type: moved
-  date: 2026-09-25T17:40:15.076Z
-  fromColumn: Backlog
-  toColumn: Done
+- type: archived
+  date: 2026-10-13T22:03:36.347Z
+  fromColumn: Done
   author: Kevin J. Duling

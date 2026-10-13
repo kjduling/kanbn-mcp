@@ -1,7 +1,11 @@
 ---
+tags:
+  - feature
+  - high
 created: 2026-09-25T01:09:06.417Z
-updated: 2026-09-25T18:11:02.696Z
+updated: 2026-10-13T22:03:07.689Z
 completed: 2026-09-25T18:11:02.696Z
+column: Done
 ---
 
 # Author a Kanbn SKILL.md - agent-facing usage guidance (tags, sub-tasks, relation mirroring)
@@ -101,8 +105,7 @@ AI-agnostic requirement (hard constraint, added 2026-09-25): the CONTENT must be
 
 ## History
 
-- type: moved
-  date: 2026-09-25T18:11:02.696Z
-  fromColumn: Backlog
-  toColumn: Done
+- type: archived
+  date: 2026-10-13T22:03:36.442Z
+  fromColumn: Done
   author: Kevin J. Duling

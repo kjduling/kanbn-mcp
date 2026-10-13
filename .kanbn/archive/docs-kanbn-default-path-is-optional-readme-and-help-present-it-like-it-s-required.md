@@ -1,7 +1,11 @@
 ---
+tags:
+  - bug
+  - medium
 created: 2026-09-25T01:03:16.195Z
-updated: 2026-09-25T17:40:14.998Z
+updated: 2026-10-13T22:03:07.624Z
 completed: 2026-09-25T17:40:14.998Z
+column: Done
 ---
 
 # Docs: KANBN_DEFAULT_PATH is optional - README and --help present it like it's required
@@ -31,11 +35,13 @@ Work:
 - author: Kevin J. Duling
   date: 2026-09-25T17:40:14.967Z
   Done (2026-09-25). README 'MCP client configuration' rewritten: primary snippets no longer carry the env block; a separate 'Which board does the server use?' subsection states KANBN_DEFAULT_PATH is optional and documents the default - server resolves the board from its working directory (process.cwd()), which for a global npm launch is usually the project the host opened or the home directory. HELP_TEXT ENVIRONMENT block updated to match. Config snippets now use the `kanbn-mcp` binary (see the npm-help ticket, same change).
+- author: Kevin J. Duling
+  date: 2026-10-13T20:09:05.001Z
+  Superseded (2026-10-13): KANBN_DEFAULT_PATH is being removed as a dangerous ambient override - the board now always resolves from the project directory (process.cwd()), with only the explicit per-call `path` argument as an override. This ticket's 'pin a fixed board' guidance no longer applies and the docs should be dropped, not amended. See 'Remove KANBN_DEFAULT_PATH; resolve the board from the project directory only'.
 
 ## History
 
-- type: moved
-  date: 2026-09-25T17:40:14.998Z
-  fromColumn: Backlog
-  toColumn: Done
+- type: archived
+  date: 2026-10-13T22:03:36.325Z
+  fromColumn: Done
   author: Kevin J. Duling

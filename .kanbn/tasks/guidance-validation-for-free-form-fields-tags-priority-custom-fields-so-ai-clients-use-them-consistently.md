@@ -1,6 +1,9 @@
 ---
+tags:
+  - spike
+  - medium
 created: 2026-09-18T20:04:39.742Z
-updated: 2026-09-25T01:09:11.513Z
+updated: 2026-10-13T22:06:15.701Z
 ---
 
 # Guidance/validation for free-form fields (tags, priority, custom fields) so AI clients use them consistently
