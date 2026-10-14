@@ -4,6 +4,7 @@ import { getIndexMethod, readyBoard } from "../kanbn/instance.js";
 import { jsonResponse, McpResponse, textResponse } from "../kanbn/response.js";
 import { COMMENTS_PROPERTY, PATH_PROPERTY, RELATIONS_PROPERTY, SUBTASKS_PROPERTY } from "../kanbn/schema.js";
 import { assertSubTasksHaveText, buildTaskDataFromArgs, mergeExistingTaskData } from "../kanbn/taskData.js";
+import { applyDerivedProgress, deriveProgress, isCompletedColumn, progressOverrideNote, progressWarning } from "../kanbn/progress.js";
 import { aliasTool, defineTool, ToolDefinition, ToolHandler } from "../types.js";
 
 /**
@@ -50,6 +51,18 @@ export const handleKanbnCreateTask: ToolHandler = async (args) => {
         column = await resolveColumnName(instance, column);
     }
 
+    // Progress is derived, never typed: compute it now so it is correct from the first write, and
+    // warn when a caller drops an incomplete task straight into a completed column.
+    let inCompletedColumn = false;
+    const getIndexFn = getIndexMethod(instance);
+    if (typeof getIndexFn === "function") {
+        try {
+            inCompletedColumn = isCompletedColumn(await getIndexFn.call(instance), column);
+        } catch { }
+    }
+    const suppliedProgress = taskData.metadata?.progress;
+    const progress = applyDerivedProgress(taskData, inCompletedColumn);
+
     let createdTaskId: any;
     if (column) {
         createdTaskId = await createFn.call(instance, taskData, column);
@@ -63,7 +76,15 @@ export const handleKanbnCreateTask: ToolHandler = async (args) => {
 
     const taskName = taskData.name || taskData.title || taskIdStr;
 
-    return textResponse(`Created task "${taskName}" (${taskIdStr})`);
+    const notes: string[] = [];
+    if (inCompletedColumn) {
+        const warning = progressWarning(taskIdStr, progress, taskData.subTasks);
+        if (warning) notes.push(warning);
+    }
+    const overrideNote = progressOverrideNote(suppliedProgress, progress);
+    if (overrideNote) notes.push(overrideNote);
+
+    return textResponse(`Created task "${taskName}" (${taskIdStr})${notes.length ? `\n\n${notes.join("\n")}` : ""}`);
 };
 
 /**
@@ -167,8 +188,20 @@ export const handleKanbnEditTask: ToolHandler = async (args) => {
         throw new Error(`No fields provided to edit`);
     }
     assertSubTasksHaveText(taskData);
+    // Capture any caller-supplied progress now: the merge below backfills the existing value, and we
+    // only want to note a genuine caller override, not the routine recomputation.
+    const suppliedProgress = taskData.metadata?.progress;
 
     const getFn = instance.getTask || instance.get || instance.fetchTask;
+    // The task's column lives in the index, not the task file: getTask does not hydrate it, so ask
+    // the instance which column currently holds this task.
+    let existingColumn: string | undefined;
+    const findColumnFn = instance.findTaskColumn;
+    if (typeof findColumnFn === "function") {
+        try {
+            existingColumn = await findColumnFn.call(instance, taskId);
+        } catch { }
+    }
     if (typeof getFn === "function") {
         try {
             const existingTask = await getFn.call(instance, taskId);
@@ -243,9 +276,28 @@ export const handleKanbnEditTask: ToolHandler = async (args) => {
         throw new TypeError(`No editTask method found on Kanbn instance`);
     }
 
+    // Recompute progress from the merged sub-tasks and the task's column, so an edit can never leave
+    // progress stale (and a ticket resting in a completed column reports if it isn't really done).
+    let inCompletedColumn = false;
+    const getIndexFn = getIndexMethod(instance);
+    if (typeof getIndexFn === "function") {
+        try {
+            inCompletedColumn = isCompletedColumn(await getIndexFn.call(instance), existingColumn);
+        } catch { }
+    }
+    const progress = applyDerivedProgress(taskData, inCompletedColumn);
+
     await editFn.call(instance, taskId, taskData);
 
-    return textResponse(`Edited task "${taskId}"`);
+    const notes: string[] = [];
+    if (inCompletedColumn) {
+        const warning = progressWarning(taskId, progress, taskData.subTasks);
+        if (warning) notes.push(warning);
+    }
+    const overrideNote = progressOverrideNote(suppliedProgress, progress);
+    if (overrideNote) notes.push(overrideNote);
+
+    return textResponse(`Edited task "${taskId}"${notes.length ? `\n\n${notes.join("\n")}` : ""}`);
 };
 
 /**
@@ -422,6 +474,38 @@ export const handleKanbnSetRelations: ToolHandler = async (args) => {
 };
 
 /**
+ * Re-sync a task's derived progress after it changed columns.
+ *
+ * Fetches the task's sub-tasks and the board's completed columns, derives the progress it should
+ * carry in `column`, writes it via the edit path, and returns the inputs so the caller can warn
+ * when incomplete work has been parked in a completed column.
+ * @param {any} instance A Kanbn instance
+ * @param {string | undefined} path The board path (for the edit call)
+ * @param {string} taskId The task id
+ * @param {string} column The column the task now sits in
+ * @returns {Promise<{ progress: number; subTasks: any; inCompletedColumn: boolean }>} The resync inputs
+ */
+async function resyncProgressAfterMove(instance: any, path: string | undefined, taskId: string, column: string) {
+    const getFn = instance.getTask || instance.get || instance.fetchTask;
+    let subTasks: any;
+    if (typeof getFn === "function") {
+        try {
+            subTasks = (await getFn.call(instance, taskId))?.subTasks;
+        } catch { }
+    }
+    let inCompletedColumn = false;
+    const getIndexFn = getIndexMethod(instance);
+    if (typeof getIndexFn === "function") {
+        try {
+            inCompletedColumn = isCompletedColumn(await getIndexFn.call(instance), column);
+        } catch { }
+    }
+    const progress = deriveProgress(subTasks, inCompletedColumn);
+    await handleKanbnEditTask({ path, taskId, progress });
+    return { progress, subTasks, inCompletedColumn };
+}
+
+/**
  * Handle the "kanbn_move_task" MCP tool call: move a task between columns.
  * @param {Record<string, any>} args MCP tool arguments
  * @returns {Promise<McpResponse>} The MCP content response
@@ -443,9 +527,15 @@ export const handleKanbnMoveTask: ToolHandler = async (args) => {
     }
 
     const resolvedColumn = await resolveColumnName(instance, targetColumn);
+
     await moveFn.call(instance, taskId, resolvedColumn);
 
-    return textResponse(`Moved task ${taskId} to column "${resolvedColumn}"`);
+    // Re-sync the derived progress for the new column, and warn when incomplete work has just been
+    // parked in a completed column (a common "Done at 0%" accident).
+    const { progress, subTasks, inCompletedColumn } = await resyncProgressAfterMove(instance, args.path, taskId, resolvedColumn);
+
+    const warning = inCompletedColumn ? progressWarning(taskId, progress, subTasks) : null;
+    return textResponse(`Moved task ${taskId} to column "${resolvedColumn}"${warning ? `\n\n${warning}` : ""}`);
 };
 
 /**
@@ -476,6 +566,7 @@ export const handleKanbnRenameTask: ToolHandler = async (args) => {
         }
         const resolvedColumn = await resolveColumnName(instance, targetColumn);
         await moveFn.call(instance, newTaskId, resolvedColumn, args.position ?? null);
+        await resyncProgressAfterMove(instance, args.path, newTaskId, resolvedColumn);
     }
 
     return textResponse(`Renamed task ${taskId} to "${newName}" (new id: ${newTaskId})`);

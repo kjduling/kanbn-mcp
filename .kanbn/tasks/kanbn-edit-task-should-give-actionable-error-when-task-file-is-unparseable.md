@@ -1,10 +1,11 @@
 ---
+progress: 1
 board: index
 tags:
   - bug
   - high
 created: 2026-10-13T22:38:46.228Z
-updated: 2026-10-13T23:45:10.684Z
+updated: 2026-10-14T03:13:17.622Z
 started: 2026-10-13T23:42:24.632Z
 completed: 2026-10-13T23:45:10.684Z
 ---
@@ -23,8 +24,8 @@ Fix: detect parse/load failures when reading existing task in edit path; re-thro
 
 ## History
 
-- type: moved
-  date: 2026-10-13T23:45:10.684Z
-  fromColumn: In Progress
-  toColumn: Done
+- type: progress
+  date: 2026-10-14T03:13:17.622Z
+  fromProgress: 0
+  toProgress: 1
   author: Kevin J. Duling

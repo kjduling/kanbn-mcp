@@ -1,9 +1,10 @@
 ---
+progress: 1
 tags:
   - bug
   - high
 created: 2026-10-14T02:36:08.761Z
-updated: 2026-10-14T02:52:28.536Z
+updated: 2026-10-14T03:13:17.684Z
 started: 2026-10-14T02:49:09.303Z
 completed: 2026-10-14T02:52:28.536Z
 ---
@@ -50,8 +51,8 @@ Affected tools that take a column argument: kanbn_create_task (column/col), kanb
 
 ## History
 
-- type: moved
-  date: 2026-10-14T02:52:28.536Z
-  fromColumn: In Progress
-  toColumn: Done
+- type: progress
+  date: 2026-10-14T03:13:17.684Z
+  fromProgress: 0
+  toProgress: 1
   author: Kevin J. Duling

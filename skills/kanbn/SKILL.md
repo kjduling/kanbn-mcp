@@ -76,6 +76,19 @@ Prefer kanbn_add_relation for edges. kanbn_edit_task and kanbn_set_relations
 replace the whole relations array, so read the current task first
 (kanbn_get_task) before re-supplying relations.
 
+## Progress and completion
+
+Progress is derived from the work, not typed in: a ticket with sub-tasks is
+complete to the fraction of sub-tasks ticked, and a ticket with no sub-tasks is
+0% while open and 100% once it sits in a completed column. The tools recompute
+it on every create, edit and move, so never set it by hand.
+
+A ticket is only Done when it is genuinely finished: progress is 100% AND its
+tests pass. Moving an incomplete ticket into a completed column still goes
+through but now reports a warning - treat that warning as a stop sign, not a
+formality, and move the ticket back out until the work (and its tests) are
+complete.
+
 ## Verify after every create/edit
 
 Follow kanbn_create_task or kanbn_edit_task with kanbn_get_task (or

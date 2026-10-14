@@ -1,9 +1,10 @@
 ---
+progress: 1
 tags:
   - bug
   - critical
 created: 2026-10-14T02:40:52.378Z
-updated: 2026-10-14T02:48:03.629Z
+updated: 2026-10-14T03:13:17.666Z
 started: 2026-10-14T02:45:27.953Z
 completed: 2026-10-14T02:48:03.629Z
 ---
@@ -60,8 +61,8 @@ Expected: reject subTasks entries with no text (after normalisation) with an act
 
 ## History
 
-- type: moved
-  date: 2026-10-14T02:48:03.629Z
-  fromColumn: In Progress
-  toColumn: Done
+- type: progress
+  date: 2026-10-14T03:13:17.666Z
+  fromProgress: 0
+  toProgress: 1
   author: Kevin J. Duling

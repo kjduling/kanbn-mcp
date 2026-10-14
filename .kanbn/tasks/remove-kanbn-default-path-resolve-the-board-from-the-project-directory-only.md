@@ -1,6 +1,7 @@
 ---
+progress: 1
 created: 2026-10-13T20:08:55.866Z
-updated: 2026-10-14T02:27:19.635Z
+updated: 2026-10-14T03:13:17.645Z
 tags:
   - bug
   - high
@@ -59,8 +60,8 @@ Also touches: HELP_TEXT ENVIRONMENT block + client config examples (src/server.t
 
 ## History
 
-- type: moved
-  date: 2026-10-14T02:27:19.635Z
-  fromColumn: In Progress
-  toColumn: Done
+- type: progress
+  date: 2026-10-14T03:13:17.645Z
+  fromProgress: 0
+  toProgress: 1
   author: Kevin J. Duling

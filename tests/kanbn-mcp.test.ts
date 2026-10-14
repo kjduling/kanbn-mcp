@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { describe, mock } from "node:test";
 
-import { assertSubTasksHaveText, buildTaskDataFromArgs, enqueueKanbnOperation, getArchiveMethod, getKanbnInstance, getKanbnPath, handleKanbnInitBoard, handleToolCall, isBoardInitialized, isMainEntry, listTools, matchColumnName, registerInitializedMethod, resetOperationQueue } from "../src/server";
+import { assertSubTasksHaveText, buildTaskDataFromArgs, deriveProgress, enqueueKanbnOperation, getArchiveMethod, getCompletedColumns, getKanbnInstance, getKanbnPath, handleKanbnInitBoard, handleToolCall, isBoardInitialized, isCompletedColumn, isMainEntry, listTools, matchColumnName, progressOverrideNote, progressWarning, registerInitializedMethod, resetOperationQueue, roundProgress } from "../src/server";
 import { mergeExistingTaskData, normaliseRelationType } from "../src/server";
 import { TOOLS } from "../src/server";
 
@@ -2031,7 +2031,6 @@ describe("task creation and movement", () => {
                 due: "2026-09-15T00:00:00.000Z",
                 started: "2026-09-01T00:00:00.000Z",
                 completed: "2026-09-10T00:00:00.000Z",
-                progress: 0.5,
                 plannedStart: "2026-08-30T00:00:00.000Z",
                 plannedFinish: "2026-09-20T00:00:00.000Z",
                 created: "2026-08-29T00:00:00.000Z",
@@ -2055,7 +2054,8 @@ describe("task creation and movement", () => {
             assert.equal(new Date(task.metadata.due).toISOString(), new Date("2026-09-15T00:00:00.000Z").toISOString());
             assert.equal(new Date(task.metadata.started).toISOString(), new Date("2026-09-01T00:00:00.000Z").toISOString());
             assert.equal(new Date(task.metadata.completed).toISOString(), new Date("2026-09-10T00:00:00.000Z").toISOString());
-            assert.equal(task.metadata.progress, 0.5);
+            // progress is derived from the work, not typed in: a sub-task-less task in an open column is 0%
+            assert.equal(task.metadata.progress, 0);
             assert.equal(new Date(task.metadata.plannedStart).toISOString(), new Date("2026-08-30T00:00:00.000Z").toISOString());
             assert.equal(new Date(task.metadata.plannedFinish).toISOString(), new Date("2026-09-20T00:00:00.000Z").toISOString());
             assert.deepStrictEqual(task.metadata.tags, ["launch", "beta"]);
@@ -3031,20 +3031,36 @@ describe("kanbn_edit_task", () => {
                 path: dir,
                 name: "Progress Task",
                 column: "Backlog",
+                subTasks: [
+                    { text: "one", completed: false },
+                    { text: "two", completed: false },
+                    { text: "three", completed: false },
+                    { text: "four", completed: false },
+                ],
             });
 
             const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
             assert.ok(taskIdMatch);
             const taskId = taskIdMatch![1];
 
+            // Creating with four open sub-tasks derives 0%
+            assert.equal((await getTaskForDir(dir, taskId)).metadata.progress, 0);
+
             await handleToolCall("kanbn_edit_task", {
                 path: dir,
                 taskId: taskId,
-                progress: 0.75,
+                subTasks: [
+                    { text: "one", completed: true },
+                    { text: "two", completed: true },
+                    { text: "three", completed: true },
+                    { text: "four", completed: false },
+                ],
             });
 
+            // Ticking three of four derives 0.75
             const task = await getTaskForDir(dir, taskId);
             assert.equal(task.metadata.progress, 0.75);
+            assert.deepStrictEqual(task.subTasks.map((subTask: any) => subTask.text), ["one", "two", "three", "four"]);
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }
@@ -3249,7 +3265,6 @@ describe("kanbn_edit_task", () => {
                 column: "Backlog",
                 description: "Old desc",
                 assigned: "eve",
-                progress: 0.1,
             });
 
             const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
@@ -3262,7 +3277,6 @@ describe("kanbn_edit_task", () => {
                 name: "Updated",
                 description: "New desc body",
                 assigned: "frank",
-                progress: 0.9,
                 due: "2028-01-01T00:00:00.000Z",
                 tags: ["multi", "edit"],
             });
@@ -3271,7 +3285,7 @@ describe("kanbn_edit_task", () => {
             assert.equal(task.name, "Updated");
             assert.equal(task.description, "New desc body");
             assert.equal(task.metadata.assigned, "frank");
-            assert.equal(task.metadata.progress, 0.9);
+            assert.equal(task.metadata.progress, 0);
             assert.equal(new Date(task.metadata.due).toISOString(), new Date("2028-01-01T00:00:00.000Z").toISOString());
             assert.deepStrictEqual(task.metadata.tags, ["multi", "edit"]);
         } finally {
@@ -4938,6 +4952,122 @@ describe("case-insensitive column resolution", () => {
 
             const found = JSON.parse((await handleToolCall("kanbn_find_tracked_tasks", { path: dir, columnName: "bAcKlOg" })).content[0].text);
             assert.deepStrictEqual(found, ["tracked"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("derived progress", () => {
+    test("deriveProgress: sub-task ratio, rounding, and the no-sub-task column rule", () => {
+        assert.equal(deriveProgress([{ completed: true }, { completed: false }], false), 0.5);
+        assert.equal(deriveProgress([{ completed: true }, { completed: true }], false), 1);
+        assert.equal(deriveProgress([{ completed: false }], false), 0);
+        // 1/3 rounds to 2 decimals
+        assert.equal(deriveProgress([{ completed: true }, { completed: false }, { completed: false }], false), 0.33);
+        // no sub-tasks: 0 while open, 1 in a completed column
+        assert.equal(deriveProgress(undefined, false), 0);
+        assert.equal(deriveProgress(undefined, true), 1);
+        assert.equal(deriveProgress([], true), 1);
+        assert.equal(roundProgress(0.3333333333), 0.33);
+    });
+
+    test("isCompletedColumn matches only when the board declares the column", () => {
+        const index = { options: { completedColumns: ["Done"] } };
+        assert.deepStrictEqual(getCompletedColumns(index), ["Done"]);
+        assert.equal(isCompletedColumn(index, "Done"), true);
+        assert.equal(isCompletedColumn(index, "done"), false);
+        assert.equal(isCompletedColumn(index, undefined), false);
+        assert.equal(isCompletedColumn({}, "Done"), false);
+    });
+
+    test("progressWarning and progressOverrideNote produce the expected copy", () => {
+        assert.equal(progressWarning("t", 1, [{ completed: true }]), null);
+        assert.match(String(progressWarning("t", 0.5, [{ completed: true }, { completed: false }])), /50% complete \(1\/2 sub-tasks\)/);
+        assert.match(String(progressWarning("t", 0, [])), /0% complete/);
+        assert.equal(progressOverrideNote(undefined, 0.5), null);
+        assert.equal(progressOverrideNote(0.5, 0.5), null);
+        assert.match(String(progressOverrideNote(0.9, 0.5)), /supplied value \(0.9\) was replaced by 0.5/);
+    });
+
+    test("kanbn_create_task derives progress from sub-tasks and reports an overridden value", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Create Progress Board", columns: ["Backlog", "Done"] });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Derived",
+                column: "Backlog",
+                progress: 0.9,
+                subTasks: [{ text: "a", completed: false }, { text: "b", completed: false }],
+            });
+            // The typed value is recomputed and the caller is told, never silently overridden
+            assert.match(created.content[0].text, /progress is derived/i);
+            assert.match(created.content[0].text, /supplied value \(0.9\) was replaced by 0/);
+
+            const taskId = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/)![1];
+            assert.equal((await getTaskForDir(dir, taskId)).metadata.progress, 0);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("moving a sub-task-less task into Done completes it; moving it back out un-completes it", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Move Progress Board", columns: ["Backlog", "Done"] });
+            const created = await handleToolCall("kanbn_create_task", { path: dir, name: "Simple", column: "Backlog" });
+            const taskId = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/)![1];
+
+            assert.equal((await getTaskForDir(dir, taskId)).metadata.progress, 0);
+
+            const movedIn = await handleToolCall("kanbn_move_task", { path: dir, taskId, targetColumn: "Done" });
+            assert.equal((await getTaskForDir(dir, taskId)).metadata.progress, 1);
+            assert.doesNotMatch(movedIn.content[0].text, /Warning:/);
+
+            await handleToolCall("kanbn_move_task", { path: dir, taskId, targetColumn: "Backlog" });
+            assert.equal((await getTaskForDir(dir, taskId)).metadata.progress, 0);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("moving an incomplete task into Done warns but succeeds, and leaves the true progress", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Warn Progress Board", columns: ["Backlog", "Done"] });
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Incomplete",
+                column: "Backlog",
+                subTasks: [{ text: "a", completed: true }, { text: "b", completed: false }],
+            });
+            const taskId = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/)![1];
+
+            const moved = await handleToolCall("kanbn_move_task", { path: dir, taskId, targetColumn: "Done" });
+            assert.match(moved.content[0].text, /Moved task/);
+            assert.match(moved.content[0].text, /Warning: task ".*" is 50% complete \(1\/2 sub-tasks\)/);
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.equal(task.metadata.progress, 0.5);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("a sub-task-less task created straight into Done is 100% with no warning", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Direct Done Board", columns: ["Backlog", "Done"] });
+            const created = await handleToolCall("kanbn_create_task", { path: dir, name: "Already done", column: "Done" });
+            assert.doesNotMatch(created.content[0].text, /Warning:/);
+            const taskId = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/)![1];
+            assert.equal((await getTaskForDir(dir, taskId)).metadata.progress, 1);
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }
