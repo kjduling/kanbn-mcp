@@ -62,6 +62,13 @@ replaced.
 Bullets in description are invisible to the board: they don't render, aren't
 tracked, and don't count in kanbn_search.
 
+A description must not contain an unfenced level-2 heading that names a
+reserved section - "## Metadata", "## Sub-tasks", "## Relations", "## Comments"
+or "## History". Kanbn treats such a heading as the real section wherever it
+appears, silently truncating the description and re-parsing what follows. The
+write is rejected; show a heading like that demoted ("### Sub-tasks") or inside
+a fenced code block instead.
+
 ## Relations - link tickets
 
 Wire tickets with relations:

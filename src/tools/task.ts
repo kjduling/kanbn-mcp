@@ -3,7 +3,7 @@ import { resolveColumnName } from "../kanbn/columns.js";
 import { getIndexMethod, readyBoard } from "../kanbn/instance.js";
 import { jsonResponse, McpResponse, textResponse } from "../kanbn/response.js";
 import { COMMENTS_PROPERTY, PATH_PROPERTY, RELATIONS_PROPERTY, SUBTASKS_PROPERTY } from "../kanbn/schema.js";
-import { assertSubTasksHaveText, buildTaskDataFromArgs, mergeExistingTaskData } from "../kanbn/taskData.js";
+import { assertDescriptionHasNoReservedHeadings, assertSubTasksHaveText, buildTaskDataFromArgs, mergeExistingTaskData } from "../kanbn/taskData.js";
 import { applyDerivedProgress, deriveProgress, isCompletedColumn, progressOverrideNote, progressWarning } from "../kanbn/progress.js";
 import { aliasTool, defineTool, ToolDefinition, ToolHandler } from "../types.js";
 
@@ -18,6 +18,7 @@ export const handleKanbnCreateTask: ToolHandler = async (args) => {
 
     const taskData = buildTaskDataFromArgs(args);
     assertSubTasksHaveText(taskData);
+    assertDescriptionHasNoReservedHeadings(taskData);
     let column = args.column || args.col || taskData.column || taskData.metadata?.column;
 
     if (taskData.metadata) {
@@ -241,6 +242,10 @@ export const handleKanbnEditTask: ToolHandler = async (args) => {
             }
         }
     }
+
+    // Guard after the merge: a caller-supplied description is checked, and a backfilled one is safe
+    // because the parser has already stripped any reserved heading from it.
+    assertDescriptionHasNoReservedHeadings(taskData);
 
     if (taskData.name) {
         const getIndexFn = getIndexMethod(instance);

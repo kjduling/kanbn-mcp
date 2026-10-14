@@ -20,7 +20,6 @@ completedColumns:
 - [clean-up-the-setup-prompt-layout-break-wordy-single-line-questions-and-defaults-onto-readable-lines](tasks/clean-up-the-setup-prompt-layout-break-wordy-single-line-questions-and-defaults-onto-readable-lines.md)
 - [ensure-skill-files-are-installed-to-correct-directories-for-each-agent-host](tasks/ensure-skill-files-are-installed-to-correct-directories-for-each-agent-host.md)
 - [kanbn-init-board-should-accept-omitted-columns-documented-optional](tasks/kanbn-init-board-should-accept-omitted-columns-documented-optional.md)
-- [task-descriptions-can-hijack-reserved-sections-when-they-embed-a-level-2-sub-tasks-heading](tasks/task-descriptions-can-hijack-reserved-sections-when-they-embed-a-level-2-sub-tasks-heading.md)
 
 ## Todo
 
@@ -35,5 +34,6 @@ completedColumns:
 - [case-insensitive-column-name-resolution-for-kanbn-tools](tasks/case-insensitive-column-name-resolution-for-kanbn-tools.md)
 - [derive-ticket-progress-from-sub-tasks-and-warn-when-incomplete-work-lands-in-done](tasks/derive-ticket-progress-from-sub-tasks-and-warn-when-incomplete-work-lands-in-done.md)
 - [test-harness-breaks-under-kanbn-2-6-0-dynamic-import-no-longer-exposes-the-kanbn-class](tasks/test-harness-breaks-under-kanbn-2-6-0-dynamic-import-no-longer-exposes-the-kanbn-class.md)
+- [task-descriptions-can-hijack-reserved-sections-when-they-embed-a-level-2-sub-tasks-heading](tasks/task-descriptions-can-hijack-reserved-sections-when-they-embed-a-level-2-sub-tasks-heading.md)
 
 ## Blocked

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { describe, mock } from "node:test";
 
-import { assertSubTasksHaveText, buildTaskDataFromArgs, deriveProgress, enqueueKanbnOperation, getArchiveMethod, getCompletedColumns, getKanbnInstance, getKanbnPath, handleKanbnInitBoard, handleToolCall, isBoardInitialized, isCompletedColumn, isMainEntry, listTools, matchColumnName, progressOverrideNote, progressWarning, registerInitializedMethod, resetOperationQueue, roundProgress } from "../src/server";
+import { assertDescriptionHasNoReservedHeadings, assertSubTasksHaveText, buildTaskDataFromArgs, deriveProgress, enqueueKanbnOperation, findReservedHeadingInDescription, getArchiveMethod, getCompletedColumns, getKanbnInstance, getKanbnPath, handleKanbnInitBoard, handleToolCall, isBoardInitialized, isCompletedColumn, isMainEntry, listTools, matchColumnName, progressOverrideNote, progressWarning, registerInitializedMethod, resetOperationQueue, roundProgress } from "../src/server";
 import { mergeExistingTaskData, normaliseRelationType } from "../src/server";
 import { TOOLS } from "../src/server";
 
@@ -316,6 +316,46 @@ describe("buildTaskDataFromArgs", () => {
             { task: "model", type: "depends-on" },
             { task: "view", type: "blocks" },
         ]);
+    });
+});
+
+describe("reserved description headings", () => {
+    test("findReservedHeadingInDescription returns null for ordinary descriptions", () => {
+        assert.equal(findReservedHeadingInDescription(""), null);
+        assert.equal(findReservedHeadingInDescription("Just a paragraph.\n\nAnd another."), null);
+        assert.equal(findReservedHeadingInDescription("### Sub-tasks\n\nA level-3 heading is description content."), null);
+        assert.equal(findReservedHeadingInDescription("  ## Sub-tasks\n\nIndented, so not a heading to kanbn."), null);
+    });
+
+    test("findReservedHeadingInDescription finds an unfenced level-2 reserved heading", () => {
+        assert.equal(findReservedHeadingInDescription("Intro\n\n## Sub-tasks\n\nbody"), "## Sub-tasks");
+        assert.equal(findReservedHeadingInDescription("## Relations"), "## Relations");
+        assert.equal(findReservedHeadingInDescription("## Comments"), "## Comments");
+        assert.equal(findReservedHeadingInDescription("## History"), "## History");
+        assert.equal(findReservedHeadingInDescription("## Metadata"), "## Metadata");
+    });
+
+    test("findReservedHeadingInDescription ignores headings inside fenced code blocks", () => {
+        const desc = "Example:\n\n```markdown\n## Sub-tasks\n\n- [ ] not real\n```\n\nDone.";
+        assert.equal(findReservedHeadingInDescription(desc), null);
+    });
+
+    test("findReservedHeadingInDescription is case- and spacing-sensitive, matching the parser", () => {
+        assert.equal(findReservedHeadingInDescription("## sub-tasks"), null, "lowercase title is not reserved");
+        assert.equal(findReservedHeadingInDescription("## Sub-tasks "), null, "trailing space changes the title");
+    });
+
+    test("assertDescriptionHasNoReservedHeadings throws an actionable error naming the heading", () => {
+        assert.throws(
+            () => assertDescriptionHasNoReservedHeadings({ description: "Intro\n\n## Sub-tasks\n\nbody" }),
+            /reserved level-2 heading "## Sub-tasks"/
+        );
+    });
+
+    test("assertDescriptionHasNoReservedHeadings accepts safe descriptions and missing descriptions", () => {
+        assert.doesNotThrow(() => assertDescriptionHasNoReservedHeadings({}));
+        assert.doesNotThrow(() => assertDescriptionHasNoReservedHeadings({ description: "plain" }));
+        assert.doesNotThrow(() => assertDescriptionHasNoReservedHeadings({ description: "```\n## Sub-tasks\n```" }));
     });
 });
 
@@ -2112,6 +2152,151 @@ describe("task creation and movement", () => {
         }
     });
 
+    test("kanbn_create_task rejects a description with a level-2 reserved heading instead of silently truncating", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Reserved Heading Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const description = [
+                "This ticket documents the sub-task format.",
+                "",
+                "## Sub-tasks",
+                "",
+                "- [ ] an example checklist that is NOT real",
+                "",
+                "Some trailing description text.",
+            ].join("\n");
+
+            await assert.rejects(
+                handleToolCall("kanbn_create_task", {
+                    path: dir,
+                    name: "Hijack me",
+                    column: "Backlog",
+                    description,
+                }),
+                /Invalid description: it contains the reserved level-2 heading "## Sub-tasks"/
+            );
+
+            // The task must not have been created with a truncated description.
+            const listed = await handleToolCall("kanbn_search", { path: dir });
+            assert.doesNotMatch(listed.content[0].text, /Hijack me/, "Task should not be created when the description is rejected");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_create_task accepts a description with a fenced level-2 Sub-tasks heading and round-trips it intact", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Fenced Heading Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const description = [
+                "This ticket documents the sub-task format:",
+                "",
+                "```markdown",
+                "## Sub-tasks",
+                "",
+                "- [ ] an example checklist that is NOT real",
+                "```",
+                "",
+                "Some trailing description text.",
+            ].join("\n");
+
+            const result = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Fenced example",
+                column: "Backlog",
+                description,
+            });
+
+            assert.match(result.content[0].text, /Created task "Fenced example"/i);
+            const taskId = result.content[0].text.match(/Created task "Fenced example" \(([^)]+)\)/)![1];
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.equal(task.description, description, "Fenced example should round-trip unchanged");
+            assert.ok(!task.subTasks || task.subTasks.length === 0, "No real sub-tasks should be created");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_create_task accepts a description with a level-3 Sub-tasks heading and round-trips it intact", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Level Three Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const description = [
+                "This ticket documents the sub-task format:",
+                "",
+                "### Sub-tasks",
+                "",
+                "Some trailing description text.",
+            ].join("\n");
+
+            const result = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Level three example",
+                column: "Backlog",
+                description,
+            });
+
+            const taskId = result.content[0].text.match(/Created task "Level three example" \(([^)]+)\)/)![1];
+            const task = await getTaskForDir(dir, taskId);
+            assert.equal(task.description, description, "A level-3 heading should round-trip unchanged");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_create_task accepts a description with a level-1 Comments heading and round-trips it intact", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Level One Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const description = [
+                "This ticket documents comments:",
+                "",
+                "# Comments",
+                "",
+                "A level-1 heading is not a reserved section.",
+            ].join("\n");
+
+            const result = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Level one example",
+                column: "Backlog",
+                description,
+            });
+
+            const taskId = result.content[0].text.match(/Created task "Level one example" \(([^)]+)\)/)![1];
+            const task = await getTaskForDir(dir, taskId);
+            assert.equal(task.description, description, "A level-1 heading should round-trip unchanged");
+            assert.ok(!task.comments || task.comments.length === 0, "No real comments should be created");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
     test("kanbn_create_task stores relations and renders them as links", async () => {
         const dir = makeTempDir();
 
@@ -3201,6 +3386,41 @@ describe("kanbn_edit_task", () => {
             assert.equal(task.subTasks[0].completed, true);
             assert.equal(task.subTasks[1].text, "New subtask two");
             assert.equal(task.subTasks[1].completed, false);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_edit_task rejects a description with a level-2 reserved heading", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Edit Reserved Heading Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Editable Task",
+                column: "Backlog",
+                description: "Original description",
+            });
+
+            const taskId = created.content[0].text.match(/Created task "Editable Task" \(([^)]+)\)/)![1];
+
+            await assert.rejects(
+                handleToolCall("kanbn_edit_task", {
+                    path: dir,
+                    taskId,
+                    description: "Now with a heading\n\n## Relations\n\n- [ ] oops",
+                }),
+                /Invalid description: it contains the reserved level-2 heading "## Relations"/
+            );
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.equal(task.description, "Original description", "A rejected edit must not change the description");
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }

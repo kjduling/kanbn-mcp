@@ -203,3 +203,117 @@ export function assertSubTasksHaveText(taskData: Record<string, any>): void {
         }
     });
 }
+
+/**
+ * Level-2 section titles the Kanbn task format owns. The library's parseTask treats a level-2
+ * heading with one of these exact titles as the real section wherever it appears in the file
+ * (src/parse-task.js, getReservedSection), so a description that contains one is hijacked on the
+ * next read: the description is truncated at the heading and everything after it is re-parsed as
+ * sub-tasks, relations, comments or history.
+ */
+export const RESERVED_SECTION_TITLES: readonly string[] = [
+    "Metadata",
+    "Sub-tasks",
+    "Relations",
+    "Comments",
+    "History",
+];
+
+/**
+ * Match an ATX heading line the same way kanbn's parser does: the heading must start at column 0
+ * (an indented heading is not hoisted, so it is safe description content).
+ */
+const HEADING_REGEX = /^(#{1,6}) (.+)$/;
+
+/**
+ * Match the opening or closing line of a fenced code block. Up to 3 leading spaces are allowed, as
+ * in CommonMark.
+ */
+const FENCE_REGEX = /^ {0,3}(`{3,}|~{3,})(.*)$/;
+
+/**
+ * Whether a fence line opens a code block. A backtick fence's info string can't itself contain a
+ * backtick; tilde fences have no such restriction. Mirrors kanbn's parse-markdown.js.
+ * @param {RegExpMatchArray} fenceMatch A FENCE_REGEX match
+ * @returns {boolean} True when the line opens a fence
+ */
+function isFenceStart(fenceMatch: RegExpMatchArray): boolean {
+    return fenceMatch[1][0] !== "`" || fenceMatch[2].indexOf("`") === -1;
+}
+
+/**
+ * Whether a line closes the currently open code block: same character, at least as long, and no
+ * info string. Mirrors kanbn's parse-markdown.js.
+ * @param {RegExpMatchArray | null} fenceMatch A FENCE_REGEX match, or null
+ * @param {{ char: string, length: number }} fence The currently open fence
+ * @returns {boolean} True when the line closes the fence
+ */
+function isFenceEnd(fenceMatch: RegExpMatchArray | null, fence: { char: string; length: number; }): boolean {
+    return (
+        fenceMatch !== null &&
+        fenceMatch[1][0] === fence.char &&
+        fenceMatch[1].length >= fence.length &&
+        fenceMatch[2].trim() === ""
+    );
+}
+
+/**
+ * Find the first level-2 heading in a description whose title is a reserved section title.
+ *
+ * Fenced code blocks are skipped, exactly as kanbn's findHeadings does, so a description that shows
+ * the format inside a ``` block is safe and is not flagged. Indented headings are not headings to
+ * the parser and so are likewise safe.
+ * @param {string} description The description text
+ * @returns {string | null} The offending heading line (e.g. "## Sub-tasks"), or null when none
+ */
+export function findReservedHeadingInDescription(description: string): string | null {
+    if (typeof description !== "string" || description === "") {
+        return null;
+    }
+
+    let fence: { char: string; length: number; } | null = null;
+    for (const rawLine of description.split("\n")) {
+        const line = rawLine.replace(/\r$/, "");
+        const fenceMatch = line.match(FENCE_REGEX);
+        if (fence === null) {
+            if (fenceMatch && isFenceStart(fenceMatch)) {
+                fence = { char: fenceMatch[1][0], length: fenceMatch[1].length };
+                continue;
+            }
+            const headingMatch = line.match(HEADING_REGEX);
+            if (headingMatch && headingMatch[1] === "##" && RESERVED_SECTION_TITLES.includes(headingMatch[2])) {
+                return headingMatch[0];
+            }
+        } else if (isFenceEnd(fenceMatch, fence)) {
+            fence = null;
+        }
+    }
+    return null;
+}
+
+/**
+ * Reject a task description that contains an unfenced level-2 reserved heading.
+ *
+ * The library cannot round-trip such a description: on the next read it treats the heading as the
+ * real section, silently truncating the description and re-parsing the lines that follow as
+ * sub-tasks/relations/comments/history. There is no escaping in the format, so the honest fix is to
+ * refuse the write with a clear, actionable message instead of letting it corrupt the task. A
+ * heading demoted to level 3, indented, or shown inside a fenced code block is safe and accepted.
+ * @param {Record<string, any>} taskData Task data built by buildTaskDataFromArgs
+ * @returns {void}
+ * @throws {Error} When the description contains an unfenced level-2 reserved heading
+ */
+export function assertDescriptionHasNoReservedHeadings(taskData: Record<string, any>): void {
+    const description = taskData?.description;
+    const heading = typeof description === "string" ? findReservedHeadingInDescription(description) : null;
+    if (!heading) {
+        return;
+    }
+    const reserved = RESERVED_SECTION_TITLES.map((title) => `"## ${title}"`).join(", ");
+    throw new Error(
+        `Invalid description: it contains the reserved level-2 heading "${heading}", which the Kanbn task format owns. ` +
+        `On the next read the library treats it as the real section, so the description would be silently truncated and the lines that follow re-parsed. ` +
+        `Reserved headings: ${reserved}. ` +
+        `To show a heading like this in a description, demote it (e.g. "### ${heading.slice(3)}") or wrap it in a fenced code block (\`\`\`).`
+    );
+}
