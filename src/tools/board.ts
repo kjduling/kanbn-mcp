@@ -16,6 +16,7 @@ import {
     truncateResponse,
 } from "../kanbn/response.js";
 import { PATH_PROPERTY } from "../kanbn/schema.js";
+import { resolveColumnName } from "../kanbn/columns.js";
 import { aliasTool, defineTool, ToolDefinition, ToolHandler } from "../types.js";
 
 /**
@@ -313,7 +314,7 @@ const VALID_SORT_ORDERS = ["ascending", "descending"];
 export const handleKanbnSortColumn: ToolHandler = async (args) => {
     const { instance } = await readyBoard(args, false);
 
-    const columnName = getRequiredString(args, "columnName");
+    const columnName = await resolveColumnName(instance, getRequiredString(args, "columnName"));
     if (!Array.isArray(args.sorters)) {
         throw new Error(`Missing required parameter: sorters`);
     }

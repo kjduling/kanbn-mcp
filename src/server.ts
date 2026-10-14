@@ -21,6 +21,7 @@ export * from "./tools/index.js";
 export * from "./kanbn/instance.js";
 export * from "./kanbn/queue.js";
 export * from "./kanbn/taskData.js";
+export * from "./kanbn/columns.js";
 export * from "./kanbn/response.js";
 export * from "./kanbn/args.js";
 export * from "./kanbn/schema.js";

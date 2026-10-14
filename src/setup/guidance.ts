@@ -146,6 +146,11 @@ Create tickets with kanbn_create_task. Always:
   - unit test requirements ("add a test for ...")
 - set assigned, due, started, and progress whenever you know them
 
+Sub-tasks replace as a whole collection. To tick one off (or reopen it), resend
+the FULL subTasks array - every entry with its "text" and its "completed" flag.
+An entry with no text is rejected, because it would blank the sub-task it
+replaced.
+
 Bullets in description are invisible to the board: they don't render, aren't
 tracked, and don't count in kanbn_search.
 

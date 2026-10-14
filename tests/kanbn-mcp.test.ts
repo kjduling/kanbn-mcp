@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { describe, mock } from "node:test";
 
-import { buildTaskDataFromArgs, enqueueKanbnOperation, getArchiveMethod, getKanbnInstance, getKanbnPath, handleKanbnInitBoard, handleToolCall, isBoardInitialized, isMainEntry, listTools, registerInitializedMethod, resetOperationQueue } from "../src/server";
+import { assertSubTasksHaveText, buildTaskDataFromArgs, enqueueKanbnOperation, getArchiveMethod, getKanbnInstance, getKanbnPath, handleKanbnInitBoard, handleToolCall, isBoardInitialized, isMainEntry, listTools, matchColumnName, registerInitializedMethod, resetOperationQueue } from "../src/server";
 import { mergeExistingTaskData, normaliseRelationType } from "../src/server";
 import { TOOLS } from "../src/server";
 
@@ -4840,6 +4840,219 @@ describe("kanbn constructor actions option", () => {
             const enabled = new KanbnClass(dir, { actions: "rules.yaml" });
             assert.equal(disabled.actionsEnabled, false);
             assert.equal(enabled.actionsEnabled, true);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("case-insensitive column resolution", () => {
+    test("matchColumnName: exact wins, case-insensitive and trimmed resolve, unknown/ambiguous/empty return null", () => {
+        const columns = ["Backlog", "Todo", "In Progress", "Done"];
+        assert.equal(matchColumnName(columns, "Backlog"), "Backlog");
+        assert.equal(matchColumnName(columns, "BACKLOG"), "Backlog");
+        assert.equal(matchColumnName(columns, "  todo  "), "Todo");
+        assert.equal(matchColumnName(columns, "in progress"), "In Progress");
+        assert.equal(matchColumnName(columns, "nonexistent"), null);
+        assert.equal(matchColumnName(columns, ""), null);
+        assert.equal(matchColumnName(["Todo", "TODO"], "todo"), null);
+    });
+
+    test("kanbn_create_task accepts a case-insensitive column name and lands in the canonical column", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Create Case Board", columns: ["Backlog", "Done"] });
+
+            const created = await handleToolCall("kanbn_create_task", { path: dir, name: "Cased", column: "bAcKlOg" });
+            assert.match(created.content[0].text, /Created task "Cased"/);
+
+            const index = await new KanbnClass(dir).getIndex();
+            assert.deepStrictEqual(index.columns.Backlog, ["cased"]);
+            assert.deepStrictEqual(index.columns.Done, []);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_move_task accepts a case-insensitive target column", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Move Case Board", columns: ["Backlog", "Done"] });
+            const created = await handleToolCall("kanbn_create_task", { path: dir, name: "Mover", column: "Backlog" });
+            const taskId = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/)![1];
+
+            await handleToolCall("kanbn_move_task", { path: dir, taskId, targetColumn: "DONE" });
+
+            const index = await new KanbnClass(dir).getIndex();
+            assert.deepStrictEqual(index.columns.Done, [taskId]);
+            assert.deepStrictEqual(index.columns.Backlog, []);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("an unknown column still fails, and the error lists the valid columns", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Unknown Board", columns: ["Backlog", "Done"] });
+
+            await assert.rejects(
+                handleToolCall("kanbn_create_task", { path: dir, name: "Nope", column: "Nope" }),
+                /Column "Nope" doesn't exist\. Valid columns: "Backlog", "Done"/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_sort_column accepts a case-insensitive column name", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Sort Case Board", columns: ["Backlog", "Done"] });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Beta", column: "Backlog" });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Alpha", column: "Backlog" });
+
+            await handleToolCall("kanbn_sort_column", {
+                path: dir,
+                columnName: "backlog",
+                sorters: [{ field: "name", order: "ascending" }],
+            });
+
+            const index = await new KanbnClass(dir).getIndex();
+            assert.deepStrictEqual(index.columns.Backlog, ["alpha", "beta"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_find_tracked_tasks accepts a case-insensitive column filter", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Find Case Board", columns: ["Backlog", "Done"] });
+            await handleToolCall("kanbn_create_task", { path: dir, name: "Tracked", column: "Backlog" });
+
+            const found = JSON.parse((await handleToolCall("kanbn_find_tracked_tasks", { path: dir, columnName: "bAcKlOg" })).content[0].text);
+            assert.deepStrictEqual(found, ["tracked"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("sub-task text guard (kanbn_edit_task data-loss regression)", () => {
+    test("rejects a text-less entry and names its index", () => {
+        assert.throws(
+            () => assertSubTasksHaveText({ subTasks: [{ text: "ok", completed: false }, { completed: true }] }),
+            /Invalid subTasks entry at index 1/
+        );
+    });
+
+    test("rejects whitespace-only text", () => {
+        assert.throws(
+            () => assertSubTasksHaveText({ subTasks: [{ text: "   " }] }),
+            /Invalid subTasks entry at index 0/
+        );
+    });
+
+    test("accepts entries with text and ignores an absent subTasks collection", () => {
+        assert.doesNotThrow(() => assertSubTasksHaveText({ subTasks: [{ text: "Keep", completed: true }] }));
+        assert.doesNotThrow(() => assertSubTasksHaveText({ name: "No sub-tasks here" }));
+    });
+
+    test("kanbn_edit_task rejects text-less subTasks and leaves the task file unchanged", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Guard Board", columns: ["Backlog", "Done"] });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Guarded task",
+                column: "Backlog",
+                subTasks: [
+                    { text: "First sub-task", completed: false },
+                    { text: "Second sub-task", completed: false },
+                ],
+            });
+            const taskId = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/)![1];
+            const taskFile = path.join(dir, ".kanbn", "tasks", `${taskId}.md`);
+            const before = readFileSync(taskFile, "utf8");
+
+            await assert.rejects(
+                handleToolCall("kanbn_edit_task", {
+                    path: dir,
+                    taskId,
+                    subTasks: [{ completed: true }, { completed: true }],
+                }),
+                /Invalid subTasks entry at index 0/
+            );
+
+            assert.equal(readFileSync(taskFile, "utf8"), before, "task file must be byte-for-byte unchanged");
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.deepStrictEqual(task.subTasks.map((subTask: any) => subTask.text), ["First sub-task", "Second sub-task"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_create_task rejects an empty-text sub-task entry", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Create Guard Board", columns: ["Backlog", "Done"] });
+
+            await assert.rejects(
+                handleToolCall("kanbn_create_task", {
+                    path: dir,
+                    name: "Bad task",
+                    column: "Backlog",
+                    subTasks: [{ text: "Fine" }, { completed: true }],
+                }),
+                /Invalid subTasks entry at index 1/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("a full subTasks list updates completion flags and preserves every text", async () => {
+        const dir = makeTempDir();
+
+        try {
+            await handleToolCall("kanbn_init_board", { path: dir, name: "Full List Board", columns: ["Backlog", "Done"] });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Ticking task",
+                column: "Backlog",
+                subTasks: [
+                    { text: "First sub-task", completed: false },
+                    { text: "Second sub-task", completed: false },
+                ],
+            });
+            const taskId = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/)![1];
+
+            await handleToolCall("kanbn_edit_task", {
+                path: dir,
+                taskId,
+                subTasks: [
+                    { text: "First sub-task", completed: true },
+                    { text: "Second sub-task", completed: false },
+                ],
+            });
+
+            const task = await getTaskForDir(dir, taskId);
+            assert.equal(task.subTasks.length, 2);
+            assert.equal(task.subTasks[0].text, "First sub-task");
+            assert.equal(task.subTasks[0].completed, true);
+            assert.equal(task.subTasks[1].text, "Second sub-task");
+            assert.equal(task.subTasks[1].completed, false);
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }

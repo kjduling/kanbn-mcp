@@ -1,4 +1,5 @@
 import { getRequiredString } from "../kanbn/args.js";
+import { resolveColumnName } from "../kanbn/columns.js";
 import { readyBoard } from "../kanbn/instance.js";
 import { jsonResponse, McpResponse, textResponse } from "../kanbn/response.js";
 import { PATH_PROPERTY } from "../kanbn/schema.js";
@@ -57,7 +58,8 @@ export const handleKanbnMoveSimpleTask: ToolHandler = async (args) => {
         throw new TypeError(`No moveSimpleTask method found on Kanbn instance`);
     }
 
-    const moved = await moveFn.call(instance, input, column, args.position ?? null);
+    const resolvedColumn = await resolveColumnName(instance, column);
+    const moved = await moveFn.call(instance, input, resolvedColumn, args.position ?? null);
 
     return textResponse(`Moved simple task "${moved.text}" to column "${moved.toColumn}"`);
 };
@@ -77,7 +79,19 @@ export const handleKanbnMoveSimpleTaskToBoard: ToolHandler = async (args) => {
         throw new TypeError(`No moveSimpleTaskToBoard method found on Kanbn instance`);
     }
 
-    const moved = await moveFn.call(instance, input, targetSlug, args.column ?? null, args.position ?? null);
+    // The column lives on the TARGET board, whose column names may differ from this board's. Resolve
+    // case-insensitively against the target when we can; otherwise pass the raw value through so the
+    // library's board-aware "doesn't exist on board ..." error is preserved.
+    let column = (args.column as string | undefined) ?? null;
+    if (column && typeof instance.board === "function") {
+        try {
+            column = await resolveColumnName(instance.board(targetSlug), column);
+        } catch {
+            column = (args.column as string | undefined) ?? null;
+        }
+    }
+
+    const moved = await moveFn.call(instance, input, targetSlug, column, args.position ?? null);
 
     return textResponse(`Moved simple task "${moved.text}" to board "${moved.toBoard}" column "${moved.toColumn}"`);
 };
@@ -115,7 +129,12 @@ export const handleKanbnPromoteSimpleTask: ToolHandler = async (args) => {
         throw new TypeError(`No promoteSimpleTask method found on Kanbn instance`);
     }
 
-    const taskId = await promoteFn.call(instance, input, args.column ?? null);
+    let column = (args.column as string | undefined) ?? null;
+    if (column) {
+        column = await resolveColumnName(instance, column);
+    }
+
+    const taskId = await promoteFn.call(instance, input, column);
 
     return textResponse(`Promoted simple task "${input}" to task (id: ${taskId})`);
 };

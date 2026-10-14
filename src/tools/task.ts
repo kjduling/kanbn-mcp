@@ -1,8 +1,9 @@
 import { getRequiredString } from "../kanbn/args.js";
+import { resolveColumnName } from "../kanbn/columns.js";
 import { getIndexMethod, readyBoard } from "../kanbn/instance.js";
 import { jsonResponse, McpResponse, textResponse } from "../kanbn/response.js";
 import { COMMENTS_PROPERTY, PATH_PROPERTY, RELATIONS_PROPERTY, SUBTASKS_PROPERTY } from "../kanbn/schema.js";
-import { buildTaskDataFromArgs, mergeExistingTaskData } from "../kanbn/taskData.js";
+import { assertSubTasksHaveText, buildTaskDataFromArgs, mergeExistingTaskData } from "../kanbn/taskData.js";
 import { aliasTool, defineTool, ToolDefinition, ToolHandler } from "../types.js";
 
 /**
@@ -15,6 +16,7 @@ export const handleKanbnCreateTask: ToolHandler = async (args) => {
     const { instance } = await readyBoard(args, false);
 
     const taskData = buildTaskDataFromArgs(args);
+    assertSubTasksHaveText(taskData);
     let column = args.column || args.col || taskData.column || taskData.metadata?.column;
 
     if (taskData.metadata) {
@@ -42,6 +44,10 @@ export const handleKanbnCreateTask: ToolHandler = async (args) => {
     const createFn = instance.createTask || instance.create || instance.addTask;
     if (typeof createFn !== "function") {
         throw new TypeError(`No createTask method found on Kanbn instance`);
+    }
+
+    if (column) {
+        column = await resolveColumnName(instance, column);
     }
 
     let createdTaskId: any;
@@ -160,6 +166,7 @@ export const handleKanbnEditTask: ToolHandler = async (args) => {
     if (Object.keys(taskData).length === 0) {
         throw new Error(`No fields provided to edit`);
     }
+    assertSubTasksHaveText(taskData);
 
     const getFn = instance.getTask || instance.get || instance.fetchTask;
     if (typeof getFn === "function") {
@@ -435,9 +442,10 @@ export const handleKanbnMoveTask: ToolHandler = async (args) => {
         throw new TypeError(`No moveTask method found on Kanbn instance`);
     }
 
-    await moveFn.call(instance, taskId, targetColumn);
+    const resolvedColumn = await resolveColumnName(instance, targetColumn);
+    await moveFn.call(instance, taskId, resolvedColumn);
 
-    return textResponse(`Moved task ${taskId} to column "${targetColumn}"`);
+    return textResponse(`Moved task ${taskId} to column "${resolvedColumn}"`);
 };
 
 /**
@@ -466,7 +474,8 @@ export const handleKanbnRenameTask: ToolHandler = async (args) => {
         if (typeof moveFn !== "function") {
             throw new TypeError(`No moveTask method found on Kanbn instance`);
         }
-        await moveFn.call(instance, newTaskId, targetColumn, args.position ?? null);
+        const resolvedColumn = await resolveColumnName(instance, targetColumn);
+        await moveFn.call(instance, newTaskId, resolvedColumn, args.position ?? null);
     }
 
     return textResponse(`Renamed task ${taskId} to "${newName}" (new id: ${newTaskId})`);

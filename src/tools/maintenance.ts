@@ -1,4 +1,5 @@
 import { readyBoard } from "../kanbn/instance.js";
+import { resolveColumnName } from "../kanbn/columns.js";
 import { jsonResponse, McpResponse, rethrowOperationError } from "../kanbn/response.js";
 import { PATH_PROPERTY } from "../kanbn/schema.js";
 import { defineTool, ToolDefinition, ToolHandler } from "../types.js";
@@ -20,7 +21,8 @@ export async function handleKanbnAddUntrackedTask(args: Record<string, any>): Pr
     }
     const { instance } = await readyBoard(args);
     try {
-        const added = await instance.addUntrackedTaskToIndex(taskId, columnName);
+        const resolvedColumn = await resolveColumnName(instance, columnName);
+        const added = await instance.addUntrackedTaskToIndex(taskId, resolvedColumn);
         return jsonResponse(added, 0);
     } catch (error) {
         return rethrowOperationError(`Failed to add untracked task`, error);
@@ -37,7 +39,8 @@ export async function handleKanbnFindTrackedTasks(args: Record<string, any>): Pr
     const columnName = args.columnName as string | undefined;
     const { instance } = await readyBoard(args);
     try {
-        const tracked = await instance.findTrackedTasks(columnName || null);
+        const resolvedColumn = columnName ? await resolveColumnName(instance, columnName) : null;
+        const tracked = await instance.findTrackedTasks(resolvedColumn);
         return jsonResponse(Array.from(tracked as Iterable<string>), 0);
     } catch (error) {
         return rethrowOperationError(`Failed to find tracked tasks`, error);
@@ -90,7 +93,8 @@ export async function handleKanbnAddTaskToBoard(args: Record<string, any>): Prom
     }
     const { instance } = await readyBoard(args);
     try {
-        const added = await instance.addTaskToBoard(taskId, columnName);
+        const resolvedColumn = await resolveColumnName(instance, columnName);
+        const added = await instance.addTaskToBoard(taskId, resolvedColumn);
         return jsonResponse(added, 0);
     } catch (error) {
         return rethrowOperationError(`Failed to add task to board`, error);

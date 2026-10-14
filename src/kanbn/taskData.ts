@@ -177,3 +177,29 @@ export function buildTaskDataFromArgs(args: Record<string, any>): Record<string,
 
     return taskData;
 }
+
+/**
+ * Reject sub-task entries that carry no text.
+ *
+ * Sub-tasks are replaced as a whole collection, so an entry with a missing text would silently
+ * blank the existing sub-task it replaced. buildTaskDataFromArgs normalises a missing text to "",
+ * which makes that catastrophic replace look benign; this guard turns the silent blanking into a
+ * loud, actionable error before anything is written.
+ * @param {Record<string, any>} taskData Task data built by buildTaskDataFromArgs
+ * @returns {void}
+ * @throws {Error} When any sub-task entry has an empty or whitespace-only text
+ */
+export function assertSubTasksHaveText(taskData: Record<string, any>): void {
+    if (!taskData || !Array.isArray(taskData.subTasks)) {
+        return;
+    }
+    taskData.subTasks.forEach((subTask: any, index: number) => {
+        if (!subTask || typeof subTask.text !== "string" || subTask.text.trim() === "") {
+            throw new Error(
+                `Invalid subTasks entry at index ${index}: "text" is required. ` +
+                `Sub-tasks are replaced as a whole collection, so an entry with no text would blank the sub-task it replaced. ` +
+                `To change completion, resend the full subTasks array with every entry's "text" and "completed".`
+            );
+        }
+    });
+}
