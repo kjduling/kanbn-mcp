@@ -34,5 +34,6 @@ completedColumns:
 - [kanbn-edit-task-silently-wipes-sub-task-text-when-sub-tasks-entries-omit-text](tasks/kanbn-edit-task-silently-wipes-sub-task-text-when-sub-tasks-entries-omit-text.md)
 - [case-insensitive-column-name-resolution-for-kanbn-tools](tasks/case-insensitive-column-name-resolution-for-kanbn-tools.md)
 - [derive-ticket-progress-from-sub-tasks-and-warn-when-incomplete-work-lands-in-done](tasks/derive-ticket-progress-from-sub-tasks-and-warn-when-incomplete-work-lands-in-done.md)
+- [test-harness-breaks-under-kanbn-2-6-0-dynamic-import-no-longer-exposes-the-kanbn-class](tasks/test-harness-breaks-under-kanbn-2-6-0-dynamic-import-no-longer-exposes-the-kanbn-class.md)
 
 ## Blocked

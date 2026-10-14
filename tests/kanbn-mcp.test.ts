@@ -3513,8 +3513,7 @@ describe("kanbn_edit_task", () => {
             const taskId = taskIdMatch![1];
 
             // Corrupt the task file by writing invalid markdown
-            const { Kanbn } = await import("@basementuniverse/kanbn");
-            const instance = new Kanbn(dir);
+            const instance = new KanbnClass(dir);
             await instance.initialised();
             const taskFolder = await instance.getTaskFolderPath();
             const taskPath = path.join(taskFolder, `${taskId}.md`);
@@ -3554,8 +3553,7 @@ describe("kanbn_edit_task", () => {
             const taskId = taskIdMatch![1];
 
             // Corrupt the task file with invalid YAML front matter
-            const { Kanbn } = await import("@basementuniverse/kanbn");
-            const instance = new Kanbn(dir);
+            const instance = new KanbnClass(dir);
             await instance.initialised();
             const taskFolder = await instance.getTaskFolderPath();
             const taskPath = path.join(taskFolder, `${taskId}.md`);
