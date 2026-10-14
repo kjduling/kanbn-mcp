@@ -8,6 +8,7 @@ import {
     findFirstPositional,
     parseSetupArgs,
     runSetup,
+    runInstall,
     runUninstall,
 } from "../src/setup/index.js";
 import {
@@ -587,23 +588,27 @@ describe("runSetup end to end", () => {
         }
     });
 
-    test("--host=copilot writes the workspace skill + AGENTS.md and the global personal skill", async () => {
+    test("--host=copilot writes the workspace skill + AGENTS.md (setup) and global personal skill (install)", async () => {
         const dir = makeTempDir();
         const home = makeTempDir();
         try {
+            // setup: writes project-level guidance (AGENTS.md + .github/skills/kanbn/SKILL.md)
             await runSetup(["setup", dir, "--yes", "--host=copilot"], { home });
-            // workspace: universal AGENTS.md (always-on for Copilot) + project skill
             assert.equal(existsSync(join(dir, "AGENTS.md")), true);
             const projectSkill = join(dir, ".github", "skills", "kanbn", "SKILL.md");
             assert.equal(existsSync(projectSkill), true);
             assert.ok(readFileSync(projectSkill, "utf8").startsWith(SKILL_FRONTMATTER));
-            // personal: global skill in the Copilot personal skills dir
+            // no global skill from setup
             const personalSkill = join(home, ".copilot", "skills", "kanbn", "SKILL.md");
-            assert.equal(existsSync(personalSkill), true);
-            assert.ok(readFileSync(personalSkill, "utf8").startsWith(SKILL_FRONTMATTER));
+            assert.equal(existsSync(personalSkill), false);
             // no other clients' envelopes
             assert.equal(existsSync(join(dir, "CLAUDE.md")), false);
             assert.equal(existsSync(join(dir, ".clinerules")), false);
+
+            // install --host=copilot: writes global personal skill
+            await runInstall(["install", dir, "--yes", "--host=copilot"], { home });
+            assert.equal(existsSync(personalSkill), true);
+            assert.ok(readFileSync(personalSkill, "utf8").startsWith(SKILL_FRONTMATTER));
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });
@@ -633,7 +638,7 @@ describe("runSetup end to end", () => {
         try {
             mkdirSync(join(home, ".config", "opencode"), { recursive: true });
             mkdirSync(join(home, ".claude"), { recursive: true });
-            await runSetup(["setup", dir, "--yes", "--mcp"], { home });
+            await runInstall(["install", dir, "--yes", "--mcp"], { home });
             // opencode: project config wins (candidate order: project first)
             const projectConfig = readJsonLoose(join(dir, "opencode.json"));
             assert.deepEqual(projectConfig.config?.mcp.kanbn, { type: "local", command: ["kanbn-mcp"], enabled: true });
@@ -664,7 +669,7 @@ describe("runSetup end to end", () => {
                 },
             }, null, 2));
             // First run: only the legacy file exists, so cline registers there.
-            await runSetup(["setup", dir, "--yes", "--mcp=cline"], { home });
+            await runInstall(["install", dir, "--yes", "--mcp=cline"], { home });
             // Now the user's Cline migrates to the modern ~/.cline layout.
             const modern = join(home, ".cline", "data", "settings", "cline_mcp_settings.json");
             mkdirSync(join(modern, ".."), { recursive: true });
@@ -673,7 +678,7 @@ describe("runSetup end to end", () => {
                 null, 2
             ));
             // Second run: the modern path wins; the stale legacy entry is removed.
-            await runSetup(["setup", dir, "--yes", "--mcp=cline"], { home });
+            await runInstall(["install", dir, "--yes", "--mcp=cline"], { home });
             assert.ok("kanbn" in (readJsonLoose(modern).config?.mcpServers ?? {}));
             const legacyAfter = readJsonLoose(legacy);
             assert.deepEqual(Object.keys(legacyAfter.config?.mcpServers ?? {}), ["unity"]);
@@ -690,7 +695,7 @@ describe("runSetup end to end", () => {
         const dir = makeTempDir();
         const home = makeTempDir();
         try {
-            await runSetup(["setup", dir, "--yes", "--mcp=opencode"], { home });
+            await runInstall(["install", dir, "--yes", "--mcp=opencode"], { home });
             const configPath = join(dir, "opencode.json");
             assert.equal(existsSync(configPath), true);
             const config = readJsonLoose(configPath);
@@ -709,7 +714,7 @@ describe("runSetup end to end", () => {
         const dir = makeTempDir();
         const home = makeTempDir();
         try {
-            await runSetup(["setup", dir, "--yes", "--mcp=copilot"], { home });
+            await runInstall(["install", dir, "--yes", "--mcp=copilot"], { home });
             const mcpPath = join(home, "Library", "Application Support", "Code", "User", "mcp.json");
             assert.equal(existsSync(mcpPath), true);
             const config = readJsonLoose(mcpPath);

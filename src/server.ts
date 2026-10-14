@@ -5,7 +5,7 @@ import { CallToolRequestSchema, CallToolResult, ListToolsRequestSchema } from "@
 import path from "node:path";
 import { resetOperationQueue } from "./kanbn/queue.js";
 import { handleToolCall, listTools } from "./tools/index.js";
-import { findFirstPositional, runSetup, runUninstall } from "./setup/index.js";
+import { findFirstPositional, runSetup, runInstall, runUninstall } from "./setup/index.js";
 
 // Public API surface. The tool implementations live in per-category modules (src/tools/*),
 // the shared Kanbn helpers in src/kanbn/*; this entry file only wires them to the MCP server.
@@ -58,8 +58,9 @@ USAGE
   npx -y @kduling/kanbn-mcp [options]  run without installing
   kanbn-mcp mcp [options]              explicit server mode: some MCP hosts
                                        pass a literal 'mcp' argument
+  kanbn-mcp install [flags]            register MCP server + install global skills
   kanbn-mcp setup [flags]              guided board configuration for AI clients
-  kanbn-mcp uninstall                  remove what setup wrote
+  kanbn-mcp uninstall                  remove what install/setup wrote
   node dist/server.js [options]        from a source checkout
 
 OPTIONS
@@ -149,6 +150,26 @@ MCP CLIENT CONFIGURATION
   In all cases the board root (the directory containing .kanbn) is taken from
   the server's working directory, so each project configures its own board.
 
+INSTALL
+
+  kanbn-mcp install wires the MCP server into AI client configs and installs
+  the global kanbn skill. No board questions are asked.
+
+    kanbn-mcp install                    # install into all detected hosts
+    kanbn-mcp install --host=opencode    # install into one host only
+    kanbn-mcp install --mcp              # also register MCP server in client configs
+    kanbn-mcp install --mcp=opencode     # register MCP only for opencode
+    kanbn-mcp install --list             # list detected clients and targets
+    kanbn-mcp install --dry-run          # show what would be written
+    kanbn-mcp install --check            # show current install state
+
+  Targets:
+    MCP registration (--mcp): opencode.json, ~/.claude.json, cline_mcp_settings.json,
+      ~/.codeium/windsurf/mcp_config.json, VS Code user mcp.json (GitHub Copilot)
+    Global skills (--host): ~/.config/opencode/skills/kanbn/SKILL.md,
+      ~/.claude/skills/kanbn/SKILL.md, ~/.cline/skills/kanbn/SKILL.md,
+      ~/.copilot/skills/kanbn/SKILL.md
+
 SETUP
 
   kanbn-mcp setup asks the board conventions once (columns + meanings, type and
@@ -160,25 +181,15 @@ SETUP
     CLAUDE.md                           .clinerules/kanbn.md
     .windsurf/rules/kanbn.md            skills/kanbn/SKILL.md (committed)
 
-  Answers and a write-manifest persist to .kanbn/setup.json, so re-runs amend
-  and 'kanbn-mcp uninstall' removes everything.
+  Answers persist to .kanbn/setup.json, so re-runs amend and 'kanbn-mcp uninstall'
+  removes everything. No MCP registration or global skills here - use 'install'.
 
   Flags:
     --yes              non-interactive: all defaults (or amend persisted answers)
     --json <file>      import answers from a JSON file (non-interactive)
-    --host=<slugs>     emit for one client only: opencode|claude|windsurf|
-                       cline|devin|copilot (comma-separated). opencode/claude/
-                       cline/copilot also install the global skill
-                       (~/.config/opencode/skills, ~/.claude/skills,
-                       ~/.cline/skills, ~/.copilot/skills); copilot emits the
-                       universal AGENTS.md it reads from the workspace root
-                       plus its workspace skill (.github/skills/kanbn/SKILL.md)
+    --host=<slugs>     emit guidance for one client only: opencode|claude|windsurf|
+                       cline|devin|copilot (comma-separated)
     --repo-only        write repo files only (the default)
-    --mcp              also register the kanbn MCP server in detected client
-                       configs: opencode.json, ~/.claude.json,
-                       cline_mcp_settings.json, ~/.codeium/windsurf/mcp_config.json,
-                       VS Code user mcp.json (GitHub Copilot)
-    --mcp=<clients>    register only in the listed clients (comma-separated)
     --list             list detected clients and target files; change nothing
     --dry-run          show what would be written; change nothing
     --print            print the canonical guidance + manual install
@@ -239,7 +250,14 @@ if (isMainEntry()) {
         process.exit(0);
     }
     const positional = findFirstPositional(cliArgs);
-    if (positional === "setup") {
+    if (positional === "install") {
+        runInstall(cliArgs)
+            .then(() => process.exit(0))
+            .catch((err) => {
+                console.error(String((err as Error)?.message ?? err));
+                process.exit(1);
+            });
+    } else if (positional === "setup") {
         runSetup(cliArgs)
             .then(() => process.exit(0))
             .catch((err) => {

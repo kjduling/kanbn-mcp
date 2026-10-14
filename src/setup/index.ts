@@ -1,11 +1,9 @@
 /**
- * `kanbn-mcp setup` / `kanbn-mcp uninstall` entry point.
+ * `kanbn-mcp setup` / `kanbn-mcp install` / `kanbn-mcp uninstall` entry points.
  *
- * One interactive Q&A collects the board conventions; the answers render into
- * ONE canonical client-neutral guidance body which is emitted into the files
- * each AI client reads (AGENTS.md, SKILL.md, CLAUDE.md, rule files). `--mcp`
- * additionally registers the kanbn MCP server in detected client configs.
- * Re-runs amend from .kanbn/setup.json; `uninstall` reverses via the manifest.
+ * - setup: interactive Q&A for board conventions; emits per-client guidance envelopes.
+ * - install: per-agent wiring only (MCP registration + global skills). No board Q&A.
+ * - uninstall: reverses everything either command wrote (deterministic, no manifest).
  */
 
 import * as fs from "node:fs";
@@ -22,7 +20,8 @@ import {
 import { renderCanonical, renderSkill } from "./guidance.js";
 import { CLIENTS, detectHosts, manualInstallText, registerClient, unregisterClient } from "./hosts.js";
 import { collectAnswers, manifestPath, readManifest, writeManifest } from "./questions.js";
-import { HostSlug, RegisteredTarget, SetupManifest, WrittenTarget } from "./types.js";
+import { HostSlug, RegisteredTarget, SetupManifest, WrittenTarget, SetupAnswers } from "./types.js";
+import { defaultAnswers } from "./questions.js";
 
 export interface SetupArgs {
     yes: boolean;
@@ -37,7 +36,17 @@ export interface SetupArgs {
     positionals: string[];
 }
 
-const KNOWN_FLAGS = new Set([
+export interface InstallArgs {
+    yes: boolean;
+    mcp: boolean | string[];
+    host?: string;
+    list: boolean;
+    dryRun: boolean;
+    check: boolean;
+    positionals: string[];
+}
+
+const SETUP_FLAGS = new Set([
     "--yes",
     "--list",
     "--dry-run",
@@ -48,6 +57,16 @@ const KNOWN_FLAGS = new Set([
     "--host",
     "--ai",
     "--json",
+]);
+
+const INSTALL_FLAGS = new Set([
+    "--yes",
+    "--list",
+    "--dry-run",
+    "--check",
+    "--mcp",
+    "--host",
+    "--ai",
 ]);
 
 /** The first non-flag token in an argv list (the subcommand). */
@@ -75,7 +94,7 @@ export function parseSetupArgs(argv: string[]): SetupArgs {
         if (arg.startsWith("-")) {
             const eq = arg.indexOf("=");
             const bare = eq === -1 ? arg : arg.slice(0, eq);
-            if (!KNOWN_FLAGS.has(bare)) {
+            if (!SETUP_FLAGS.has(bare)) {
                 throw new Error(`Unknown flag "${bare}". Run \`kanbn-mcp --help\` for the full flag list.`);
             }
             // value flags accept both "--json <file>" and "--json=<file>"
@@ -122,6 +141,62 @@ export function parseSetupArgs(argv: string[]): SetupArgs {
     };
 }
 
+/**
+ * Parse install CLI arguments.
+ * @param argv Full CLI args (process.argv.slice(2))
+ * @returns Parsed options
+ */
+export function parseInstallArgs(argv: string[]): InstallArgs {
+    const positionals: string[] = [];
+    let host: string | undefined;
+    let mcp: boolean | string[] = false;
+    for (let i = 0; i < argv.length; i++) {
+        const arg = argv[i];
+        if (arg.startsWith("-")) {
+            const eq = arg.indexOf("=");
+            const bare = eq === -1 ? arg : arg.slice(0, eq);
+            if (!INSTALL_FLAGS.has(bare)) {
+                throw new Error(`Unknown flag "${bare}". Run \`kanbn-mcp --help\` for the full flag list.`);
+            }
+            // value flags accept both "--host <slug>" and "--host=<slug>"
+            const takeValue = (): string | undefined => {
+                if (eq !== -1) {
+                    return arg.slice(eq + 1);
+                }
+                const next = argv[i + 1];
+                if (next !== undefined && !next.startsWith("-")) {
+                    i += 1;
+                    return next;
+                }
+                return undefined;
+            };
+            if (bare === "--host" || bare === "--ai") {
+                const value = takeValue();
+                if (value !== undefined) {
+                    host = value;
+                }
+            } else if (bare === "--mcp") {
+                const value = takeValue();
+                mcp = value === undefined
+                    ? true
+                    : value.split(",").map((s) => s.trim()).filter(Boolean);
+            }
+            // --list / --dry-run / --check carry no values
+        } else {
+            positionals.push(arg);
+        }
+    }
+    return {
+        yes: argv.includes("--yes"),
+        mcp,
+        host,
+        list: argv.includes("--list"),
+        dryRun: argv.includes("--dry-run"),
+        check: argv.includes("--check"),
+        positionals,
+    };
+}
+
 function out(text: string): void {
     try {
         process.stdout.write(text + "\n");
@@ -148,7 +223,7 @@ function warn(text: string): void {
 }
 
 function resolveRoot(positionals: string[], cwd: string): string {
-    const candidate = positionals.find((p) => p !== "setup" && p !== "uninstall");
+    const candidate = positionals.find((p) => p !== "setup" && p !== "uninstall" && p !== "install");
     if (!candidate) {
         return cwd;
     }
@@ -281,7 +356,7 @@ export interface RunOptions {
     home?: string;
 }
 
-/** The main setup flow. */
+/** The main setup flow: board configuration + guidance emission only. */
 export async function runSetup(argv: string[], options: RunOptions = {}): Promise<void> {
     const args = parseSetupArgs(argv);
     const root = resolveRoot(args.positionals, process.cwd());
@@ -329,8 +404,101 @@ export async function runSetup(argv: string[], options: RunOptions = {}): Promis
     const hostSlugs = resolveHostSlugs(args.host);
     const plan = planRepoEmit(root, answers, hostSlugs);
 
+    if (args.dryRun) {
+        printWriteReport(
+            describeWrites(plan.targets, new Set()),
+            [],
+            true,
+            null
+        );
+        out("");
+        out(body);
+        return;
+    }
+
+    const written = applyRepoEmit(root, answers, hostSlugs);
+
+    const manifest: SetupManifest = {
+        schemaVersion: 1,
+        generatedAt: new Date().toISOString(),
+        answers,
+        written,
+        registered: [],
+    };
+    writeManifest(root, manifest);
+
+    printWriteReport(describeWrites(written, new Set()), [], false, manifestPath(root));
+    out("");
+    out("The canonical guidance body (every file above embeds this exact prose):");
+    out("");
+    out(body);
+    out("");
+    out("Re-run `kanbn-mcp setup` to amend the answers; `kanbn-mcp uninstall` removes everything above.");
+    out("For any client kanbn-mcp setup does not cover, run `kanbn-mcp setup --print` for copy-paste install instructions.");
+}
+
+/** The install flow: per-agent wiring only (MCP registration + global skills). No board Q&A. */
+export async function runInstall(argv: string[], options: RunOptions = {}): Promise<void> {
+    const args = parseInstallArgs(argv);
+    const root = resolveRoot(args.positionals, process.cwd());
+    const home = options.home ?? os.homedir();
+
+    if (args.list) {
+        listClientsAndTargets();
+        return;
+    }
+
+    if (args.check) {
+        // Deterministic check: recompute what would be installed from current config + host detection
+        const detected = detectHosts(home).filter((h) => h.detected).map((h) => h.slug);
+        const mcpClients = selectedMcpClients(args.mcp, detected);
+        const hostSlugs = resolveHostSlugs(args.host);
+        const globalSkills: { path: string; host: string }[] = [];
+        if (hostSlugs) {
+            for (const slug of hostSlugs) {
+                const target = globalSkillForHost(slug, home);
+                if (target) {
+                    globalSkills.push({ path: target, host: slug });
+                }
+            }
+        }
+        out(`kanbn-mcp install state for ${root}:`);
+        if (mcpClients.length > 0) {
+            out(`  MCP registration (${mcpClients.join(", ")}):`);
+            for (const slug of mcpClients) {
+                const client = CLIENTS.find((c) => c.client === slug);
+                if (client) {
+                    const target = client.defaultPath(home, root);
+                    out(`    - ${fs.existsSync(target) ? "ok" : "MISSING"} ${target} (${slug})`);
+                }
+            }
+        } else {
+            out("  MCP registration: none (no --mcp or no detected clients)");
+        }
+        if (globalSkills.length > 0) {
+            out("  Global skills:");
+            for (const gs of globalSkills) {
+                out(`    - ${fs.existsSync(gs.path) ? "ok" : "MISSING"} ${gs.path} (${gs.host})`);
+            }
+        } else {
+            out("  Global skills: none (no --host specified)");
+        }
+        return;
+    }
+
+    // Load existing board config for global skill rendering (uses the same answers as setup)
+    const existingManifest = readManifest(root);
+    const answers = existingManifest ? existingManifest.answers : defaultAnswers(root);
+
     const detected = detectHosts(home).filter((h) => h.detected).map((h) => h.slug);
-    const mcpClients = selectedMcpClients(args.mcp, detected);
+    const hostSlugs = resolveHostSlugs(args.host);
+    let mcpClients: string[];
+    if (hostSlugs) {
+        // --host limits both MCP registration and global skills to specified hosts
+        mcpClients = hostSlugs.filter((slug) => detected.includes(slug));
+    } else {
+        mcpClients = selectedMcpClients(args.mcp, detected);
+    }
     const globalSkills: { path: string; host: string }[] = [];
     if (hostSlugs) {
         for (const slug of hostSlugs) {
@@ -343,29 +511,30 @@ export async function runSetup(argv: string[], options: RunOptions = {}): Promis
 
     if (args.dryRun) {
         const globalPlans: WrittenTarget[] = globalSkills.map((gs) => ({ path: gs.path, host: gs.host, kind: "file", changed: true }));
-        const allPlanned = [...plan.targets, ...globalPlans];
+        // For dry-run, use the same mcpClients logic
+        const dryRunMcpClients = hostSlugs
+            ? hostSlugs.filter((slug) => detected.includes(slug))
+            : selectedMcpClients(args.mcp, detected);
         printWriteReport(
-            describeWrites(allPlanned, new Set(globalSkills.map((gs) => gs.path))),
-            planRegistrations(args.mcp, root, true, home),
+            describeWrites(globalPlans, new Set(globalSkills.map((gs) => gs.path))),
+            planRegistrations(dryRunMcpClients, root, true, home),
             true,
             null
         );
-        out("");
-        out(body);
         return;
     }
 
-    const written = applyRepoEmit(root, answers, hostSlugs);
+    const registered: RegisteredTarget[] = [];
+    const written: WrittenTarget[] = [];
+
+    // Install global skills
     for (const gs of globalSkills) {
         const changed = writeManagedFile(gs.path, renderSkill(answers));
         written.push({ path: gs.path, host: gs.host, kind: "file", changed });
     }
 
-    const registered: RegisteredTarget[] = [];
+    // Register MCP server in client configs
     if (mcpClients.length > 0) {
-        // Prior run's records, in case a client's config path changed since
-        // (e.g. Cline moved from the legacy globalStorage file to ~/.cline).
-        const prior = readManifest(root);
         for (const slug of mcpClients) {
             const client = CLIENTS.find((c) => c.client === slug);
             if (!client) {
@@ -378,7 +547,7 @@ export async function runSetup(argv: string[], options: RunOptions = {}): Promis
                 // Clean up a registration this client previously recorded at a
                 // different path so `uninstall` stays complete. Best-effort:
                 // if the old entry was hand-edited, the guarded remove leaves it.
-                for (const stale of prior?.registered ?? []) {
+                for (const stale of existingManifest?.registered ?? []) {
                     if (stale.client === slug && stale.path !== outcome.path) {
                         if (unregisterClient(stale.path, slug)) {
                             out(`cleaned up stale "${slug}" entry in ${stale.path}`);
@@ -391,23 +560,29 @@ export async function runSetup(argv: string[], options: RunOptions = {}): Promis
         }
     }
 
-    const manifest: SetupManifest = {
+    // Update manifest with new registered entries (merge with existing, replacing stale paths)
+    const priorRegistered = existingManifest?.registered ?? [];
+    const mergedRegistered = [
+        ...priorRegistered.filter((prior) => !registered.some((r) => r.client === prior.client)),
+        ...registered,
+    ];
+    // Deduplicate by path+client
+    const uniqueRegistered = mergedRegistered.filter((reg, index, self) =>
+        index === self.findIndex((r) => r.path === reg.path && r.client === reg.client)
+    );
+
+    const updatedManifest: SetupManifest = {
         schemaVersion: 1,
         generatedAt: new Date().toISOString(),
-        answers,
-        written,
-        registered,
+        answers: existingManifest?.answers ?? answers,
+        written: existingManifest?.written ?? [],
+        registered: uniqueRegistered,
     };
-    writeManifest(root, manifest);
+    writeManifest(root, updatedManifest);
 
     printWriteReport(describeWrites(written, new Set(globalSkills.map((gs) => gs.path))), registered, false, manifestPath(root));
     out("");
-    out("The canonical guidance body (every file above embeds this exact prose):");
-    out("");
-    out(body);
-    out("");
-    out("Re-run `kanbn-mcp setup` to amend the answers; `kanbn-mcp uninstall` removes everything above.");
-    out("For any client kanbn-mcp setup does not cover, run `kanbn-mcp setup --print` for copy-paste install instructions.");
+    out("Run `kanbn-mcp install --check` to verify; `kanbn-mcp uninstall` removes everything above.");
 }
 
 function planRegistrations(mcp: boolean | string[], root: string, dryRun: boolean, home: string): RegisteredTarget[] {

@@ -11,7 +11,6 @@ completedColumns:
 
 - [guidance-validation-for-free-form-fields-tags-priority-custom-fields-so-ai-clients-use-them-consistently](tasks/guidance-validation-for-free-form-fields-tags-priority-custom-fields-so-ai-clients-use-them-consistently.md)
 - [directed-relation-hygiene-depends-on-blocks-edges-should-mirror-on-both-tasks-guidance-and-or-audit-mirroring](tasks/directed-relation-hygiene-depends-on-blocks-edges-should-mirror-on-both-tasks-guidance-and-or-audit-mirroring.md)
-- [split-kanbn-mcp-setup-into-install-and-setup](tasks/split-kanbn-mcp-setup-into-install-and-setup.md)
 - [kanbn-mcp-install-and-uninstall-target-all-known-hosts-by-default-host-agent-limits-to-one](tasks/kanbn-mcp-install-and-uninstall-target-all-known-hosts-by-default-host-agent-limits-to-one.md)
 - [kanbn-mcp-install-writes-only-per-host-home-config-drop-project-level-registration](tasks/kanbn-mcp-install-writes-only-per-host-home-config-drop-project-level-registration.md)
 - [make-kanbn-mcp-uninstall-and-check-deterministic-drop-written-registered-state-from-the-config](tasks/make-kanbn-mcp-uninstall-and-check-deterministic-drop-written-registered-state-from-the-config.md)
@@ -24,6 +23,10 @@ completedColumns:
 ## Todo
 
 ## In Progress
+
+## Done
+
+- [split-kanbn-mcp-setup-into-install-and-setup](tasks/split-kanbn-mcp-setup-into-install-and-setup.md)
 
 ## Done
 

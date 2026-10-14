@@ -3,7 +3,10 @@ tags:
   - feature
   - high
 created: 2026-10-13T19:38:12.693Z
-updated: 2026-10-13T22:06:15.652Z
+updated: 2026-10-14T05:30:00.000Z
+started: 2026-10-14T04:30:00.000Z
+completed: 2026-10-14T05:30:00.000Z
+progress: 1
 ---
 
 # Split kanbn-mcp setup into install and setup
@@ -28,22 +31,25 @@ Effort: src/setup/index.ts (runSetup) currently interleaves both flows (lines ~3
 
 ## Sub-tasks
 
-- [ ] Decide the flag/scope split: which flags move to install (--mcp, --host, --list, --check?) vs setup (--yes, --json, --repo-only, --host?, --print, --dry-run), and keep uninstall covering both
-- [ ] Extract the per-agent install flow (detectHosts/registerClient/global skill writes) out of runSetup into a runInstall entry point
-- [ ] Reduce runSetup to board configuration + guidance emission only; remove client registration from its path
-- [ ] Add the 'install' subcommand dispatch in src/server.ts alongside setup/uninstall, without breaking the bare-server and 'mcp' positional paths
-- [ ] Split or namespace the .kanbn/setup.json manifest so uninstall reverses both commands' writes and each command's report shows only its own targets
-- [ ] Update HELP_TEXT and README: document install and setup as separate commands with their own flag lists
-- [ ] verify that `kanbn-mcp install` registers the MCP server without asking board questions or writing guidance files
-- [ ] verify that `kanbn-mcp setup` emits guidance without registering any MCP client
-- [ ] verify that `kanbn-mcp uninstall` removes everything written by either install or setup
-- [ ] add a test for install-only runs (registration, no guidance writes) and setup-only runs (guidance writes, no registration)
-- [ ] add a test that feature-flagged behaviour is idempotent across re-runs of either command
+- [x] Decide the flag/scope split: which flags move to install (--mcp, --host, --list, --check?) vs setup (--yes, --json, --repo-only, --host?, --print, --dry-run), and keep uninstall covering both
+- [x] Extract the per-agent install flow (detectHosts/registerClient/global skill writes) out of runSetup into a runInstall entry point
+- [x] Reduce runSetup to board configuration + guidance emission only; remove client registration from its path
+- [x] Add the 'install' subcommand dispatch in src/server.ts alongside setup/uninstall, without breaking the bare-server and 'mcp' positional paths
+- [x] Update HELP_TEXT and README: document install and setup as separate commands with their own flag lists
+- [x] verify that `kanbn-mcp install` registers the MCP server without asking board questions or writing guidance files
+- [x] verify that `kanbn-mcp setup` emits guidance without registering any MCP client
+- [x] verify that `kanbn-mcp uninstall` removes everything written by either install or setup (deterministic, no manifest)
+- [x] add a test for install-only runs (registration, no guidance writes) and setup-only runs (guidance writes, no registration)
+- [x] add a test that feature-flagged behaviour is idempotent across re-runs of either command
 
 ## Relations
 
-- [related-to add-kanbn-mcp-setup-interactive-guided-configuration-squeez-unity-cli-style](add-kanbn-mcp-setup-interactive-guided-configuration-squeez-unity-cli-style.md)
-- [related-to setup-output-should-report-where-it-stores-files-mirroring-uninstall-s-removed-left-in-place-report](setup-output-should-report-where-it-stores-files-mirroring-uninstall-s-removed-left-in-place-report.md)
+- [related-to make-kanbn-mcp-uninstall-and-check-deterministic-drop-written-registered-state-from-the-config](make-kanbn-mcp-uninstall-and-check-deterministic-drop-written-registered-state-from-the-config.md)
+- [related-to move-board-config-to-home-kanbn-kanbn-mcp-config-json-with-per-field-project-override](move-board-config-to-home-kanbn-kanbn-mcp-config-json-with-per-field-project-override.md)
+- [related-to kanbn-mcp-install-and-uninstall-target-all-known-hosts-by-default-host-agent-limits-to-one](kanbn-mcp-install-and-uninstall-target-all-known-hosts-by-default-host-agent-limits-to-one.md)
+- [related-to kanbn-mcp-install-writes-only-per-host-home-config-drop-project-level-registration](kanbn-mcp-install-writes-only-per-host-home-config-drop-project-level-registration.md)
+- [related-to ensure-skill-files-are-installed-to-correct-directories-for-each-agent-host](ensure-skill-files-are-installed-to-correct-directories-for-each-agent-host.md)
+- [related-to clean-up-the-setup-prompt-layout-break-wordy-single-line-questions-and-defaults-onto-readable-lines](clean-up-the-setup-prompt-layout-break-wordy-single-line-questions-and-defaults-onto-readable-lines.md)
 
 ## Comments
 
