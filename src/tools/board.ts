@@ -90,8 +90,6 @@ export const handleKanbnInitBoard: ToolHandler = async (args) => {
         throw new TypeError(`No initialization method found on Kanbn instance`);
     }
 
-    let lastError: Error | null = null;
-
     try {
         if (hasColumns) {
             await initFn.call(instance, { name: boardName, columns: args.columns });
@@ -99,20 +97,8 @@ export const handleKanbnInitBoard: ToolHandler = async (args) => {
             await initFn.call(instance, { name: boardName });
         }
     } catch (e) {
-        lastError = e instanceof Error ? e : new Error(String(e));
-        try {
-            if (hasColumns) {
-                await initFn.call(instance, boardName, args.columns);
-            } else {
-                await initFn.call(instance, boardName);
-            }
-        } catch (e2) {
-            lastError = e2 instanceof Error ? e2 : new Error(String(e2));
-        }
-    }
-
-    if (lastError) {
-        throw new Error(`Kanbn init failed on both attempts: ${lastError.message}`);
+        const err = e instanceof Error ? e : new Error(String(e));
+        throw new Error(`Kanbn init failed: ${err.message}`);
     }
 
     return textResponse(`Successfully initialized Kanbn board at: ${boardPath}`);
@@ -382,7 +368,7 @@ const initBoardTool = defineTool(
     {
         path: PATH_PROPERTY,
         name: { type: "string", description: "Name of the board" },
-        columns: { type: "array", items: { type: "string" }, description: "Initial board columns" },
+        columns: { type: "array", items: { type: "string" }, description: "Initial board columns (optional; uses Kanbn defaults if omitted)" },
     },
 );
 
@@ -399,7 +385,7 @@ const ensureBoardTool = defineTool(
     {
         path: PATH_PROPERTY,
         name: { type: "string", description: "Name of the board" },
-        columns: { type: "array", items: { type: "string" }, description: "Initial board columns" },
+        columns: { type: "array", items: { type: "string" }, description: "Initial board columns (optional; uses Kanbn defaults if omitted)" },
     },
 );
 
@@ -423,7 +409,7 @@ const secondaryBoardTools: ToolDefinition[] = [
             slug: { type: "string", description: "Board slug" },
             name: { type: "string", description: "Display name" },
             description: { type: "string", description: "Board description" },
-            columns: { type: "array", items: { type: "string" }, description: "Initial board columns" },
+            columns: { type: "array", items: { type: "string" }, description: "Initial board columns (optional; uses Kanbn defaults if omitted)" },
             options: { type: "object", description: "Low-level board options" },
         },
         ["slug"],

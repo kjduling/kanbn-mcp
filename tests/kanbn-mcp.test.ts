@@ -558,6 +558,45 @@ describe("board lifecycle commands", () => {
             rmSync(dir, { recursive: true, force: true });
         }
     });
+
+    test("kanbn_init_board accepts no args except path", async () => {
+        const dir = makeTempDir();
+
+        try {
+            const result = await handleToolCall("kanbn_init_board", { path: dir });
+            assert.match(result.content[0].text, /Initialized Kanbn board/i);
+            const status = await handleToolCall("kanbn_status", { path: dir });
+            assert.ok(status.content[0].text.length > 0);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_init_board accepts name only", async () => {
+        const dir = makeTempDir();
+
+        try {
+            const result = await handleToolCall("kanbn_init_board", { path: dir, name: "NameOnly" });
+            assert.match(result.content[0].text, /Initialized Kanbn board/i);
+            const status = await handleToolCall("kanbn_status", { path: dir });
+            assert.ok(status.content[0].text.length > 0);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("kanbn_init_board accepts columns omitted", async () => {
+        const dir = makeTempDir();
+
+        try {
+            const result = await handleToolCall("kanbn_init_board", { path: dir, name: "OmittedCols" });
+            assert.match(result.content[0].text, /Initialized Kanbn board/i);
+            const status = await handleToolCall("kanbn_status", { path: dir });
+            assert.ok(status.content[0].text.length > 0);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
 });
 
 describe("isBoardInitialized", () => {

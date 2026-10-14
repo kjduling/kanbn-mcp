@@ -1,8 +1,12 @@
 ---
+progress: 1
 tags:
   - bug
   - high
 created: 2026-10-13T22:38:46.240Z
+updated: 2026-10-14T18:59:22.241Z
+started: 2026-10-14T18:56:08.706Z
+completed: 2026-10-14T18:59:22.206Z
 ---
 
 # kanbn_init_board should accept omitted columns (documented optional)
@@ -13,9 +17,9 @@ Fix: default columns to undefined only when explicitly provided as non-array? Or
 
 ## Sub-tasks
 
-- [ ] In handleKanbnInitBoard, only pass columns to init if Array.isArray(args.columns); otherwise omit
-- [ ] Remove or fix the positional-retry fallback at line ~99 that passes bare string
-- [ ] Add tests: init with no args, name only, columns omitted
+- [x] In handleKanbnInitBoard, only pass columns to init if Array.isArray(args.columns); otherwise omit
+- [x] Remove or fix the positional-retry fallback at line ~99 that passes bare string
+- [x] Add tests: init with no args, name only, columns omitted
 
 ## History
 
@@ -24,4 +28,19 @@ Fix: default columns to undefined only when explicitly provided as non-array? Or
   column: Backlog
   fromProgress: 0
   toProgress: 0
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-10-14T18:56:08.706Z
+  fromColumn: Backlog
+  toColumn: In Progress
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-10-14T18:59:22.206Z
+  fromColumn: In Progress
+  toColumn: Done
+  author: Kevin J. Duling
+- type: progress
+  date: 2026-10-14T18:59:22.241Z
+  fromProgress: 0
+  toProgress: 1
   author: Kevin J. Duling

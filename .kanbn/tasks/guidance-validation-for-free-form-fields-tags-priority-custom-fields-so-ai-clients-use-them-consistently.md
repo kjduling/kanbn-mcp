@@ -1,9 +1,9 @@
 ---
+created: 2026-09-18T20:04:39.742Z
+updated: 2026-10-14T18:52:07.562Z
 tags:
   - spike
   - medium
-created: 2026-09-18T20:04:39.742Z
-updated: 2026-10-13T22:06:15.701Z
 ---
 
 # Guidance/validation for free-form fields (tags, priority, custom fields) so AI clients use them consistently
@@ -14,7 +14,7 @@ Consider for the project:
 1. Guidance layer - do the tool `description`s (or AGENTS.md / README) explain how agents should pick values for `tags`, `priority`, and custom fields? Examples of tag conventions (prefix namespacing like `typ:bug` / `pri:high`, the project's own go-to taxonomy) would stop each agent session from inventing its own. Verify the schema description text is automatically surfaced to clients or must be re-stated per-tool.
 2. Restriction/validation layer - should the server enforce or hint at allowed values? Options to compare: (a) custom-field types in the kanbn config (`options.task.customFields` with types/enums) surfacing as enum hints in the tool schema; (b) a `priority` validation (kanbn's low/medium/high vocabulary); (c) `tagsSuggestion`/tag-casing normalization (e.g. reject or coerce whitespace, force lowercase or prefix discipline); (d) a read-only "collect values" tool already exists (kanbn_collect_contributor_values) - is a `collect_tags`-style counterpart warranted so agents can stay consistent with existing tag vocabulary?
 3. Failure modes - what does kanbn itself do today when an agent writes an out-of-schema value (e.g. priority "urgent")? Silently accepted? Rejected? Rendered inconsistently? Whatever kanbn does dictates how loudly the MCP should intervene.
-4. Scope line - this is a separate project from April; only research/design/consider here, nothing to ship in April's board.
+
 
 Deliverable is a decision: guidance-only, validation-only, or guidance + enum surfacing, with a concrete proposal for schema-description text and/or custom-field typing. No code changes implied until that decision lands.
 
