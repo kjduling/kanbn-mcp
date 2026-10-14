@@ -1,9 +1,12 @@
 ---
+progress: 1
 tags:
   - feature
   - high
 created: 2026-10-13T19:45:23.127Z
-updated: 2026-10-13T22:01:04.035Z
+updated: 2026-10-14T22:44:38.048Z
+started: 2026-10-14T22:29:06.976Z
+completed: 2026-10-14T22:44:37.998Z
 ---
 
 # kanbn-mcp install and uninstall target all known hosts by default, --host=<agent> limits to one
@@ -27,18 +30,36 @@ Depends on the split ticket (install must exist as its own command first) and on
 
 ## Sub-tasks
 
-- [ ] Decide the default target set: all DETECTED hosts (squeez behaviour) vs all KNOWN hosts - document the choice and how undetected hosts are reported/skipped
-- [ ] install: make --host optional - absent = all targets, present = only the listed host(s); support comma-separated multi or not (decide)
-- [ ] uninstall: add a --host filter - absent = all manifest entries, present = only that host's entries
-- [ ] --list and --dry-run honour the same host selection so planning matches the run
-- [ ] Update HELP_TEXT + README with install/uninstall --host semantics
-- [ ] verify that `kanbn-mcp install` with no --host wires every known/detected host
-- [ ] verify that `kanbn-mcp install --host=<agent>` wires only that host
-- [ ] verify that `kanbn-mcp uninstall` with no --host removes every host's entries
-- [ ] verify that `kanbn-mcp uninstall --host=<agent>` removes only that host's entries and leaves the others
-- [ ] add tests for all four combinations (install all / install one, uninstall all / uninstall one)
+- [x] Decide the default target set: all DETECTED hosts (squeez behaviour) vs all KNOWN hosts - document the choice and how undetected hosts are reported/skipped
+- [x] install: make --host optional - absent = all targets, present = only the listed host(s); support comma-separated multi
+- [x] uninstall: add a --host filter - absent = all manifest entries, present = only that host's entries
+- [x] --list and --dry-run honour the same host selection so planning matches the run
+- [x] Update HELP_TEXT + README with install/uninstall --host semantics
+- [x] verify that `kanbn-mcp install` with no --host wires every known/detected host
+- [x] verify that `kanbn-mcp install --host=<agent>` wires only that host
+- [x] verify that `kanbn-mcp uninstall` with no --host removes every host's entries
+- [x] verify that `kanbn-mcp uninstall --host=<agent>` removes only that host's entries and leaves the others
+- [x] add tests for all four combinations (install all / install one, uninstall all / uninstall one)
 
 ## Relations
 
 - [related-to split-kanbn-mcp-setup-into-install-and-setup](split-kanbn-mcp-setup-into-install-and-setup.md)
 - [related-to kanbn-mcp-install-writes-only-per-host-home-config-drop-project-level-registration](kanbn-mcp-install-writes-only-per-host-home-config-drop-project-level-registration.md)
+
+## History
+
+- type: moved
+  date: 2026-10-14T22:29:06.976Z
+  fromColumn: Backlog
+  toColumn: In Progress
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-10-14T22:44:37.998Z
+  fromColumn: In Progress
+  toColumn: Done
+  author: Kevin J. Duling
+- type: progress
+  date: 2026-10-14T22:44:38.048Z
+  fromProgress: 0
+  toProgress: 1
+  author: Kevin J. Duling

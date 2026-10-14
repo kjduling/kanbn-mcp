@@ -451,8 +451,18 @@ export async function runInstall(argv: string[], options: RunOptions = {}): Prom
     if (args.check) {
         // Deterministic check: recompute what would be installed from current config + host detection
         const detected = detectHosts(home).filter((h) => h.detected).map((h) => h.slug);
-        const mcpClients = selectedMcpClients(args.mcp, detected);
         const hostSlugs = resolveHostSlugs(args.host);
+        const targetHosts = hostSlugs ?? detected;
+
+        let mcpClients: string[];
+        if (hostSlugs) {
+            mcpClients = hostSlugs.filter((slug) => detected.includes(slug));
+        } else if (args.mcp === true || Array.isArray(args.mcp)) {
+            mcpClients = selectedMcpClients(args.mcp, detected);
+        } else {
+            mcpClients = detected.filter((slug) => REGISTRABLE_CLIENTS.includes(slug));
+        }
+
         const globalSkills: { path: string; host: string }[] = [];
         if (hostSlugs) {
             for (const slug of hostSlugs) {
@@ -461,7 +471,15 @@ export async function runInstall(argv: string[], options: RunOptions = {}): Prom
                     globalSkills.push({ path: target, host: slug });
                 }
             }
+        } else if (args.mcp !== true && !Array.isArray(args.mcp)) {
+            for (const slug of targetHosts) {
+                const target = globalSkillForHost(slug, home);
+                if (target) {
+                    globalSkills.push({ path: target, host: slug });
+                }
+            }
         }
+
         out(`kanbn-mcp install state for ${root}:`);
         if (mcpClients.length > 0) {
             out(`  MCP registration (${mcpClients.join(", ")}):`);
@@ -473,7 +491,7 @@ export async function runInstall(argv: string[], options: RunOptions = {}): Prom
                 }
             }
         } else {
-            out("  MCP registration: none (no --mcp or no detected clients)");
+            out("  MCP registration: none (no detected registrable clients)");
         }
         if (globalSkills.length > 0) {
             out("  Global skills:");
@@ -481,7 +499,7 @@ export async function runInstall(argv: string[], options: RunOptions = {}): Prom
                 out(`    - ${fs.existsSync(gs.path) ? "ok" : "MISSING"} ${gs.path} (${gs.host})`);
             }
         } else {
-            out("  Global skills: none (no --host specified)");
+            out("  Global skills: none (no target hosts with global skills)");
         }
         return;
     }
@@ -492,29 +510,51 @@ export async function runInstall(argv: string[], options: RunOptions = {}): Prom
 
     const detected = detectHosts(home).filter((h) => h.detected).map((h) => h.slug);
     const hostSlugs = resolveHostSlugs(args.host);
+
+    // Determine target hosts: if --host is given, use those; otherwise use all detected hosts
+    // (this is the squeez parity: install with no --host targets all detected hosts)
+    const targetHosts = hostSlugs ?? detected;
+
     let mcpClients: string[];
     if (hostSlugs) {
-        // --host limits both MCP registration and global skills to specified hosts
+        // --host explicitly limits both MCP registration and global skills to specified hosts
         mcpClients = hostSlugs.filter((slug) => detected.includes(slug));
-    } else {
+    } else if (args.mcp === true || Array.isArray(args.mcp)) {
+        // --mcp without --host: register MCP for detected registrable clients (backward compat)
         mcpClients = selectedMcpClients(args.mcp, detected);
+    } else {
+        // No flags: install for all detected hosts (both MCP and global skills)
+        mcpClients = detected.filter((slug) => REGISTRABLE_CLIENTS.includes(slug));
     }
+
     const globalSkills: { path: string; host: string }[] = [];
     if (hostSlugs) {
+        // --host: only global skills for specified hosts
         for (const slug of hostSlugs) {
             const target = globalSkillForHost(slug, home);
             if (target) {
                 globalSkills.push({ path: target, host: slug });
             }
         }
+    } else if (args.mcp !== true && !Array.isArray(args.mcp)) {
+        // No --host and no --mcp: install global skills for all target hosts
+        for (const slug of targetHosts) {
+            const target = globalSkillForHost(slug, home);
+            if (target) {
+                globalSkills.push({ path: target, host: slug });
+            }
+        }
     }
+    // If --mcp is given without --host, no global skills are installed (backward compat)
 
     if (args.dryRun) {
         const globalPlans: WrittenTarget[] = globalSkills.map((gs) => ({ path: gs.path, host: gs.host, kind: "file", changed: true }));
         // For dry-run, use the same mcpClients logic
         const dryRunMcpClients = hostSlugs
             ? hostSlugs.filter((slug) => detected.includes(slug))
-            : selectedMcpClients(args.mcp, detected);
+            : (args.mcp === true || Array.isArray(args.mcp))
+                ? selectedMcpClients(args.mcp, detected)
+                : detected.filter((slug) => REGISTRABLE_CLIENTS.includes(slug));
         printWriteReport(
             describeWrites(globalPlans, new Set(globalSkills.map((gs) => gs.path))),
             planRegistrations(dryRunMcpClients, root, true, home),
@@ -571,11 +611,18 @@ export async function runInstall(argv: string[], options: RunOptions = {}): Prom
         index === self.findIndex((r) => r.path === reg.path && r.client === reg.client)
     );
 
+    // Merge written entries (global skills) with existing
+    const priorWritten = existingManifest?.written ?? [];
+    const mergedWritten = [
+        ...priorWritten.filter((prior) => !written.some((w) => w.path === prior.path && w.host === prior.host)),
+        ...written,
+    ];
+
     const updatedManifest: SetupManifest = {
         schemaVersion: 1,
         generatedAt: new Date().toISOString(),
         answers: existingManifest?.answers ?? answers,
-        written: existingManifest?.written ?? [],
+        written: mergedWritten,
         registered: uniqueRegistered,
     };
     writeManifest(root, updatedManifest);
@@ -607,7 +654,7 @@ function planRegistrations(mcp: boolean | string[], root: string, dryRun: boolea
     return plan;
 }
 
-/** Reverse everything `kanbn-mcp setup` wrote, using the manifest. */
+/** Reverse everything `kanbn-mcp setup`/`install` wrote, using the manifest. */
 export async function runUninstall(argv: string[], options: RunOptions = {}): Promise<void> {
     const args = parseSetupArgs(argv);
     const root = resolveRoot(args.positionals, process.cwd());
@@ -616,9 +663,18 @@ export async function runUninstall(argv: string[], options: RunOptions = {}): Pr
         out(`Nothing installed by kanbn-mcp setup in ${root}.`);
         return;
     }
+
+    // Filter by --host if provided
+    const hostFilter = args.host ? resolveHostSlugs(args.host) : null;
+    const filterByHost = (host: string) => hostFilter === null || hostFilter.includes(host as HostSlug);
+
     const removed: string[] = [];
     const left: string[] = [];
     for (const target of manifest.written) {
+        if (!filterByHost(target.host)) {
+            left.push(`${target.path} (host "${target.host}" filtered out by --host)`);
+            continue;
+        }
         try {
             if (target.kind === "block") {
                 if (removeBlock(target.path)) {
@@ -639,6 +695,10 @@ export async function runUninstall(argv: string[], options: RunOptions = {}): Pr
         }
     }
     for (const reg of manifest.registered) {
+        if (!filterByHost(reg.client)) {
+            left.push(`${reg.path} (client "${reg.client}" filtered out by --host)`);
+            continue;
+        }
         try {
             if (unregisterClient(reg.path, reg.client)) {
                 removed.push(reg.path);
@@ -650,8 +710,30 @@ export async function runUninstall(argv: string[], options: RunOptions = {}): Pr
         }
     }
     try {
-        fs.rmSync(manifestPath(root), { force: true });
-        removed.push(manifestPath(root));
+        if (hostFilter === null) {
+            // No --host filter: remove everything including the manifest
+            fs.rmSync(manifestPath(root), { force: true });
+            removed.push(manifestPath(root));
+        } else {
+            // --host filter: update manifest to keep non-filtered entries
+            const remainingWritten = manifest.written.filter((t) => !filterByHost(t.host));
+            const remainingRegistered = manifest.registered.filter((r) => !filterByHost(r.client));
+            if (remainingWritten.length === 0 && remainingRegistered.length === 0) {
+                // Nothing left: remove the manifest
+                fs.rmSync(manifestPath(root), { force: true });
+                removed.push(manifestPath(root));
+            } else {
+                const updatedManifest: SetupManifest = {
+                    schemaVersion: manifest.schemaVersion,
+                    generatedAt: new Date().toISOString(),
+                    answers: manifest.answers,
+                    written: remainingWritten,
+                    registered: remainingRegistered,
+                };
+                writeManifest(root, updatedManifest);
+                out(`  - manifest updated (${remainingWritten.length} written, ${remainingRegistered.length} registered entries remain)`);
+            }
+        }
     } catch {
         // ignore
     }

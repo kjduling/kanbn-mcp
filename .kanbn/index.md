@@ -10,7 +10,6 @@ completedColumns:
 ## Backlog
 
 - [directed-relation-hygiene-depends-on-blocks-edges-should-mirror-on-both-tasks-guidance-and-or-audit-mirroring](tasks/directed-relation-hygiene-depends-on-blocks-edges-should-mirror-on-both-tasks-guidance-and-or-audit-mirroring.md)
-- [kanbn-mcp-install-and-uninstall-target-all-known-hosts-by-default-host-agent-limits-to-one](tasks/kanbn-mcp-install-and-uninstall-target-all-known-hosts-by-default-host-agent-limits-to-one.md)
 - [make-kanbn-mcp-uninstall-and-check-deterministic-drop-written-registered-state-from-the-config](tasks/make-kanbn-mcp-uninstall-and-check-deterministic-drop-written-registered-state-from-the-config.md)
 - [move-board-config-to-home-kanbn-kanbn-mcp-config-json-with-per-field-project-override](tasks/move-board-config-to-home-kanbn-kanbn-mcp-config-json-with-per-field-project-override.md)
 - [add-a-per-project-board-path-to-home-kanbn-kanbn-mcp-config-json-replaces-kanbn-default-path](tasks/add-a-per-project-board-path-to-home-kanbn-kanbn-mcp-config-json-replaces-kanbn-default-path.md)
@@ -38,5 +37,6 @@ completedColumns:
 - [task-descriptions-can-hijack-reserved-sections-when-they-embed-a-level-2-sub-tasks-heading](tasks/task-descriptions-can-hijack-reserved-sections-when-they-embed-a-level-2-sub-tasks-heading.md)
 - [kanbn-init-board-should-accept-omitted-columns-documented-optional](tasks/kanbn-init-board-should-accept-omitted-columns-documented-optional.md)
 - [kanbn-mcp-install-writes-only-per-host-home-config-drop-project-level-registration](tasks/kanbn-mcp-install-writes-only-per-host-home-config-drop-project-level-registration.md)
+- [kanbn-mcp-install-and-uninstall-target-all-known-hosts-by-default-host-agent-limits-to-one](tasks/kanbn-mcp-install-and-uninstall-target-all-known-hosts-by-default-host-agent-limits-to-one.md)
 
 ## Blocked

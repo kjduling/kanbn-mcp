@@ -800,3 +800,219 @@ describe("runSetup end to end", () => {
         }
     });
 });
+
+describe("install/uninstall --host targeting", () => {
+    test("install with no flags targets all detected hosts (MCP + global skills)", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            mkdirSync(join(home, ".config", "opencode"), { recursive: true });
+            mkdirSync(join(home, ".claude"), { recursive: true });
+            await runInstall(["install", dir, "--yes"], { home });
+            // opencode: registered in home config
+            const homeConfig = readJsonLoose(join(home, ".config", "opencode", "opencode.json"));
+            assert.deepEqual(homeConfig.config?.mcp.kanbn, { type: "local", command: ["kanbn-mcp"], enabled: true });
+            // claude: registered in home config
+            const claudeConfig = readJsonLoose(join(home, ".claude.json"));
+            assert.deepEqual(claudeConfig.config?.mcpServers, { kanbn: { command: "kanbn-mcp", args: [] } });
+            // global skills for both
+            assert.ok(existsSync(join(home, ".config", "opencode", "skills", "kanbn", "SKILL.md")));
+            assert.ok(existsSync(join(home, ".claude", "skills", "kanbn", "SKILL.md")));
+            const manifest = readManifest(dir);
+            const clients = manifest?.registered.map((r) => r.client).sort();
+            assert.deepEqual(clients, ["claude", "opencode"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
+    test("install --host=opencode targets only opencode", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            mkdirSync(join(home, ".config", "opencode"), { recursive: true });
+            mkdirSync(join(home, ".claude"), { recursive: true });
+            await runInstall(["install", dir, "--yes", "--host=opencode"], { home });
+            // opencode: registered in home config
+            const homeConfig = readJsonLoose(join(home, ".config", "opencode", "opencode.json"));
+            assert.deepEqual(homeConfig.config?.mcp.kanbn, { type: "local", command: ["kanbn-mcp"], enabled: true });
+            // claude: NOT registered
+            const claudeConfig = readJsonLoose(join(home, ".claude.json"));
+            assert.ok(!("kanbn" in (claudeConfig.config?.mcpServers ?? {})));
+            // global skills only for opencode
+            assert.ok(existsSync(join(home, ".config", "opencode", "skills", "kanbn", "SKILL.md")));
+            assert.ok(!existsSync(join(home, ".claude", "skills", "kanbn", "SKILL.md")));
+            const manifest = readManifest(dir);
+            assert.equal(manifest?.registered.length, 1);
+            assert.equal(manifest?.registered[0].client, "opencode");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
+    test("install --host=opencode,claude targets multiple hosts", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            mkdirSync(join(home, ".config", "opencode"), { recursive: true });
+            mkdirSync(join(home, ".claude"), { recursive: true });
+            await runInstall(["install", dir, "--yes", "--host=opencode,claude"], { home });
+            const homeConfig = readJsonLoose(join(home, ".config", "opencode", "opencode.json"));
+            assert.deepEqual(homeConfig.config?.mcp.kanbn, { type: "local", command: ["kanbn-mcp"], enabled: true });
+            const claudeConfig = readJsonLoose(join(home, ".claude.json"));
+            assert.deepEqual(claudeConfig.config?.mcpServers, { kanbn: { command: "kanbn-mcp", args: [] } });
+            assert.ok(existsSync(join(home, ".config", "opencode", "skills", "kanbn", "SKILL.md")));
+            assert.ok(existsSync(join(home, ".claude", "skills", "kanbn", "SKILL.md")));
+            const manifest = readManifest(dir);
+            const clients = manifest?.registered.map((r) => r.client).sort();
+            assert.deepEqual(clients, ["claude", "opencode"]);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
+    test("uninstall with no flags removes all hosts entries", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            mkdirSync(join(home, ".config", "opencode"), { recursive: true });
+            mkdirSync(join(home, ".claude"), { recursive: true });
+            await runInstall(["install", dir, "--yes"], { home });
+            const output = await captureStdout(() => runUninstall(["uninstall", dir]));
+            assert.match(output, /Removed:/);
+            // opencode config cleaned (kanbn entry removed, mcp object may be empty)
+            const homeConfig = readJsonLoose(join(home, ".config", "opencode", "opencode.json"));
+            assert.ok(!("kanbn" in (homeConfig.config?.mcp ?? {})));
+            // claude config cleaned (kanbn entry removed, mcpServers object may be empty)
+            const claudeConfig = readJsonLoose(join(home, ".claude.json"));
+            assert.ok(!("kanbn" in (claudeConfig.config?.mcpServers ?? {})));
+            // global skills removed
+            assert.ok(!existsSync(join(home, ".config", "opencode", "skills", "kanbn", "SKILL.md")));
+            assert.ok(!existsSync(join(home, ".claude", "skills", "kanbn", "SKILL.md")));
+            // manifest removed
+            assert.ok(!existsSync(join(dir, ".kanbn", "setup.json")));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
+    test("uninstall --host=opencode removes only opencode entries", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            mkdirSync(join(home, ".config", "opencode"), { recursive: true });
+            mkdirSync(join(home, ".claude"), { recursive: true });
+            await runInstall(["install", dir, "--yes"], { home });
+            // uninstall only opencode
+            const output = await captureStdout(() => runUninstall(["uninstall", dir, "--host=opencode"]));
+            assert.match(output, /Removed:/);
+            assert.match(output, /opencode/);
+            // opencode config cleaned
+            const homeConfig = readJsonLoose(join(home, ".config", "opencode", "opencode.json"));
+            assert.equal(homeConfig.config?.mcp, undefined);
+            // claude config STILL EXISTS
+            const claudeConfig = readJsonLoose(join(home, ".claude.json"));
+            assert.deepEqual(claudeConfig.config?.mcpServers, { kanbn: { command: "kanbn-mcp", args: [] } });
+            // opencode skill removed, claude skill remains
+            assert.ok(!existsSync(join(home, ".config", "opencode", "skills", "kanbn", "SKILL.md")));
+            assert.ok(existsSync(join(home, ".claude", "skills", "kanbn", "SKILL.md")));
+            // manifest updated, not removed
+            const manifest = readManifest(dir);
+            assert.ok(manifest);
+            assert.equal(manifest?.registered.length, 1);
+            assert.equal(manifest?.registered[0].client, "claude");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
+    test("uninstall --host=opencode,claude removes multiple hosts", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            mkdirSync(join(home, ".config", "opencode"), { recursive: true });
+            mkdirSync(join(home, ".claude"), { recursive: true });
+            await runInstall(["install", dir, "--yes"], { home });
+            const output = await captureStdout(() => runUninstall(["uninstall", dir, "--host=opencode,claude"]));
+            assert.match(output, /Removed:/);
+            // both configs cleaned (kanbn entries removed)
+            const homeConfig = readJsonLoose(join(home, ".config", "opencode", "opencode.json"));
+            assert.ok(!("kanbn" in (homeConfig.config?.mcp ?? {})));
+            const claudeConfig = readJsonLoose(join(home, ".claude.json"));
+            assert.ok(!("kanbn" in (claudeConfig.config?.mcpServers ?? {})));
+            // both skills removed
+            assert.ok(!existsSync(join(home, ".config", "opencode", "skills", "kanbn", "SKILL.md")));
+            assert.ok(!existsSync(join(home, ".claude", "skills", "kanbn", "SKILL.md")));
+            // manifest removed (all entries gone)
+            assert.ok(!existsSync(join(dir, ".kanbn", "setup.json")));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
+    test("uninstall --host=unknown-host errors appropriately", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            mkdirSync(join(home, ".config", "opencode"), { recursive: true });
+            await runInstall(["install", dir, "--yes", "--host=opencode"], { home });
+            // uninstall with unknown host
+            let threw = false;
+            try {
+                await runUninstall(["uninstall", dir, "--host=unknown-host"]);
+            } catch (e) {
+                threw = true;
+                assert.match((e as Error).message, /Unknown host "unknown-host"/);
+            }
+            assert.ok(threw);
+            // opencode config should still exist
+            const homeConfig = readJsonLoose(join(home, ".config", "opencode", "opencode.json"));
+            assert.deepEqual(homeConfig.config?.mcp.kanbn, { type: "local", command: ["kanbn-mcp"], enabled: true });
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
+    test("install --check with no flags reports all detected hosts", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            mkdirSync(join(home, ".config", "opencode"), { recursive: true });
+            mkdirSync(join(home, ".claude"), { recursive: true });
+            const output = await captureStdout(() => runInstall(["install", dir, "--check"], { home }));
+            assert.match(output, /MCP registration/);
+            assert.match(output, /opencode/);
+            assert.match(output, /claude/);
+            assert.match(output, /Global skills/);
+            assert.match(output, /opencode/);
+            assert.match(output, /claude/);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
+    test("install --dry-run with no flags plans for all detected hosts", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            mkdirSync(join(home, ".config", "opencode"), { recursive: true });
+            mkdirSync(join(home, ".claude"), { recursive: true });
+            const output = await captureStdout(() => runInstall(["install", dir, "--dry-run"], { home }));
+            assert.match(output, /would register.*opencode/i);
+            assert.match(output, /would register.*claude/i);
+            assert.match(output, /SKILL\.md.*opencode/i);
+            assert.match(output, /SKILL\.md.*claude/i);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+});

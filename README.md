@@ -247,10 +247,17 @@ The canonical body is client-neutral — it names only kanbn-mcp MCP tools, neve
 | Flag | Effect |
 | --- | --- |
 | `--mcp[=clients]` | register the kanbn MCP server in detected client configs — `~/.config/opencode/opencode.json` (opencode), `~/.claude.json` (Claude Code), `~/.cline/data/settings/cline_mcp_settings.json` (Cline), `~/.codeium/windsurf/mcp_config.json` (Windsurf), VS Code user `mcp.json` (GitHub Copilot); limit with a comma list, e.g. `--mcp=opencode,claude` |
-| `--host=<slugs>` | install global skill for `opencode\|claude\|cline\|copilot` (comma-separated) into `~/.config/opencode/skills/kanbn/SKILL.md` / `~/.claude/skills/kanbn/SKILL.md` / `~/.cline/skills/kanbn/SKILL.md` / `~/.copilot/skills/kanbn/SKILL.md` |
+| `--host=<slugs>` | install global skill + MCP registration for `opencode\|claude\|cline\|copilot` (comma-separated) into their respective home configs; if omitted, installs for **all detected hosts** |
 | `--list` | list detected clients and target files; change nothing |
 | `--dry-run` | show what would be written; change nothing |
 | `--check` | report current install state |
+
+### Flags for `kanbn-mcp uninstall`
+
+| Flag | Effect |
+| --- | --- |
+| `--host=<slugs>` | uninstall only the specified hosts (comma-separated); if omitted, uninstalls **all hosts** from the manifest |
+| `--check` | report current install state (alias for `install --check`) |
 
 ### Non-interactive runs (CI)
 
