@@ -25,8 +25,8 @@ export function getKanbnInstance(boardPath: string): any {
 }
 
 /**
- * Resolve the board path from an explicit override, the KANBN_DEFAULT_PATH
- * environment variable, or the server working directory.
+ * Resolve the board path from an explicit per-call override or the server working directory.
+ * KANBN_DEFAULT_PATH is ignored and warned about if set.
  * @param {string} [customPath] Optional explicit board path
  * @returns {string} The resolved absolute board path
  */
@@ -34,8 +34,10 @@ export function getKanbnPath(customPath?: string): string {
     if (customPath) {
         return path.resolve(customPath);
     }
+    // Warn loudly if KANBN_DEFAULT_PATH is set (it's ignored per the bug fix decision)
     if (process.env.KANBN_DEFAULT_PATH) {
-        return path.resolve(process.env.KANBN_DEFAULT_PATH);
+        console.error(`[getKanbnPath] KANBN_DEFAULT_PATH is ignored. The board resolves from the project directory (${process.cwd()}). To override, pass an explicit 'path' argument.`);
+        delete process.env.KANBN_DEFAULT_PATH;
     }
     return process.cwd();
 }

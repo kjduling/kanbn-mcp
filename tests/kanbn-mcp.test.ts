@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { describe, mock } from "node:test";
 
-import { buildTaskDataFromArgs, enqueueKanbnOperation, getArchiveMethod, getKanbnInstance, handleKanbnInitBoard, handleToolCall, isBoardInitialized, isMainEntry, listTools, registerInitializedMethod, resetOperationQueue } from "../src/server";
+import { buildTaskDataFromArgs, enqueueKanbnOperation, getArchiveMethod, getKanbnInstance, getKanbnPath, handleKanbnInitBoard, handleToolCall, isBoardInitialized, isMainEntry, listTools, registerInitializedMethod, resetOperationQueue } from "../src/server";
 import { mergeExistingTaskData, normaliseRelationType } from "../src/server";
 import { TOOLS } from "../src/server";
 
@@ -3748,25 +3748,10 @@ describe("kanbn_delete_board", () => {
         }
     });
 
-    test("rejects deletion when KANBN_DEFAULT_PATH points to non-board directory", async () => {
-        const dir = makeTempDir();
-        const originalEnv = process.env.KANBN_DEFAULT_PATH;
-
-        try {
-            process.env.KANBN_DEFAULT_PATH = dir;
-
-            const result = await handleToolCall("kanbn_delete_board", {});
-
-            assert.match(result.content[0].text, /Not a Kanbn board directory/i);
-        } finally {
-            rmSync(dir, { recursive: true, force: true });
-            if (originalEnv !== undefined) {
-                process.env.KANBN_DEFAULT_PATH = originalEnv;
-            } else {
-                delete process.env.KANBN_DEFAULT_PATH;
-            }
-        }
-    });
+    // Note: The old test "rejects deletion when KANBN_DEFAULT_PATH points to non-board directory" has been removed.
+    // Per the bug fix (remove-kanbn-default-path), KANBN_DEFAULT_PATH is now ignored and warnings are printed to stderr.
+    // Resolution strictly follows: explicit path argument -> process.cwd(). The board always resolves from the project directory.
+    // A set KANBN_DEFAULT_PATH triggers a loud warning but does not change resolution.
 });
 
 describe("getKanbnInstance", () => {
@@ -3811,6 +3796,86 @@ describe("getKanbnInstance", () => {
             assert.ok(instance !== null && instance !== undefined, "should return a non-null instance");
         } finally {
             rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("getKanbnPath resolution", () => {
+    test("explicit path argument resolves to that path", () => {
+        const explicitDir = makeTempDir();
+        try {
+            const result = getKanbnPath(explicitDir);
+            assert.equal(result, explicitDir, "should resolve to explicit path");
+        } finally {
+            rmSync(explicitDir, { recursive: true, force: true });
+        }
+    });
+
+    test("no path argument resolves to process.cwd()", () => {
+        const cwd = process.cwd();
+        try {
+            const result = getKanbnPath(undefined);
+            assert.equal(result, cwd, "should resolve to process.cwd() when no path is provided");
+        } finally {
+            // cleanup handled by finally block above
+        }
+    });
+
+    test("resolved board is process.cwd() when KANBN_DEFAULT_PATH is set but no path argument is given", () => {
+        const tempDir = makeTempDir();
+        const cwd = process.cwd();
+        
+        try {
+            process.env.KANBN_DEFAULT_PATH = tempDir;
+            
+            const result = getKanbnPath(undefined);
+            
+            // KANBN_DEFAULT_PATH should be ignored and we should still resolve to cwd
+            assert.equal(result, cwd, "KANBN_DEFAULT_PATH is ignored; resolution falls back to process.cwd()");
+        } finally {
+            rmSync(tempDir, { recursive: true, force: true });
+        }
+    });
+
+    test("set KANBN_DEFAULT_PATH does NOT change the resolved board (regression guard)", () => {
+        const tempDir = makeTempDir();
+        const cwd = process.cwd();
+        
+        try {
+            process.env.KANBN_DEFAULT_PATH = tempDir;
+            
+            const result = getKanbnPath(undefined);
+            
+            // Even with KANBN_DEFAULT_PATH set, resolution must still use cwd (not the env var)
+            assert.equal(result, cwd, "KANBN_DEFAULT_PATH must not influence board resolution");
+        } finally {
+            rmSync(tempDir, { recursive: true, force: true });
+        }
+    });
+
+    test("explicit path overrides process.cwd() when both are available", () => {
+        const explicitDir = makeTempDir();
+        try {
+            const result = getKanbnPath(explicitDir);
+            
+            assert.equal(result, explicitDir, "explicit path should override cwd");
+        } finally {
+            rmSync(explicitDir, { recursive: true, force: true });
+        }
+    });
+
+    test("no path argument resolves to process.cwd() regardless of KANBN_DEFAULT_PATH being set", () => {
+        const tempBoardPath = makeTempDir();
+        const cwd = process.cwd();
+        
+        try {
+            process.env.KANBN_DEFAULT_PATH = tempBoardPath;
+            
+            // Without an explicit path argument, resolution should use cwd (not env var)
+            const result = getKanbnPath(undefined);
+            assert.equal(result, cwd, "without explicit path, resolution uses cwd even if KANBN_DEFAULT_PATH is set");
+        } finally {
+            rmSync(tempBoardPath, { recursive: true, force: true });
         }
     });
 });

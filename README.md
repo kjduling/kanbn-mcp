@@ -94,7 +94,6 @@ Point your MCP client at the `kanbn-mcp` command from the global install. The im
 
 - `command`: `kanbn-mcp` (after `npm install -g @kduling/kanbn-mcp`)
 - `args`: usually empty; `kanbn-mcp` accepts a literal `mcp` argument for hosts that expect a subcommand-style arg (e.g. `"args": ["mcp"]`); some hosts (e.g. Cline) expect a placeholder such as `[""]`
-- `KANBN_DEFAULT_PATH`: optional — sets a fixed board regardless of working directory
 
 ### opencode
 
@@ -174,19 +173,7 @@ Copilot reads the board guidance the same way it reads everything else in a proj
 
 With no extra configuration the server reads the board from its **working directory** — the directory the MCP host launches the server in. Open the host in your project root (the directory containing the `.kanbn` folder) and it manages that board. When the host launches the server from your home directory (common for a globally installed command), the server looks there instead.
 
-`KANBN_DEFAULT_PATH` is optional; set it to pin a fixed board regardless of the working directory:
 
-```jsonc
-// opencode: add to the "kanbn" entry above
-"environment": { "KANBN_DEFAULT_PATH": "/path/to/project-root" }
-
-// Claude Desktop / other "mcpServers" hosts: add to the "kanbn" entry above
-"env": { "KANBN_DEFAULT_PATH": "/path/to/project-root" }
-```
-
-It should point at the project root that contains the `.kanbn` directory, not into `.kanbn` itself. Individual tools can also override the board per call with a `path` argument.
-
-## Agent guidance with kanbn-mcp setup
 
 Kanbn boards are markdown files; nothing stops a freshly launched agent from re-inventing the board's vocabulary (columns, tags, WIP limits). `kanbn-mcp setup` closes that loop: one short Q&A about how the board works, and the answers are written as AI-agnostic guidance into the files each client reads. Any agent that can see the repo — opencode, Claude, Windsurf, Cline, Devin, or a future one — knows the conventions before it touches a ticket.
 

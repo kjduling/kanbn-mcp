@@ -70,15 +70,6 @@ Run with no options to start the MCP server over stdio. The server also
 starts when the entry script's filename contains "server", when a literal
 'mcp' positional argument is present, or when --run-server is passed.
 
-ENVIRONMENT
-  KANBN_DEFAULT_PATH   Optional. Default board directory (must contain a .kanbn
-                       folder). If unset, the server resolves the board from its
-                       working directory - usually the directory the MCP host
-                       launched the server from (often the project root you have
-                       open, or the home directory for a global launch).
-                       Individual tools can override this per-call with a "path"
-                       argument.
-
 LIMITATION
   operationQueue serializes ops within a single session. No concurrent connections.
   If multiple connections arise, a per-connection queue would be required.
@@ -155,14 +146,6 @@ MCP CLIENT CONFIGURATION
 
   In all cases the board root (the directory containing .kanbn) is taken from
   the server's working directory, so each project configures its own board.
-  To force a fixed board regardless of working directory, add an optional
-  environment entry:
-
-    opencode:     "environment": { "KANBN_DEFAULT_PATH": "/path/to/project-root" }
-    mcpServers:   "env": { "KANBN_DEFAULT_PATH": "/path/to/project-root" }
-
-  KANBN_DEFAULT_PATH is optional and should point at the project root that
-  contains the .kanbn directory, not into .kanbn itself.
 
 SETUP
 

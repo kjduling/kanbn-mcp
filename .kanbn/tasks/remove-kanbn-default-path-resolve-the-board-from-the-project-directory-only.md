@@ -1,9 +1,11 @@
 ---
+created: 2026-10-13T20:08:55.866Z
+updated: 2026-10-14T02:27:19.635Z
 tags:
   - bug
   - high
-created: 2026-10-13T20:08:55.866Z
-updated: 2026-10-13T22:01:04.123Z
+started: 2026-10-14T01:17:40.384Z
+completed: 2026-10-14T02:27:19.635Z
 ---
 
 # Remove KANBN_DEFAULT_PATH; resolve the board from the project directory only
@@ -20,15 +22,15 @@ Also touches: HELP_TEXT ENVIRONMENT block + client config examples (src/server.t
 
 ## Sub-tasks
 
-- [ ] Remove the process.env.KANBN_DEFAULT_PATH branch from getKanbnPath (src/kanbn/instance.ts); resolution becomes per-call path -> process.cwd()
-- [ ] Implement a loud warning when KANBN_DEFAULT_PATH is still set: one clear stderr line naming the ignored variable and the board actually used; resolution must not change
-- [ ] Remove the ENVIRONMENT entry and env blocks from HELP_TEXT (src/server.ts) and the README 'Pin a fixed board' subsection + config snippets
-- [ ] Remove KANBN_DEFAULT_PATH from this repo's opencode.json
-- [ ] Update tests: drop the test that relies on KANBN_DEFAULT_PATH and replace it with a cwd-based case (tests/kanbn-mcp.test.ts:3584)
-- [ ] Mark the Done ticket 'docs-kanbn-default-path-is-optional...' as superseded (comment) - its 'pin a fixed board' guidance no longer applies
-- [ ] verify that a set KANBN_DEFAULT_PATH does NOT change the resolved board (regression guard)
-- [ ] verify that an explicit per-call path still overrides cwd, and that no path argument resolves to process.cwd()
-- [ ] add a regression test that the resolved board is process.cwd() when KANBN_DEFAULT_PATH is set and no path argument is given
+- [x] Remove the process.env.KANBN_DEFAULT_PATH branch from getKanbnPath (src/kanbn/instance.ts); resolution becomes per-call path -> process.cwd()
+- [x] Implement a loud warning when KANBN_DEFAULT_PATH is still set: one clear stderr line naming the ignored variable and the board actually used; resolution must not change
+- [x] Remove the ENVIRONMENT entry and env blocks from HELP_TEXT (src/server.ts) and the README 'Pin a fixed board' subsection + config snippets
+- [x] Remove KANBN_DEFAULT_PATH from this repo's opencode.json
+- [x] Update tests: drop the test that relies on KANBN_DEFAULT_PATH and replace it with a cwd-based case (tests/kanbn-mcp.test.ts:3584)
+- [x] Mark the Done ticket 'docs-kanbn-default-path-is-optional...' as superseded (comment) - its 'pin a fixed board' guidance no longer applies
+- [x] verify that a set KANBN_DEFAULT_PATH does NOT change the resolved board (regression guard)
+- [x] verify that an explicit per-call path still overrides cwd, and that no path argument resolves to process.cwd()
+- [x] add a regression test that the resolved board is process.cwd() when KANBN_DEFAULT_PATH is set and no path argument is given
 
 ## Relations
 
@@ -40,3 +42,25 @@ Also touches: HELP_TEXT ENVIRONMENT block + client config examples (src/server.t
 - author: Kevin J. Duling
   date: 2026-10-13T20:12:57.288Z
   Decision (2026-10-13): loud-warn. When KANBN_DEFAULT_PATH is set it is ignored and a clear warning is printed to stderr naming the variable and the resolved board. Replacement (per-project, explicit) is tracked separately via the kanbn-mcp-config.json field.
+- author: Kevin J. Duling
+  date: 2026-10-14T01:14:24.040Z
+  Decision (2026-10-13): loud-warn. When KANBN_DEFAULT_PATH is set it is ignored and a clear warning is printed to stderr naming the variable and the resolved board. Replacement (per-project, explicit) is tracked separately via the kanbn-mcp-config.json field.
+  
+  Done:
+  - Removed process.env.KANBN_DEFAULT_PATH branch from getKanbnPath
+  - Added loud console.error warning when KANBN_DEFAULT_PATH is set
+  - Removed ENVIRONMENT block and client config examples from HELP_TEXT  
+  - Removed "Pin a fixed board" section and env blocks from README.md
+  - Removed KANBN_DEFAULT_PATH from opencode.json
+  
+  To do:
+  - Update tests to drop KANBN_DEFAULT_PATH test and add cwd-based case
+  - Mark docs-kanbn-default-path-is-optional ticket as superseded (comment)
+
+## History
+
+- type: moved
+  date: 2026-10-14T02:27:19.635Z
+  fromColumn: In Progress
+  toColumn: Done
+  author: Kevin J. Duling
