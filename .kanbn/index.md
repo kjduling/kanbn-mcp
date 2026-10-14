@@ -20,7 +20,6 @@ completedColumns:
 - [add-a-per-project-board-path-to-home-kanbn-kanbn-mcp-config-json-replaces-kanbn-default-path](tasks/add-a-per-project-board-path-to-home-kanbn-kanbn-mcp-config-json-replaces-kanbn-default-path.md)
 - [clean-up-the-setup-prompt-layout-break-wordy-single-line-questions-and-defaults-onto-readable-lines](tasks/clean-up-the-setup-prompt-layout-break-wordy-single-line-questions-and-defaults-onto-readable-lines.md)
 - [ensure-skill-files-are-installed-to-correct-directories-for-each-agent-host](tasks/ensure-skill-files-are-installed-to-correct-directories-for-each-agent-host.md)
-- [kanbn-edit-task-should-give-actionable-error-when-task-file-is-unparseable](tasks/kanbn-edit-task-should-give-actionable-error-when-task-file-is-unparseable.md)
 - [kanbn-init-board-should-accept-omitted-columns-documented-optional](tasks/kanbn-init-board-should-accept-omitted-columns-documented-optional.md)
 - [history-task](tasks/history-task.md)
 - [replace-task](tasks/replace-task.md)
@@ -46,5 +45,6 @@ completedColumns:
 ## Done
 
 - [kanbn-edit-task-appends-to-history-instead-of-replacing-it](tasks/kanbn-edit-task-appends-to-history-instead-of-replacing-it.md)
+- [kanbn-edit-task-should-give-actionable-error-when-task-file-is-unparseable](tasks/kanbn-edit-task-should-give-actionable-error-when-task-file-is-unparseable.md)
 
 ## Blocked

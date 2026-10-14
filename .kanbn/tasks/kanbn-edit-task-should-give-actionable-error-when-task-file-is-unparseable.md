@@ -1,8 +1,12 @@
 ---
+board: index
 tags:
   - bug
   - high
 created: 2026-10-13T22:38:46.228Z
+updated: 2026-10-13T23:45:10.684Z
+started: 2026-10-13T23:42:24.632Z
+completed: 2026-10-13T23:45:10.684Z
 ---
 
 # kanbn_edit_task should give actionable error when task file is unparseable
@@ -13,15 +17,14 @@ Fix: detect parse/load failures when reading existing task in edit path; re-thro
 
 ## Sub-tasks
 
-- [ ] In edit_task, catch getTask errors and if it's a parse/load error, throw an improved error message
-- [ ] Distinguish 'task not found' from 'task file unparseable' where possible
-- [ ] Add regression test for unparseable task file edit attempt
+- [x] In edit_task, catch getTask errors and if it's a parse/load error, throw an improved error message
+- [x] Distinguish 'task not found' from 'task file unparseable' where possible
+- [x] Add regression test for unparseable task file edit attempt
 
 ## History
 
-- type: created
-  date: 2026-10-13T22:38:46.228Z
-  column: Backlog
-  fromProgress: 0
-  toProgress: 0
+- type: moved
+  date: 2026-10-13T23:45:10.684Z
+  fromColumn: In Progress
+  toColumn: Done
   author: Kevin J. Duling

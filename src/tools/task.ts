@@ -174,10 +174,31 @@ export const handleKanbnEditTask: ToolHandler = async (args) => {
             }
         } catch (err: any) {
             const msg = String(err?.message || err);
-            if (msg.includes("parse task") || msg.includes("Unable to parse") || msg.toLowerCase().includes("parse")) {
+            // Distinguish "task file not found" from "task file unparseable"
+            const isFileNotFound = msg.includes("Couldn't access task file") || msg.includes("ENOENT") || msg.includes("not found");
+            const isParseError = !isFileNotFound && (
+                msg.includes("parse task") ||
+                msg.includes("Unable to parse") ||
+                msg.toLowerCase().includes("parse") ||
+                msg.includes("invalid markdown") ||
+                msg.includes("invalid front matter") ||
+                msg.includes("invalid metadata") ||
+                msg.includes("missing a name heading") ||
+                msg.includes("must contain a list") ||
+                msg.includes("unable to parse") ||
+                msg.includes("data is null") ||
+                msg.includes("data is not a string")
+            );
+            if (isParseError) {
                 throw new Error(`Failed to parse task file for "${taskId}": ${msg}`);
             }
-            // Task may not exist yet or other error; proceed with provided fields
+            if (isFileNotFound) {
+                // Task file doesn't exist but task is in index; proceed with provided fields
+                // (library will validate required fields like name)
+            } else {
+                // Unknown error - re-throw with context
+                throw new Error(`Failed to read task "${taskId}": ${msg}`);
+            }
         }
     }
 

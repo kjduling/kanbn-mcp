@@ -3478,6 +3478,88 @@ describe("kanbn_edit_task", () => {
             rmSync(dir, { recursive: true, force: true });
         }
     });
+
+    test("throws actionable error when task file is unparseable", async () => {
+        const dir = makeTempDir();
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Corrupt Task Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Corrupt Task",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            // Corrupt the task file by writing invalid markdown
+            const { Kanbn } = await import("@basementuniverse/kanbn");
+            const instance = new Kanbn(dir);
+            await instance.initialised();
+            const taskFolder = await instance.getTaskFolderPath();
+            const taskPath = path.join(taskFolder, `${taskId}.md`);
+            writeFileSync(taskPath, "This is not valid task markdown\nNo heading here");
+
+            // Try to edit the corrupt task - should get actionable parse error
+            await assert.rejects(
+                handleToolCall("kanbn_edit_task", {
+                    path: dir,
+                    taskId: taskId,
+                    description: "Trying to fix it",
+                }),
+                /Failed to parse task file for ".*"/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("throws actionable error when task file has invalid front matter", async () => {
+        const dir = makeTempDir();
+        try {
+            await handleToolCall("kanbn_init_board", {
+                path: dir,
+                name: "Invalid Frontmatter Board",
+                columns: ["Backlog", "Done"],
+            });
+
+            const created = await handleToolCall("kanbn_create_task", {
+                path: dir,
+                name: "Bad Frontmatter Task",
+                column: "Backlog",
+            });
+
+            const taskIdMatch = created.content[0].text.match(/Created task "[^"]+" \(([^)]+)\)/);
+            assert.ok(taskIdMatch);
+            const taskId = taskIdMatch![1];
+
+            // Corrupt the task file with invalid YAML front matter
+            const { Kanbn } = await import("@basementuniverse/kanbn");
+            const instance = new Kanbn(dir);
+            await instance.initialised();
+            const taskFolder = await instance.getTaskFolderPath();
+            const taskPath = path.join(taskFolder, `${taskId}.md`);
+            writeFileSync(taskPath, "---\ninvalid: yaml: [\n---\n# Bad Frontmatter Task\n\nDescription here");
+
+            // Try to edit the corrupt task - should get actionable parse error
+            await assert.rejects(
+                handleToolCall("kanbn_edit_task", {
+                    path: dir,
+                    taskId: taskId,
+                    description: "Trying to fix it",
+                }),
+                /Failed to parse task file for ".*"/
+            );
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
 });
 
 describe("kanbn_delete_board", () => {
