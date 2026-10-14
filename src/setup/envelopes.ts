@@ -120,6 +120,18 @@ const HOST_REPO_TARGETS: Record<HostSlug, string[]> = {
     // GitHub Copilot (VS Code) reads AGENTS.md from the workspace root
     // (universal) plus its workspace skill at .github/skills/kanbn/SKILL.md.
     copilot: ["universal", "copilot-skill"],
+    // Cursor uses .cursor/rules/ for rules and .cursor/skills/ for skills
+    cursor: ["universal", "cursor-rule", "cursor-skill"],
+    // Continue uses .continue/rules/ for rules
+    continue: ["universal", "continue-rule"],
+    // Roo Code uses .roo/rules/ for rules
+    roo: ["universal", "roo-rule"],
+    // Aider uses .aider/ for rules
+    aider: ["universal", "aider-rule"],
+    // Gemini CLI uses .gemini/ for rules
+    "gemini-cli": ["universal", "gemini-rule"],
+    // Codex uses .codex/ for rules
+    codex: ["universal", "codex-rule"],
 };
 
 export interface RepoTarget {
@@ -201,6 +213,80 @@ export function repoTargets(): RepoTarget[] {
             file: ".github/skills/kanbn/SKILL.md",
             write: (root, answers) => writeManagedFile(path.join(root, ".github", "skills", "kanbn", "SKILL.md"), renderSkill(answers)),
         },
+        {
+            // Cursor uses .cursor/rules/ for project rules (always-on) and
+            // .cursor/skills/ for skills (auto-triggered by description).
+            id: "cursor-rule",
+            host: "cursor",
+            file: ".cursor/rules/kanbn.md",
+            write: (root, answers) =>
+                upsertBlock(
+                    path.join(root, ".cursor", "rules", "kanbn.md"),
+                    renderBlock(renderCanonical(answers))
+                ),
+        },
+        {
+            // Cursor skill file for auto-triggering.
+            id: "cursor-skill",
+            host: "cursor",
+            file: ".cursor/skills/kanbn/SKILL.md",
+            write: (root, answers) => writeManagedFile(path.join(root, ".cursor", "skills", "kanbn", "SKILL.md"), renderSkill(answers)),
+        },
+        {
+            // Continue uses .continue/rules/ for project rules.
+            id: "continue-rule",
+            host: "continue",
+            file: ".continue/rules/kanbn.md",
+            write: (root, answers) =>
+                upsertBlock(
+                    path.join(root, ".continue", "rules", "kanbn.md"),
+                    renderBlock(renderCanonical(answers))
+                ),
+        },
+        {
+            // Roo Code uses .roo/rules/ for project rules.
+            id: "roo-rule",
+            host: "roo",
+            file: ".roo/rules/kanbn.md",
+            write: (root, answers) =>
+                upsertBlock(
+                    path.join(root, ".roo", "rules", "kanbn.md"),
+                    renderBlock(renderCanonical(answers))
+                ),
+        },
+        {
+            // Aider uses .aider/ for project rules.
+            id: "aider-rule",
+            host: "aider",
+            file: ".aider/kanbn.md",
+            write: (root, answers) =>
+                upsertBlock(
+                    path.join(root, ".aider", "kanbn.md"),
+                    renderBlock(renderCanonical(answers))
+                ),
+        },
+        {
+            // Gemini CLI uses .gemini/ for project rules.
+            id: "gemini-rule",
+            host: "gemini-cli",
+            file: ".gemini/rules/kanbn.md",
+            write: (root, answers) =>
+                upsertBlock(
+                    path.join(root, ".gemini", "rules", "kanbn.md"),
+                    renderBlock(renderCanonical(answers))
+                ),
+        },
+        {
+            // Codex uses .codex/ for project rules.
+            id: "codex-rule",
+            host: "codex",
+            file: ".codex/rules/kanbn.md",
+            write: (root, answers) =>
+                upsertBlock(
+                    path.join(root, ".codex", "rules", "kanbn.md"),
+                    renderBlock(renderCanonical(answers))
+                ),
+        },
     ];
 }
 
@@ -219,8 +305,25 @@ export function resolveHostSlugs(hostFilter: string | undefined): HostSlug[] | n
     }
     const slugs = hostFilter.split(",").map((s) => s.trim().toLowerCase());
     for (const slug of slugs) {
-        if (!["opencode", "claude", "windsurf", "cline", "devin", "copilot"].includes(slug)) {
-            throw new Error(`Unknown host "${slug}". Known hosts: opencode, claude, windsurf, cline, devin, copilot.`);
+        if (
+            ![
+                "opencode",
+                "claude",
+                "windsurf",
+                "cline",
+                "devin",
+                "copilot",
+                "cursor",
+                "continue",
+                "roo",
+                "aider",
+                "gemini-cli",
+                "codex",
+            ].includes(slug)
+        ) {
+            throw new Error(
+                `Unknown host "${slug}". Known hosts: opencode, claude, windsurf, cline, devin, copilot, cursor, continue, roo, aider, gemini-cli, codex.`
+            );
         }
     }
     return slugs as HostSlug[];

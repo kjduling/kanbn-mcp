@@ -1,9 +1,34 @@
 ---
+updates:
+  subTasks:
+    -
+      text: 'Inventory known agent skill/rule locations and filenames'
+      completed: true
+    -
+      text: 'Update setup/install to resolve correct output path per host'
+      completed: true
+    -
+      text: 'Support common hosts: opencode, claude-code, cursor, continue, cline, roo, aider, copilot, gemini-cli, codex'
+      completed: true
+    -
+      text: 'Update AGENTS.md/docs to document correct placement'
+      completed: true
+    -
+      text: 'Add tests for per-host path resolution'
+      completed: true
+    -
+      text: 'Add acceptance tests verifying files go to correct dirs'
+      completed: true
+    -
+      text: 'Verify uninstall removes files from all targeted locations'
+      completed: true
+  status: Done
 tags:
   - feature
   - high
 created: 2026-10-13T20:25:46.454Z
-updated: 2026-10-13T22:01:03.992Z
+updated: 2026-10-14T23:49:42.040Z
+progress: 0
 ---
 
 # ensure-skill-files-are-installed-to-correct-directories-for-each-agent-host

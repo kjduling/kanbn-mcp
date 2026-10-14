@@ -68,6 +68,42 @@ export function detectHosts(home: string = os.homedir()): HostInfo[] {
             detected: exists(path.join(vscodeUserConfigDir(home), "mcp.json")),
             feedback: "user-level VS Code mcp.json (servers.kanbn-mcp); enable kanbn-mcp in the Copilot Chat MCP picker",
         },
+        {
+            slug: "cursor",
+            label: "Cursor",
+            detected: exists(path.join(home, ".cursor")),
+            feedback: "project .cursor/rules/kanbn.md + .cursor/skills/kanbn/SKILL.md",
+        },
+        {
+            slug: "continue",
+            label: "Continue",
+            detected: exists(path.join(home, ".continue")),
+            feedback: "project .continue/rules/kanbn.md",
+        },
+        {
+            slug: "roo",
+            label: "Roo Code",
+            detected: exists(path.join(home, ".roo")),
+            feedback: "project .roo/rules/kanbn.md",
+        },
+        {
+            slug: "aider",
+            label: "Aider",
+            detected: exists(path.join(home, ".aider")),
+            feedback: "project .aider/kanbn.md",
+        },
+        {
+            slug: "gemini-cli",
+            label: "Gemini CLI",
+            detected: exists(path.join(home, ".gemini")),
+            feedback: "project .gemini/rules/kanbn.md",
+        },
+        {
+            slug: "codex",
+            label: "Codex",
+            detected: exists(path.join(home, ".codex")),
+            feedback: "project .codex/rules/kanbn.md",
+        },
     ];
 }
 
@@ -246,6 +282,120 @@ export const CLIENTS: ClientRegistration[] = [
                 null,
                 4
             ),
+    },
+    {
+        client: "cursor",
+        server: "kanbn",
+        label: "Cursor",
+        candidates: (home) => [path.join(home, ".cursor", "mcp.json")],
+        defaultPath: (home) => path.join(home, ".cursor", "mcp.json"),
+        merge: (config) => {
+            const mcp = (config.mcpServers ?? {}) as Record<string, unknown>;
+            const changed = mergeOnce(mcp, "kanbn", { command: "kanbn-mcp", args: [] });
+            config.mcpServers = mcp;
+            return changed;
+        },
+        remove: (config) => {
+            const mcp = (config.mcpServers ?? {}) as Record<string, unknown>;
+            const changed = removeOnce(mcp, "kanbn", { command: "kanbn-mcp", args: [] });
+            return changed;
+        },
+        snippet: () => JSON.stringify({ mcpServers: { kanbn: { command: "kanbn-mcp", args: [] } } }, null, 4),
+    },
+    {
+        client: "continue",
+        server: "kanbn",
+        label: "Continue",
+        candidates: (home) => [path.join(home, ".continue", "config.json")],
+        defaultPath: (home) => path.join(home, ".continue", "config.json"),
+        merge: (config) => {
+            const mcp = (config.mcpServers ?? {}) as Record<string, unknown>;
+            const changed = mergeOnce(mcp, "kanbn", { command: "kanbn-mcp", args: [] });
+            config.mcpServers = mcp;
+            return changed;
+        },
+        remove: (config) => {
+            const mcp = (config.mcpServers ?? {}) as Record<string, unknown>;
+            const changed = removeOnce(mcp, "kanbn", { command: "kanbn-mcp", args: [] });
+            return changed;
+        },
+        snippet: () => JSON.stringify({ mcpServers: { kanbn: { command: "kanbn-mcp", args: [] } } }, null, 4),
+    },
+    {
+        client: "roo",
+        server: "kanbn",
+        label: "Roo Code",
+        candidates: (home) => [path.join(home, ".roo", "mcp.json")],
+        defaultPath: (home) => path.join(home, ".roo", "mcp.json"),
+        merge: (config) => {
+            const mcp = (config.mcpServers ?? {}) as Record<string, unknown>;
+            const changed = mergeOnce(mcp, "kanbn", { command: "kanbn-mcp", args: [] });
+            config.mcpServers = mcp;
+            return changed;
+        },
+        remove: (config) => {
+            const mcp = (config.mcpServers ?? {}) as Record<string, unknown>;
+            const changed = removeOnce(mcp, "kanbn", { command: "kanbn-mcp", args: [] });
+            return changed;
+        },
+        snippet: () => JSON.stringify({ mcpServers: { kanbn: { command: "kanbn-mcp", args: [] } } }, null, 4),
+    },
+    {
+        client: "aider",
+        server: "kanbn",
+        label: "Aider",
+        candidates: (home) => [path.join(home, ".aider", "mcp.json")],
+        defaultPath: (home) => path.join(home, ".aider", "mcp.json"),
+        merge: (config) => {
+            const mcp = (config.mcpServers ?? {}) as Record<string, unknown>;
+            const changed = mergeOnce(mcp, "kanbn", { command: "kanbn-mcp", args: [] });
+            config.mcpServers = mcp;
+            return changed;
+        },
+        remove: (config) => {
+            const mcp = (config.mcpServers ?? {}) as Record<string, unknown>;
+            const changed = removeOnce(mcp, "kanbn", { command: "kanbn-mcp", args: [] });
+            return changed;
+        },
+        snippet: () => JSON.stringify({ mcpServers: { kanbn: { command: "kanbn-mcp", args: [] } } }, null, 4),
+    },
+    {
+        client: "gemini-cli",
+        server: "kanbn",
+        label: "Gemini CLI",
+        candidates: (home) => [path.join(home, ".gemini", "mcp.json")],
+        defaultPath: (home) => path.join(home, ".gemini", "mcp.json"),
+        merge: (config) => {
+            const mcp = (config.mcpServers ?? {}) as Record<string, unknown>;
+            const changed = mergeOnce(mcp, "kanbn", { command: "kanbn-mcp", args: [] });
+            config.mcpServers = mcp;
+            return changed;
+        },
+        remove: (config) => {
+            const mcp = (config.mcpServers ?? {}) as Record<string, unknown>;
+            const changed = removeOnce(mcp, "kanbn", { command: "kanbn-mcp", args: [] });
+            return changed;
+        },
+        snippet: () => JSON.stringify({ mcpServers: { kanbn: { command: "kanbn-mcp", args: [] } } }, null, 4),
+    },
+    {
+        client: "codex",
+        server: "kanbn",
+        label: "Codex",
+        candidates: (home) => [path.join(home, ".codex", "mcp.json")],
+        defaultPath: (home) => path.join(home, ".codex", "mcp.json"),
+        merge: (config) => {
+            const mcp = (config.mcpServers ?? {}) as Record<string, unknown>;
+            const changed = mergeOnce(mcp, "kanbn", { command: "kanbn-mcp", args: [] });
+            config.mcpServers = mcp;
+            return changed;
+        },
+        remove: (config) => {
+            const mcp = (config.mcpServers ?? {}) as Record<string, unknown>;
+            const changed = removeOnce(mcp, "kanbn", { command: "kanbn-mcp", args: [] });
+            return changed;
+        },
+        snippet: () => JSON.stringify({ mcpServers: { kanbn: { command: "kanbn-mcp", args: [] } } }, null, 4),
     },
 ];
 

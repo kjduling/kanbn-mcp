@@ -305,6 +305,13 @@ describe("host slugs", () => {
                 "/tmp/proj/.cline/skills/kanbn/SKILL.md",
                 "/tmp/proj/skills/kanbn/SKILL.md",
                 "/tmp/proj/.github/skills/kanbn/SKILL.md",
+                "/tmp/proj/.cursor/rules/kanbn.md",
+                "/tmp/proj/.cursor/skills/kanbn/SKILL.md",
+                "/tmp/proj/.continue/rules/kanbn.md",
+                "/tmp/proj/.roo/rules/kanbn.md",
+                "/tmp/proj/.aider/kanbn.md",
+                "/tmp/proj/.gemini/rules/kanbn.md",
+                "/tmp/proj/.codex/rules/kanbn.md",
             ]
         );
         const windsurfOnly = planRepoEmit("/tmp/proj", answers, ["windsurf"]);
@@ -485,7 +492,19 @@ describe("MCP client registration", () => {
     });
 
     test("known client slugs are the canonical matrix", () => {
-        assert.deepEqual(CLIENTS.map((c) => c.client), ["opencode", "claude", "cline", "windsurf", "copilot"]);
+        assert.deepEqual(CLIENTS.map((c) => c.client), [
+            "opencode",
+            "claude",
+            "cline",
+            "windsurf",
+            "copilot",
+            "cursor",
+            "continue",
+            "roo",
+            "aider",
+            "gemini-cli",
+            "codex",
+        ]);
         assert.ok(manualInstallText().includes("Any other client"));
     });
 });
@@ -549,6 +568,13 @@ describe("runSetup end to end", () => {
                 ".cline/skills/kanbn/SKILL.md",
                 "skills/kanbn/SKILL.md",
                 ".github/skills/kanbn/SKILL.md",
+                ".cursor/rules/kanbn.md",
+                ".cursor/skills/kanbn/SKILL.md",
+                ".continue/rules/kanbn.md",
+                ".roo/rules/kanbn.md",
+                ".aider/kanbn.md",
+                ".gemini/rules/kanbn.md",
+                ".codex/rules/kanbn.md",
             ];
             for (const file of expected) {
                 assert.equal(existsSync(join(dir, file)), true, `${file} should exist`);
@@ -758,7 +784,7 @@ describe("runSetup end to end", () => {
             await runSetup(["setup", dir, "--yes"]);
             const output = await captureStdout(() => runSetup(["setup", dir, "--check"]));
             assert.match(output, /kanbn-mcp setup state/);
-            assert.match(output, /written: 8/);
+            assert.match(output, /written: 15/);
             const empty = makeTempDir();
             try {
                 const none = await captureStdout(() => runSetup(["setup", empty, "--check"]));
