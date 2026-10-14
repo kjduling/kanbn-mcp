@@ -32,3 +32,4 @@ dist-ssr
 .continue/
 AGENTS.md
 graphify-out/
+coverage

@@ -12,10 +12,11 @@
   ],
   "scripts": {
     "test": "tsx --test tests/**/*.test.ts",
+    "test:coverage": "c8 --reporter=lcov --reporter=text --reporter=html tsx --test tests/**/*.test.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "clean": "rm -rf dist docs",
-    "nuke": "rm -rf dist docs node_modules package-lock.json && npm cache clean --force",
+    "clean": "rm -rf dist docs coverage",
+    "nuke": "rm -rf dist docs coverage node_modules package-lock.json && npm cache clean --force",
     "docs": "echo '(typedoc --entryPointStrategy expand src) not yet supported in TypeScript7'",
     "docs:serve": "echo '(typedoc --entryPointStrategy expand src && python -m http.server 8080 --directory docs) not yet supported in TypeScript7'",
     "prepare": "husky"
@@ -40,6 +41,7 @@
   "homepage": "https://github.com/kjduling/kanbn-mcp",
   "devDependencies": {
     "@types/node": "^26.5.0",
+    "c8": "^10.1.3",
     "husky": "^9.1.7",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2"
