@@ -135,13 +135,11 @@ export const CLIENTS: ClientRegistration[] = [
         client: "opencode",
         server: "kanbn",
         label: "opencode",
-        candidates: (home, root) => [
-            path.join(root, "opencode.json"),
-            path.join(root, "opencode.jsonc"),
+        candidates: (home, _root) => [
             path.join(home, ".config", "opencode", "opencode.json"),
             path.join(home, ".config", "opencode", "opencode.jsonc"),
         ],
-        defaultPath: (_home, root) => path.join(root, "opencode.json"),
+        defaultPath: (home, _root) => path.join(home, ".config", "opencode", "opencode.json"),
         merge: (config) => {
             const mcp = (config.mcp ?? {}) as Record<string, unknown>;
             const changed = mergeOnce(mcp, "kanbn", OPENCODE_ENTRY);

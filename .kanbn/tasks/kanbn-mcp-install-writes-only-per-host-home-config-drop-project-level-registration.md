@@ -1,9 +1,12 @@
 ---
+progress: 1
 tags:
   - feature
   - high
 created: 2026-10-13T19:45:23.146Z
-updated: 2026-10-13T22:01:04.055Z
+updated: 2026-10-14T20:33:45.350Z
+started: 2026-10-14T19:09:45.847Z
+completed: 2026-10-14T20:33:45.252Z
 ---
 
 # kanbn-mcp install writes only per-host $HOME config; drop project-level registration
@@ -25,14 +28,14 @@ Relates to fix-setup-mcp-registers-cline-at-the-legacy-global-storage-path (host
 
 ## Sub-tasks
 
-- [ ] Retarget opencode registration to ~/.config/opencode/opencode.json (prefer an existing .json/.jsonc there); never use project opencode.json
-- [ ] Audit every ClientRegistration candidates/defaultPath: assert all registration paths are under home; fix any project-level default
-- [ ] Confirm install's only skill writes are the $HOME global skills; install writes nothing under the board root
-- [ ] Keep setup's project-level guidance writes unchanged - explicitly out of scope here
-- [ ] Update HELP_TEXT + README to document the $HOME config paths per host
-- [ ] verify that `kanbn-mcp install` writes zero files under the board root
-- [ ] verify the opencode entry lands in ~/.config/opencode/opencode.json and `uninstall` removes it there
-- [ ] add a test asserting install performs no project-level write and that the opencode registration path is home-level
+- [x] Retarget opencode registration to ~/.config/opencode/opencode.json (prefer an existing .json/.jsonc there); never use project opencode.json
+- [x] Audit every ClientRegistration candidates/defaultPath: assert all registration paths are under home; fix any project-level default
+- [x] Confirm install's only skill writes are the $HOME global skills; install writes nothing under the board root
+- [x] Keep setup's project-level guidance writes unchanged - explicitly out of scope here
+- [x] Update HELP_TEXT + README to document the $HOME config paths per host
+- [x] verify that `kanbn-mcp install` writes zero files under the board root
+- [x] verify the opencode entry lands in ~/.config/opencode/opencode.json and `uninstall` removes it there
+- [x] add a test asserting install performs no project-level write and that the opencode registration path is home-level
 
 ## Relations
 
@@ -40,3 +43,21 @@ Relates to fix-setup-mcp-registers-cline-at-the-legacy-global-storage-path (host
 - [related-to kanbn-mcp-install-and-uninstall-target-all-known-hosts-by-default-host-agent-limits-to-one](kanbn-mcp-install-and-uninstall-target-all-known-hosts-by-default-host-agent-limits-to-one.md)
 - [related-to fix-setup-mcp-registers-cline-at-the-legacy-global-storage-path-instead-of-cline-data-settings](fix-setup-mcp-registers-cline-at-the-legacy-global-storage-path-instead-of-cline-data-settings.md)
 - [related-to setup-output-should-report-where-it-stores-files-mirroring-uninstall-s-removed-left-in-place-report](setup-output-should-report-where-it-stores-files-mirroring-uninstall-s-removed-left-in-place-report.md)
+
+## History
+
+- type: moved
+  date: 2026-10-14T19:09:45.847Z
+  fromColumn: Backlog
+  toColumn: In Progress
+  author: Kevin J. Duling
+- type: moved
+  date: 2026-10-14T20:33:45.252Z
+  fromColumn: In Progress
+  toColumn: Done
+  author: Kevin J. Duling
+- type: progress
+  date: 2026-10-14T20:33:45.350Z
+  fromProgress: 0
+  toProgress: 1
+  author: Kevin J. Duling

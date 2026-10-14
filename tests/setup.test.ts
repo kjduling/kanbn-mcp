@@ -329,7 +329,7 @@ describe("MCP client registration", () => {
         try {
             const home = join(dir, "home");
             const configPaths: Record<string, string> = {
-                opencode: join(dir, "proj", "opencode.json"),
+                opencode: join(home, ".config", "opencode", "opencode.json"),
                 claude: join(home, ".claude.json"),
                 cline: join(home, ".cline", "data", "settings", "cline_mcp_settings.json"),
                 windsurf: join(home, ".codeium", "windsurf", "mcp_config.json"),
@@ -437,7 +437,7 @@ describe("MCP client registration", () => {
         try {
             const home = join(dir, "home");
             registerClient("opencode", { root: dir, home });
-            const configPath = join(dir, "opencode.json");
+            const configPath = join(home, ".config", "opencode", "opencode.json");
             assert.equal(unregisterClient(configPath, "opencode"), true);
             const config = readJsonLoose(configPath);
             assert.equal(config.config?.mcp, undefined);
@@ -639,9 +639,9 @@ describe("runSetup end to end", () => {
             mkdirSync(join(home, ".config", "opencode"), { recursive: true });
             mkdirSync(join(home, ".claude"), { recursive: true });
             await runInstall(["install", dir, "--yes", "--mcp"], { home });
-            // opencode: project config wins (candidate order: project first)
-            const projectConfig = readJsonLoose(join(dir, "opencode.json"));
-            assert.deepEqual(projectConfig.config?.mcp.kanbn, { type: "local", command: ["kanbn-mcp"], enabled: true });
+            // opencode: registered in the home config
+            const homeConfig = readJsonLoose(join(home, ".config", "opencode", "opencode.json"));
+            assert.deepEqual(homeConfig.config?.mcp.kanbn, { type: "local", command: ["kanbn-mcp"], enabled: true });
             // claude: registered in the home config
             const claudeConfig = readJsonLoose(join(home, ".claude.json"));
             assert.deepEqual(claudeConfig.config?.mcpServers, { kanbn: { command: "kanbn-mcp", args: [] } });
@@ -691,16 +691,16 @@ describe("runSetup end to end", () => {
         }
     });
 
-    test("--mcp=opencode registers in the project opencode.json", async () => {
+    test("--mcp=opencode registers in the home opencode.json", async () => {
         const dir = makeTempDir();
         const home = makeTempDir();
         try {
             await runInstall(["install", dir, "--yes", "--mcp=opencode"], { home });
-            const configPath = join(dir, "opencode.json");
+            const configPath = join(home, ".config", "opencode", "opencode.json");
             assert.equal(existsSync(configPath), true);
             const config = readJsonLoose(configPath);
             assert.deepEqual(config.config?.mcp.kanbn, { type: "local", command: ["kanbn-mcp"], enabled: true });
-            assert.equal(existsSync(join(home, ".config", "opencode")), false);
+            assert.equal(existsSync(join(dir, "opencode.json")), false);
             const manifest = readManifest(dir);
             assert.equal(manifest?.registered.length, 1);
             assert.equal(manifest?.registered[0].client, "opencode");

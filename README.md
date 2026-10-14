@@ -109,7 +109,7 @@ Point your MCP client at the `kanbn-mcp` command from the global install. The im
 ### opencode
 
 ```jsonc
-// opencode.json (project) or ~/.config/opencode/opencode.json
+// ~/.config/opencode/opencode.json
 {
   "mcp": {
     "kanbn": {
@@ -246,7 +246,7 @@ The canonical body is client-neutral — it names only kanbn-mcp MCP tools, neve
 
 | Flag | Effect |
 | --- | --- |
-| `--mcp[=clients]` | register the kanbn MCP server in detected client configs — project `opencode.json`, `~/.claude.json` (Claude Code), `cline_mcp_settings.json`, `~/.codeium/windsurf/mcp_config.json`, VS Code user `mcp.json` (GitHub Copilot); limit with a comma list, e.g. `--mcp=opencode,claude` |
+| `--mcp[=clients]` | register the kanbn MCP server in detected client configs — `~/.config/opencode/opencode.json` (opencode), `~/.claude.json` (Claude Code), `~/.cline/data/settings/cline_mcp_settings.json` (Cline), `~/.codeium/windsurf/mcp_config.json` (Windsurf), VS Code user `mcp.json` (GitHub Copilot); limit with a comma list, e.g. `--mcp=opencode,claude` |
 | `--host=<slugs>` | install global skill for `opencode\|claude\|cline\|copilot` (comma-separated) into `~/.config/opencode/skills/kanbn/SKILL.md` / `~/.claude/skills/kanbn/SKILL.md` / `~/.cline/skills/kanbn/SKILL.md` / `~/.copilot/skills/kanbn/SKILL.md` |
 | `--list` | list detected clients and target files; change nothing |
 | `--dry-run` | show what would be written; change nothing |
