@@ -13,8 +13,6 @@ completedColumns:
 - [make-kanbn-mcp-uninstall-and-check-deterministic-drop-written-registered-state-from-the-config](tasks/make-kanbn-mcp-uninstall-and-check-deterministic-drop-written-registered-state-from-the-config.md)
 - [move-board-config-to-home-kanbn-kanbn-mcp-config-json-with-per-field-project-override](tasks/move-board-config-to-home-kanbn-kanbn-mcp-config-json-with-per-field-project-override.md)
 - [add-a-per-project-board-path-to-home-kanbn-kanbn-mcp-config-json-replaces-kanbn-default-path](tasks/add-a-per-project-board-path-to-home-kanbn-kanbn-mcp-config-json-replaces-kanbn-default-path.md)
-- [clean-up-the-setup-prompt-layout-break-wordy-single-line-questions-and-defaults-onto-readable-lines](tasks/clean-up-the-setup-prompt-layout-break-wordy-single-line-questions-and-defaults-onto-readable-lines.md)
-- [ensure-skill-files-are-installed-to-correct-directories-for-each-agent-host](tasks/ensure-skill-files-are-installed-to-correct-directories-for-each-agent-host.md)
 - [guidance-validation-for-free-form-fields-tags-priority-custom-fields-so-ai-clients-use-them-consistently](tasks/guidance-validation-for-free-form-fields-tags-priority-custom-fields-so-ai-clients-use-them-consistently.md)
 
 ## Todo
@@ -38,5 +36,8 @@ completedColumns:
 - [kanbn-init-board-should-accept-omitted-columns-documented-optional](tasks/kanbn-init-board-should-accept-omitted-columns-documented-optional.md)
 - [kanbn-mcp-install-writes-only-per-host-home-config-drop-project-level-registration](tasks/kanbn-mcp-install-writes-only-per-host-home-config-drop-project-level-registration.md)
 - [kanbn-mcp-install-and-uninstall-target-all-known-hosts-by-default-host-agent-limits-to-one](tasks/kanbn-mcp-install-and-uninstall-target-all-known-hosts-by-default-host-agent-limits-to-one.md)
+- [ensure-skill-files-are-installed-to-correct-directories-for-each-agent-host](tasks/ensure-skill-files-are-installed-to-correct-directories-for-each-agent-host.md)
+- [verify-the-setup-prompt-layout-changes-work-correctly-with-multi-value-defaults](tasks/verify-the-setup-prompt-layout-changes-work-correctly-with-multi-value-defaults.md)
+- [clean-up-the-setup-prompt-layout-break-wordy-single-line-questions-and-defaults-onto-readable-lines](tasks/clean-up-the-setup-prompt-layout-break-wordy-single-line-questions-and-defaults-onto-readable-lines.md)
 
 ## Blocked

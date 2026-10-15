@@ -1,34 +1,10 @@
 ---
-updates:
-  subTasks:
-    -
-      text: 'Inventory known agent skill/rule locations and filenames'
-      completed: true
-    -
-      text: 'Update setup/install to resolve correct output path per host'
-      completed: true
-    -
-      text: 'Support common hosts: opencode, claude-code, cursor, continue, cline, roo, aider, copilot, gemini-cli, codex'
-      completed: true
-    -
-      text: 'Update AGENTS.md/docs to document correct placement'
-      completed: true
-    -
-      text: 'Add tests for per-host path resolution'
-      completed: true
-    -
-      text: 'Add acceptance tests verifying files go to correct dirs'
-      completed: true
-    -
-      text: 'Verify uninstall removes files from all targeted locations'
-      completed: true
-  status: Done
+created: 2026-10-13T20:25:46.454Z
+updated: 2026-10-15T00:02:12.037Z
 tags:
   - feature
   - high
-created: 2026-10-13T20:25:46.454Z
-updated: 2026-10-14T23:49:42.040Z
-progress: 0
+completed: 2026-10-15T00:02:12.037Z
 ---
 
 # ensure-skill-files-are-installed-to-correct-directories-for-each-agent-host
@@ -43,14 +19,22 @@ This includes:
 
 ## Sub-tasks
 
-- [ ] Inventory known agent skill/rule locations and filenames
-- [ ] Update setup/install to resolve correct output path per host
-- [ ] Support common hosts: opencode, claude-code, cursor, continue, cline, roo, aider, copilot, gemini-cli, codex
-- [ ] Update AGENTS.md/docs to document correct placement
-- [ ] Add tests for per-host path resolution
-- [ ] Add acceptance tests verifying files go to correct dirs
-- [ ] Verify uninstall removes files from all targeted locations
+- [x] Inventory known agent skill/rule locations and filenames
+- [x] Update setup/install to resolve correct output path per host
+- [x] Support common hosts: opencode, claude-code, cursor, continue, cline, roo, aider, copilot, gemini-cli, codex
+- [x] Update AGENTS.md/docs to document correct placement
+- [x] Add tests for per-host path resolution
+- [x] Add acceptance tests verifying files go to correct dirs
+- [x] Verify uninstall removes files from all targeted locations
 
 ## Relations
 
 - [related-to split-kanbn-mcp-setup-into-install-and-setup](split-kanbn-mcp-setup-into-install-and-setup.md)
+
+## History
+
+- type: moved
+  date: 2026-10-15T00:02:12.037Z
+  fromColumn: Backlog
+  toColumn: Done
+  author: Kevin J. Duling

@@ -194,10 +194,37 @@ async function promptLoop(runner: PromptRunner, answers: SetupAnswers): Promise<
         parse: (raw: string) => T,
         allowEmpty: boolean
     ): Promise<{ value: T | null; raw: string }> => {
-        const suffix = defaultValue ? ` [${defaultValue}]` : "";
-        for (let attempt = 0; attempt < 3; attempt++) {
-            const raw = (await runner.ask(`${question}${suffix}: `)).trim();
-            if (raw === "") {
+        // Format multi-value defaults for display - one per indented line
+        const defaultLines = defaultValue.split("|").filter(Boolean);
+        const hasMultiValueDefault = defaultLines.length > 1;
+        
+        let displayQuestion: string;
+        let displayDefaults: string | undefined;
+        
+        if (hasMultiValueDefault) {
+            // For multi-value defaults: show question on one line, defaults indented below
+            displayQuestion = question + ": ";
+            displayDefaults = defaultLines.map(d => `  ${d}`).join("\n");
+        } else {
+            // For single-value default: keep inline for cleaner look
+            displayQuestion = question + " [" + defaultValue + "]: ";
+            displayDefaults = undefined;
+        }
+
+        let attempt = 0;
+        do {
+            // Show the question and any multi-line defaults
+            runner.ask(displayQuestion);
+            if (displayDefaults) {
+                runner.note?.(displayDefaults);
+            } else {
+                runner.note?.("");
+            }
+
+            const raw = await runner.ask("");
+            const trimmed = raw.trim();
+            
+            if (trimmed === "") {
                 if (allowEmpty) {
                     return { value: null, raw: "" };
                 }
@@ -207,11 +234,13 @@ async function promptLoop(runner: PromptRunner, answers: SetupAnswers): Promise<
                 return { value: null, raw: "" };
             }
             try {
-                return { value: parse(raw), raw };
+                return { value: parse(trimmed), raw: trimmed };
             } catch (err) {
                 runner.note?.(`  invalid (${(err as Error).message}) - try again`);
             }
-        }
+        } while (++attempt < 3);
+        
+        // All attempts failed - keep the default
         runner.note?.(`  keeping the default: ${defaultValue}`);
         return { value: defaultValue ? parse(defaultValue) : null, raw: defaultValue };
     };
