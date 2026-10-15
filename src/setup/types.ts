@@ -75,10 +75,7 @@ export interface RegisteredTarget {
     message: string;
 }
 
-export interface SetupManifest {
+export interface SetupConfig {
     schemaVersion: number;
-    generatedAt: string;
     answers: SetupAnswers;
-    written: WrittenTarget[];
-    registered: RegisteredTarget[];
 }

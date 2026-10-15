@@ -225,7 +225,7 @@ The answers render into **one canonical guidance body**, written to:
 | `.github/skills/kanbn/SKILL.md` | GitHub Copilot workspace skill |
 | `skills/kanbn/SKILL.md` | committed copy for global skill installs |
 
-Answers persist to `.kanbn/setup.json`, so re-runs amend instead of duplicating and `kanbn-mcp uninstall` removes everything.
+Answers persist to `.kanbn/setup.json` as board **configuration only** — no install log. Re-runs amend instead of duplicating, and `kanbn-mcp uninstall` recomputes everything it should remove from that config plus host detection (nothing to go stale).
 
 ### Flags for `kanbn-mcp setup`
 
@@ -238,7 +238,7 @@ Answers persist to `.kanbn/setup.json`, so re-runs amend instead of duplicating 
 | `--list` | list detected clients and target files; change nothing |
 | `--dry-run` | show what would be written; change nothing |
 | `--print` | print the canonical guidance + manual install instructions for any client; change nothing |
-| `--check` | report what `kanbn-mcp setup` has installed so far |
+| `--check` | report the recomputed guidance targets from the config (read-only; no state file) |
 
 The canonical body is client-neutral — it names only kanbn-mcp MCP tools, never a specific AI. `kanbn-mcp setup --print` gives copy-paste install instructions for any client, including ones setup does not know about (e.g. a future host): point its MCP config at the `kanbn-mcp` command and drop the printed prose into wherever that client reads rules.
 
@@ -256,7 +256,7 @@ The canonical body is client-neutral — it names only kanbn-mcp MCP tools, neve
 
 | Flag | Effect |
 | --- | --- |
-| `--host=<slugs>` | uninstall only the specified hosts (comma-separated); if omitted, uninstalls **all hosts** from the manifest |
+| `--host=<slugs>` | uninstall only the specified hosts (comma-separated); if omitted, uninstalls **all hosts** |
 | `--check` | report current install state (alias for `install --check`) |
 
 ### Non-interactive runs (CI)
@@ -281,7 +281,7 @@ The npm package ships a generic skill at `skills/kanbn/SKILL.md`. To install it 
 
 ### Removing
 
-`kanbn-mcp uninstall` removes every guidance block and registration `kanbn-mcp install` or `kanbn-mcp setup` wrote, using the manifest. It leaves user-authored content alone and will not remove a client config entry it did not create.
+`kanbn-mcp uninstall` removes every guidance block and registration `kanbn-mcp install` or `kanbn-mcp setup` wrote. It recomputes its target set from the resolved board config plus host detection — there is no stored manifest to go stale — and still guards every write: it leaves user-authored content alone and will not remove a client config entry it did not create.
 
 ## Test
 

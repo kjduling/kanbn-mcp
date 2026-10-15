@@ -24,7 +24,7 @@ import {
 } from "../src/setup/envelopes.js";
 import { renderCanonical, renderSkill, SKILL_FRONTMATTER } from "../src/setup/guidance.js";
 import { CLIENTS, registerClient, unregisterClient, readJsonLoose, manualInstallText } from "../src/setup/hosts.js";
-import { collectAnswers, defaultAnswers, readManifest, skillPlaceholderAnswers, writeManifest } from "../src/setup/questions.js";
+import { collectAnswers, defaultAnswers, readConfig, skillPlaceholderAnswers } from "../src/setup/questions.js";
 
 function makeTempDir(): string {
     return mkdtempSync(join(tmpdir(), "kanbn-setup-"));
@@ -531,8 +531,8 @@ describe("runSetup end to end", () => {
             assert.match(first, /AGENTS\.md \(universal guidance/);
             assert.match(first, /\.opencode\/skills\/kanbn\/SKILL\.md \(opencode project skill/);
             assert.match(first, /skills\/kanbn\/SKILL\.md \(committed skill/);
-            assert.match(first, /Stored manifest:/);
-            assert.match(first, /\.kanbn\/setup\.json/);
+            // no stored-manifest line: the config carries no install state
+            assert.doesNotMatch(first, /Stored manifest:/);
             // second, idempotent run: no writes, files reported as current
             const second = await captureStdout(() => runSetup(["setup", dir, "--yes"]));
             assert.match(second, /Unchanged \(already current\):/);
@@ -555,7 +555,7 @@ describe("runSetup end to end", () => {
         }
     });
 
-    test("--yes run writes every envelope + manifest; re-run is idempotent", async () => {
+    test("--yes run writes every envelope + config; re-run is idempotent", async () => {
         const dir = makeTempDir();
         try {
             await runSetup(["setup", dir, "--yes"]);
@@ -587,16 +587,17 @@ describe("runSetup end to end", () => {
             assert.ok(skill.startsWith(SKILL_FRONTMATTER));
             assert.ok(skill.includes("kanbn_create_task"));
 
-            const manifest = readManifest(dir);
-            assert.ok(manifest);
-            assert.equal(manifest.answers.columns.length, 5);
-            assert.equal(manifest.written.length, expected.length);
+            const config = readConfig(dir);
+            assert.ok(config);
+            assert.equal(config.answers.columns.length, 5);
+            // the config carries no install state
+            assert.equal("written" in (config as object), false);
+            assert.equal("registered" in (config as object), false);
 
             // re-run: answers amend, blocks stay singular
             await runSetup(["setup", dir, "--yes"]);
             const agentsAfter = readFileSync(join(dir, "AGENTS.md"), "utf8");
             assert.equal(agentsAfter.split(BLOCK_START).length - 1, 1);
-            assert.equal(readManifest(dir)?.written.length, expected.length);
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }
@@ -650,8 +651,7 @@ describe("runSetup end to end", () => {
             await runSetup(["setup", dir, "--yes"], { home });
             assert.equal(existsSync(join(dir, "opencode.json")), false);
             assert.equal(existsSync(join(home, ".config", "opencode", "opencode.json")), false);
-            const manifest = readManifest(dir);
-            assert.equal(manifest?.registered.length, 0);
+            assert.ok(readConfig(dir));
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });
@@ -671,9 +671,8 @@ describe("runSetup end to end", () => {
             // claude: registered in the home config
             const claudeConfig = readJsonLoose(join(home, ".claude.json"));
             assert.deepEqual(claudeConfig.config?.mcpServers, { kanbn: { command: "kanbn-mcp", args: [] } });
-            const manifest = readManifest(dir);
-            const clients = manifest?.registered.map((r) => r.client).sort();
-            assert.deepEqual(clients, ["claude", "opencode"]);
+            // both registrations are present; no state file is written
+            assert.equal(existsSync(join(dir, ".kanbn", "setup.json")), false);
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });
@@ -708,9 +707,6 @@ describe("runSetup end to end", () => {
             assert.ok("kanbn" in (readJsonLoose(modern).config?.mcpServers ?? {}));
             const legacyAfter = readJsonLoose(legacy);
             assert.deepEqual(Object.keys(legacyAfter.config?.mcpServers ?? {}), ["unity"]);
-            const manifest = readManifest(dir);
-            const clineRecord = manifest?.registered.find((r) => r.client === "cline");
-            assert.equal(clineRecord?.path, modern);
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });
@@ -727,9 +723,6 @@ describe("runSetup end to end", () => {
             const config = readJsonLoose(configPath);
             assert.deepEqual(config.config?.mcp.kanbn, { type: "local", command: ["kanbn-mcp"], enabled: true });
             assert.equal(existsSync(join(dir, "opencode.json")), false);
-            const manifest = readManifest(dir);
-            assert.equal(manifest?.registered.length, 1);
-            assert.equal(manifest?.registered[0].client, "opencode");
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });
@@ -747,22 +740,18 @@ describe("runSetup end to end", () => {
             assert.deepEqual(config.config?.servers, {
                 "kanbn-mcp": { command: "kanbn-mcp", type: "stdio" },
             });
-            const manifest = readManifest(dir);
-            assert.equal(manifest?.registered.length, 1);
-            assert.equal(manifest?.registered[0].client, "copilot");
-            assert.equal(manifest?.registered[0].path, mcpPath);
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });
         }
     });
 
-    test("uninstall reverses a real run via the manifest", async () => {
+    test("uninstall reverses a real run from the derived target set", async () => {
         const dir = makeTempDir();
         const home = makeTempDir();
         try {
             await runSetup(["setup", dir, "--yes", "--mcp=opencode"], { home });
-            const output = await captureStdout(() => runUninstall(["uninstall", dir]));
+            const output = await captureStdout(() => runUninstall(["uninstall", dir], { home }));
             assert.match(output, /Removed:/);
             assert.equal(existsSync(join(dir, "AGENTS.md")), false);
             assert.equal(existsSync(join(dir, ".opencode", "skills", "kanbn", "SKILL.md")), false);
@@ -778,13 +767,61 @@ describe("runSetup end to end", () => {
         }
     });
 
-    test("--check reports the installed state", async () => {
+    test("uninstall still removes generated guidance after the config is deleted", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            await runSetup(["setup", dir, "--yes"], { home });
+            // Simulate state loss: the config is gone, but the generated files remain.
+            rmSync(join(dir, ".kanbn", "setup.json"), { force: true });
+            const output = await captureStdout(() => runUninstall(["uninstall", dir], { home }));
+            assert.match(output, /Removed:/);
+            assert.equal(existsSync(join(dir, "AGENTS.md")), false);
+            assert.equal(existsSync(join(dir, ".opencode", "skills", "kanbn", "SKILL.md")), false);
+            assert.equal(existsSync(join(dir, "skills", "kanbn", "SKILL.md")), false);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
+    test("a second uninstall run is a clean no-op", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            await runSetup(["setup", dir, "--yes"], { home });
+            await captureStdout(() => runUninstall(["uninstall", dir], { home }));
+            const second = await captureStdout(() => runUninstall(["uninstall", dir], { home }));
+            assert.match(second, /Nothing installed/);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
+    test("uninstall leaves a hand-edited guidance block in place", async () => {
+        const dir = makeTempDir();
+        try {
+            await runSetup(["setup", dir, "--yes"]);
+            const agents = join(dir, "AGENTS.md");
+            writeFileSync(agents, readFileSync(agents, "utf8").replace(BLOCK_START, "<!-- tampered -->"));
+            const output = await captureStdout(() => runUninstall(["uninstall", dir]));
+            assert.match(output, /Left in place:/);
+            assert.equal(existsSync(agents), true);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    test("--check reports the recomputed guidance targets", async () => {
         const dir = makeTempDir();
         try {
             await runSetup(["setup", dir, "--yes"]);
             const output = await captureStdout(() => runSetup(["setup", dir, "--check"]));
             assert.match(output, /kanbn-mcp setup state/);
-            assert.match(output, /written: 15/);
+            assert.match(output, /guidance targets \(recomputed from the config\):/);
+            assert.match(output, /ok .*AGENTS\.md/);
+            assert.doesNotMatch(output, /written:/);
             const empty = makeTempDir();
             try {
                 const none = await captureStdout(() => runSetup(["setup", empty, "--check"]));
@@ -818,9 +855,9 @@ describe("runSetup end to end", () => {
             writeFileSync(jsonFile, JSON.stringify({ projectName: "My Board", tagStyle: "plain" }, null, 2));
             await runSetup(["setup", dir, "--json", jsonFile]);
             await runSetup(["setup", dir, "--yes"]);
-            const manifest = readManifest(dir);
-            assert.equal(manifest?.answers.projectName, "My Board");
-            assert.equal(manifest?.answers.tagStyle, "plain");
+            const config = readConfig(dir);
+            assert.equal(config?.answers.projectName, "My Board");
+            assert.equal(config?.answers.tagStyle, "plain");
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }
@@ -844,9 +881,6 @@ describe("install/uninstall --host targeting", () => {
             // global skills for both
             assert.ok(existsSync(join(home, ".config", "opencode", "skills", "kanbn", "SKILL.md")));
             assert.ok(existsSync(join(home, ".claude", "skills", "kanbn", "SKILL.md")));
-            const manifest = readManifest(dir);
-            const clients = manifest?.registered.map((r) => r.client).sort();
-            assert.deepEqual(clients, ["claude", "opencode"]);
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });
@@ -869,9 +903,6 @@ describe("install/uninstall --host targeting", () => {
             // global skills only for opencode
             assert.ok(existsSync(join(home, ".config", "opencode", "skills", "kanbn", "SKILL.md")));
             assert.ok(!existsSync(join(home, ".claude", "skills", "kanbn", "SKILL.md")));
-            const manifest = readManifest(dir);
-            assert.equal(manifest?.registered.length, 1);
-            assert.equal(manifest?.registered[0].client, "opencode");
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });
@@ -891,9 +922,6 @@ describe("install/uninstall --host targeting", () => {
             assert.deepEqual(claudeConfig.config?.mcpServers, { kanbn: { command: "kanbn-mcp", args: [] } });
             assert.ok(existsSync(join(home, ".config", "opencode", "skills", "kanbn", "SKILL.md")));
             assert.ok(existsSync(join(home, ".claude", "skills", "kanbn", "SKILL.md")));
-            const manifest = readManifest(dir);
-            const clients = manifest?.registered.map((r) => r.client).sort();
-            assert.deepEqual(clients, ["claude", "opencode"]);
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });
@@ -907,7 +935,7 @@ describe("install/uninstall --host targeting", () => {
             mkdirSync(join(home, ".config", "opencode"), { recursive: true });
             mkdirSync(join(home, ".claude"), { recursive: true });
             await runInstall(["install", dir, "--yes"], { home });
-            const output = await captureStdout(() => runUninstall(["uninstall", dir]));
+            const output = await captureStdout(() => runUninstall(["uninstall", dir], { home }));
             assert.match(output, /Removed:/);
             // opencode config cleaned (kanbn entry removed, mcp object may be empty)
             const homeConfig = readJsonLoose(join(home, ".config", "opencode", "opencode.json"));
@@ -918,7 +946,7 @@ describe("install/uninstall --host targeting", () => {
             // global skills removed
             assert.ok(!existsSync(join(home, ".config", "opencode", "skills", "kanbn", "SKILL.md")));
             assert.ok(!existsSync(join(home, ".claude", "skills", "kanbn", "SKILL.md")));
-            // manifest removed
+            // no board config was written by install, and uninstall created none
             assert.ok(!existsSync(join(dir, ".kanbn", "setup.json")));
         } finally {
             rmSync(dir, { recursive: true, force: true });
@@ -934,7 +962,7 @@ describe("install/uninstall --host targeting", () => {
             mkdirSync(join(home, ".claude"), { recursive: true });
             await runInstall(["install", dir, "--yes"], { home });
             // uninstall only opencode
-            const output = await captureStdout(() => runUninstall(["uninstall", dir, "--host=opencode"]));
+            const output = await captureStdout(() => runUninstall(["uninstall", dir, "--host=opencode"], { home }));
             assert.match(output, /Removed:/);
             assert.match(output, /opencode/);
             // opencode config cleaned
@@ -946,11 +974,6 @@ describe("install/uninstall --host targeting", () => {
             // opencode skill removed, claude skill remains
             assert.ok(!existsSync(join(home, ".config", "opencode", "skills", "kanbn", "SKILL.md")));
             assert.ok(existsSync(join(home, ".claude", "skills", "kanbn", "SKILL.md")));
-            // manifest updated, not removed
-            const manifest = readManifest(dir);
-            assert.ok(manifest);
-            assert.equal(manifest?.registered.length, 1);
-            assert.equal(manifest?.registered[0].client, "claude");
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });
@@ -964,7 +987,7 @@ describe("install/uninstall --host targeting", () => {
             mkdirSync(join(home, ".config", "opencode"), { recursive: true });
             mkdirSync(join(home, ".claude"), { recursive: true });
             await runInstall(["install", dir, "--yes"], { home });
-            const output = await captureStdout(() => runUninstall(["uninstall", dir, "--host=opencode,claude"]));
+            const output = await captureStdout(() => runUninstall(["uninstall", dir, "--host=opencode,claude"], { home }));
             assert.match(output, /Removed:/);
             // both configs cleaned (kanbn entries removed)
             const homeConfig = readJsonLoose(join(home, ".config", "opencode", "opencode.json"));
@@ -974,8 +997,6 @@ describe("install/uninstall --host targeting", () => {
             // both skills removed
             assert.ok(!existsSync(join(home, ".config", "opencode", "skills", "kanbn", "SKILL.md")));
             assert.ok(!existsSync(join(home, ".claude", "skills", "kanbn", "SKILL.md")));
-            // manifest removed (all entries gone)
-            assert.ok(!existsSync(join(dir, ".kanbn", "setup.json")));
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });

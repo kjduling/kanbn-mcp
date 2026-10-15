@@ -10,7 +10,6 @@ completedColumns:
 ## Backlog
 
 - [directed-relation-hygiene-depends-on-blocks-edges-should-mirror-on-both-tasks-guidance-and-or-audit-mirroring](tasks/directed-relation-hygiene-depends-on-blocks-edges-should-mirror-on-both-tasks-guidance-and-or-audit-mirroring.md)
-- [make-kanbn-mcp-uninstall-and-check-deterministic-drop-written-registered-state-from-the-config](tasks/make-kanbn-mcp-uninstall-and-check-deterministic-drop-written-registered-state-from-the-config.md)
 - [move-board-config-to-home-kanbn-kanbn-mcp-config-json-with-per-field-project-override](tasks/move-board-config-to-home-kanbn-kanbn-mcp-config-json-with-per-field-project-override.md)
 - [add-a-per-project-board-path-to-home-kanbn-kanbn-mcp-config-json-replaces-kanbn-default-path](tasks/add-a-per-project-board-path-to-home-kanbn-kanbn-mcp-config-json-replaces-kanbn-default-path.md)
 - [guidance-validation-for-free-form-fields-tags-priority-custom-fields-so-ai-clients-use-them-consistently](tasks/guidance-validation-for-free-form-fields-tags-priority-custom-fields-so-ai-clients-use-them-consistently.md)
@@ -39,5 +38,6 @@ completedColumns:
 - [ensure-skill-files-are-installed-to-correct-directories-for-each-agent-host](tasks/ensure-skill-files-are-installed-to-correct-directories-for-each-agent-host.md)
 - [verify-the-setup-prompt-layout-changes-work-correctly-with-multi-value-defaults](tasks/verify-the-setup-prompt-layout-changes-work-correctly-with-multi-value-defaults.md)
 - [clean-up-the-setup-prompt-layout-break-wordy-single-line-questions-and-defaults-onto-readable-lines](tasks/clean-up-the-setup-prompt-layout-break-wordy-single-line-questions-and-defaults-onto-readable-lines.md)
+- [make-kanbn-mcp-uninstall-and-check-deterministic-drop-written-registered-state-from-the-config](tasks/make-kanbn-mcp-uninstall-and-check-deterministic-drop-written-registered-state-from-the-config.md)
 
 ## Blocked

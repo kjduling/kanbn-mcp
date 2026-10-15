@@ -60,7 +60,7 @@ USAGE
                                        pass a literal 'mcp' argument
   kanbn-mcp install [flags]            register MCP server + install global skills
   kanbn-mcp setup [flags]              guided board configuration for AI clients
-  kanbn-mcp uninstall                  remove what install/setup wrote
+  kanbn-mcp uninstall [flags]          remove what install/setup wrote (derived)
   node dist/server.js [options]        from a source checkout
 
 OPTIONS
@@ -181,8 +181,10 @@ SETUP
     CLAUDE.md                           .clinerules/kanbn.md
     .windsurf/rules/kanbn.md            skills/kanbn/SKILL.md (committed)
 
-  Answers persist to .kanbn/setup.json, so re-runs amend and 'kanbn-mcp uninstall'
-  removes everything. No MCP registration or global skills here - use 'install'.
+  Answers persist to .kanbn/setup.json as board configuration only (no install
+  log). Re-runs amend the answers; 'kanbn-mcp uninstall' recomputes its target
+  set from that config plus host detection. No MCP registration or global skills
+  here - use 'install'.
 
   Flags:
     --yes              non-interactive: all defaults (or amend persisted answers)
@@ -194,7 +196,7 @@ SETUP
     --dry-run          show what would be written; change nothing
     --print            print the canonical guidance + manual install
                        instructions for any client; change nothing
-    --check            report what kanbn-mcp setup has installed so far
+    --check            report the recomputed guidance targets (no state file)
 
   Any client kanbn-mcp setup cannot cover can be wired by hand from the
   canonical body - run 'kanbn-mcp setup --print' to see it and where each

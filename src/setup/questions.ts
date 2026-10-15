@@ -3,24 +3,29 @@
  *
  * Every answer has a default, so `--yes` / `--json <file>` runs are fully
  * non-interactive and CI-able. Prompts are Enter-to-accept-default and
- * tolerant of partial answers; re-runs amend from the persisted manifest.
+ * tolerant of partial answers; re-runs amend from the persisted config.
  */
 
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as readline from "node:readline/promises";
 import { PLACEHOLDER_BOARD_ROOT, PLACEHOLDER_PROJECT_NAME } from "./guidance.js";
-import { SetupAnswers, SetupColumn, SetupCustomField, SetupManifest, SetupTagVocab, TagStyle } from "./types.js";
+import { SetupAnswers, SetupColumn, SetupConfig, SetupCustomField, SetupTagVocab, TagStyle } from "./types.js";
 
-/** Load setup.json from the board root. */
-export function manifestPath(root: string): string {
+/**
+ * Path to the board config file. This file carries configuration only (the
+ * board conventions); it stores no install state, so uninstall/--check derive
+ * their target set from this config plus host detection.
+ */
+export function configPath(root: string): string {
     return path.join(root, ".kanbn", "setup.json");
 }
 
-export function readManifest(root: string): SetupManifest | null {
+/** Load the board config from the board root, or null when absent/unreadable. */
+export function readConfig(root: string): SetupConfig | null {
     try {
-        const raw = fs.readFileSync(manifestPath(root), "utf8");
-        const parsed = JSON.parse(raw) as SetupManifest;
+        const raw = fs.readFileSync(configPath(root), "utf8");
+        const parsed = JSON.parse(raw) as SetupConfig;
         if (parsed.schemaVersion !== 1 || !parsed.answers) {
             return null;
         }
@@ -30,9 +35,10 @@ export function readManifest(root: string): SetupManifest | null {
     }
 }
 
-export function writeManifest(root: string, manifest: SetupManifest): void {
-    fs.mkdirSync(path.dirname(manifestPath(root)), { recursive: true });
-    fs.writeFileSync(manifestPath(root), JSON.stringify(manifest, null, 2) + "\n");
+/** Persist the board config. Configuration only - no write/registration log. */
+export function writeConfig(root: string, config: SetupConfig): void {
+    fs.mkdirSync(path.dirname(configPath(root)), { recursive: true });
+    fs.writeFileSync(configPath(root), JSON.stringify(config, null, 2) + "\n");
 }
 
 export function defaultAnswers(boardRoot: string): SetupAnswers {
@@ -80,7 +86,7 @@ function resolveAnswers(root: string, existing?: SetupAnswers): SetupAnswers {
         return defaults;
     }
     // Amend: governed by the persisted values, falling back to defaults for
-    // fields the persisted manifest does not carry.
+    // fields the persisted config does not carry.
     return {
         boardRoot: root,
         projectName: existing.projectName || defaults.projectName,
@@ -363,7 +369,7 @@ export async function collectAnswers(args: {
     jsonFile?: string;
     interactive: boolean;
 }): Promise<SetupAnswers> {
-    const persisted = readManifest(args.root)?.answers;
+    const persisted = readConfig(args.root)?.answers;
     if (args.jsonFile) {
         const raw = fs.readFileSync(args.jsonFile, "utf8");
         const imported = JSON.parse(raw) as Partial<SetupAnswers>;
