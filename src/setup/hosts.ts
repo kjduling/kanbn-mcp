@@ -542,3 +542,5 @@ export function manualInstallText(): string {
     );
     return lines.join("\n");
 }
+
+export { choosePath };

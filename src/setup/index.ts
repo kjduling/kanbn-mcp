@@ -21,7 +21,7 @@ import {
     writeManagedFile,
 } from "./envelopes.js";
 import { renderCanonical, renderSkill } from "./guidance.js";
-import { CLIENTS, clientFor, detectHosts, manualInstallText, registerClient, unregisterClient } from "./hosts.js";
+import { CLIENTS, clientFor, detectHosts, manualInstallText, registerClient, unregisterClient, choosePath } from "./hosts.js";
 import { answersFor, collectAnswers, configPath, projectOverrides, readConfig, resolveAnswers, writeConfig } from "./questions.js";
 import { HostSlug, RegisteredTarget, SetupConfig, WrittenTarget } from "./types.js";
 
@@ -539,7 +539,10 @@ export async function runInstall(argv: string[], options: RunOptions = {}): Prom
             for (const slug of mcpClients) {
                 const client = CLIENTS.find((c) => c.client === slug);
                 if (client) {
-                    const target = client.defaultPath(home, root);
+                    const target = choosePath(client, home, root);
+                    // Report the chosen target if it exists, otherwise report the
+                    // default path as MISSING (matches the path registerClient
+                    // would create on an install run).
                     out(`    - ${fs.existsSync(target) ? "ok" : "MISSING"} ${target} (${slug})`);
                 }
             }
