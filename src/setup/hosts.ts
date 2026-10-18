@@ -28,24 +28,26 @@ export function detectHosts(home: string = os.homedir()): HostInfo[] {
             return false;
         }
     };
+    // Every host reads the project's AGENTS.md block (the setup default).
+    // Host-specific additions (global skill, MCP registration) are listed per host.
     return [
         {
             slug: "opencode",
             label: "opencode",
             detected: exists(path.join(home, ".config", "opencode")),
-            feedback: "project .opencode/skills/kanbn/SKILL.md + AGENTS.md block; global skill at ~/.config/opencode/skills/kanbn/SKILL.md via --host=opencode",
+            feedback: "AGENTS.md block; global skill at ~/.config/opencode/skills/kanbn/SKILL.md (install)",
         },
         {
             slug: "claude",
             label: "Claude (Code / Desktop)",
             detected: exists(path.join(home, ".claude")) || exists(path.join(home, ".claude.json")),
-            feedback: "CLAUDE.md block; global skill at ~/.claude/skills/kanbn/SKILL.md via --host=claude",
+            feedback: "AGENTS.md block; global skill at ~/.claude/skills/kanbn/SKILL.md (install)",
         },
         {
             slug: "windsurf",
             label: "Windsurf",
             detected: exists(path.join(home, ".codeium", "windsurf")),
-            feedback: "project .windsurf/rules/kanbn.md",
+            feedback: "AGENTS.md block; MCP registration via --mcp",
         },
         {
             slug: "cline",
@@ -54,55 +56,55 @@ export function detectHosts(home: string = os.homedir()): HostInfo[] {
                 exists(path.join(home, ".cline")) ||
                 exists(path.join(home, "Documents", "Cline")) ||
                 exists(path.join(home, ".clinerules")),
-            feedback: "project .clinerules/kanbn.md + .cline/skills/kanbn/SKILL.md; global skill at ~/.cline/skills/kanbn/SKILL.md via --host=cline",
+            feedback: "AGENTS.md block; global skill at ~/.cline/skills/kanbn/SKILL.md (install)",
         },
         {
             slug: "devin",
             label: "Devin",
             detected: true,
-            feedback: "repo AGENTS.md block + committed skills/kanbn/SKILL.md (Devin reads committed guidance)",
+            feedback: "AGENTS.md block (Devin reads committed guidance)",
         },
         {
             slug: "copilot",
             label: "GitHub Copilot (VS Code)",
             detected: exists(path.join(vscodeUserConfigDir(home), "mcp.json")),
-            feedback: "user-level VS Code mcp.json (servers.kanbn-mcp); enable kanbn-mcp in the Copilot Chat MCP picker",
+            feedback: "AGENTS.md block; global skill at ~/.copilot/skills/kanbn/SKILL.md (install)",
         },
         {
             slug: "cursor",
             label: "Cursor",
             detected: exists(path.join(home, ".cursor")),
-            feedback: "project .cursor/rules/kanbn.md + .cursor/skills/kanbn/SKILL.md",
+            feedback: "AGENTS.md block",
         },
         {
             slug: "continue",
             label: "Continue",
             detected: exists(path.join(home, ".continue")),
-            feedback: "project .continue/rules/kanbn.md",
+            feedback: "AGENTS.md block",
         },
         {
             slug: "roo",
             label: "Roo Code",
             detected: exists(path.join(home, ".roo")),
-            feedback: "project .roo/rules/kanbn.md",
+            feedback: "AGENTS.md block",
         },
         {
             slug: "aider",
             label: "Aider",
             detected: exists(path.join(home, ".aider")),
-            feedback: "project .aider/kanbn.md",
+            feedback: "AGENTS.md block",
         },
         {
             slug: "gemini-cli",
             label: "Gemini CLI",
             detected: exists(path.join(home, ".gemini")),
-            feedback: "project .gemini/rules/kanbn.md",
+            feedback: "AGENTS.md block",
         },
         {
             slug: "codex",
             label: "Codex",
             detected: exists(path.join(home, ".codex")),
-            feedback: "project .codex/rules/kanbn.md",
+            feedback: "AGENTS.md block",
         },
     ];
 }
@@ -517,15 +519,15 @@ export function manualInstallText(): string {
     const lines = [
         "Manual install (any client, no command needed):",
         "",
-        "1. Guidance files - copy this page's prose into the files each client reads:",
-        "   - AGENTS.md (project root) - universal; most agents pick this up automatically.",
-        "   - .opencode/skills/kanbn/SKILL.md - opencode project skill.",
-        "   - CLAUDE.md (project root) - Claude Code.",
-        "   - .windsurf/rules/kanbn.md - Windsurf.",
-        "   - .clinerules/kanbn.md + .cline/skills/kanbn/SKILL.md - Cline (rules + project skill).",
-        "   - .github/skills/kanbn/SKILL.md - Copilot (VS Code) workspace skill.",
-        "   - skills/kanbn/SKILL.md - commit it; Devin and global skill installs read committed SKILL.md files.",
-        "   For an unknown client, put the prose wherever that client reads rules or instructions.",
+        "1. Guidance - the project file is AGENTS.md; every agent on the list reads it.",
+        "   Global (per-user) skills live in $HOME, written by `kanbn-mcp install` for",
+        "   the hosts that support them:",
+        "   - ~/.config/opencode/skills/kanbn/SKILL.md - opencode",
+        "   - ~/.claude/skills/kanbn/SKILL.md - Claude Code",
+        "   - ~/.cline/skills/kanbn/SKILL.md - Cline",
+        "   - ~/.copilot/skills/kanbn/SKILL.md - Copilot (VS Code)",
+        "   For an agent that reads only its own project file, `kanbn-mcp setup --host=<slug>`",
+        "   writes that file (e.g. .windsurf/rules/kanbn.md); `setup --list` shows the hosts.",
         "2. MCP server - register the kanbn-mcp command in the client's MCP server config:",
     ];
     for (const client of CLIENTS) {

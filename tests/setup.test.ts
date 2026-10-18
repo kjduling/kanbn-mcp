@@ -333,31 +333,18 @@ describe("host slugs", () => {
         assert.throws(() => resolveHostSlugs("bobs-nose"), /Unknown host "bobs-nose"/);
     });
 
-    test("planRepoEmit covers the full matrix and honors --host", () => {
+    test("planRepoEmit defaults to the universal AGENTS.md only; --host opts into per-host files", () => {
         const answers = defaultAnswers("/tmp/proj");
+        // the default (no --host): one file, the universal block - never a
+        // pile of dot-directories for agents that may not be in use
         const all = planRepoEmit("/tmp/proj", answers, null);
-        assert.deepEqual(
-            all.targets.map((t) => t.path),
-            [
-                "/tmp/proj/AGENTS.md",
-                "/tmp/proj/.opencode/skills/kanbn/SKILL.md",
-                "/tmp/proj/CLAUDE.md",
-                "/tmp/proj/.windsurf/rules/kanbn.md",
-                "/tmp/proj/.clinerules/kanbn.md",
-                "/tmp/proj/.cline/skills/kanbn/SKILL.md",
-                "/tmp/proj/skills/kanbn/SKILL.md",
-                "/tmp/proj/.github/skills/kanbn/SKILL.md",
-                "/tmp/proj/.cursor/rules/kanbn.md",
-                "/tmp/proj/.cursor/skills/kanbn/SKILL.md",
-                "/tmp/proj/.continue/rules/kanbn.md",
-                "/tmp/proj/.roo/rules/kanbn.md",
-                "/tmp/proj/.aider/kanbn.md",
-                "/tmp/proj/.gemini/rules/kanbn.md",
-                "/tmp/proj/.codex/rules/kanbn.md",
-            ]
-        );
-        const windsurfOnly = planRepoEmit("/tmp/proj", answers, ["windsurf"]);
-        assert.deepEqual(windsurfOnly.targets.map((t) => t.path), ["/tmp/proj/.windsurf/rules/kanbn.md"]);
+        assert.deepEqual(all.targets.map((t) => t.path), ["/tmp/proj/AGENTS.md"]);
+        // explicit hosts get AGENTS.md + that host's own project file
+        const windsurf = planRepoEmit("/tmp/proj", answers, ["windsurf"]);
+        assert.deepEqual(windsurf.targets.map((t) => t.path), [
+            "/tmp/proj/AGENTS.md",
+            "/tmp/proj/.windsurf/rules/kanbn.md",
+        ]);
         const opencode = planRepoEmit("/tmp/proj", answers, ["opencode"]);
         assert.deepEqual(
             opencode.targets.map((t) => t.path),
@@ -368,6 +355,13 @@ describe("host slugs", () => {
         assert.deepEqual(copilot.targets.map((t) => t.path), [
             "/tmp/proj/AGENTS.md",
             "/tmp/proj/.github/skills/kanbn/SKILL.md",
+        ]);
+        // an explicit multi-host list unions their targets (AGENTS.md stays singular)
+        const multi = planRepoEmit("/tmp/proj", answers, ["opencode", "claude"]);
+        assert.deepEqual(multi.targets.map((t) => t.path), [
+            "/tmp/proj/AGENTS.md",
+            "/tmp/proj/.opencode/skills/kanbn/SKILL.md",
+            "/tmp/proj/CLAUDE.md",
         ]);
     });
 });
@@ -576,8 +570,8 @@ describe("runSetup end to end", () => {
             const first = await captureStdout(() => runSetup(["setup", dir, "--yes"], { home }));
             assert.match(first, /Wrote:/);
             assert.match(first, /AGENTS\.md \(universal guidance/);
-            assert.match(first, /\.opencode\/skills\/kanbn\/SKILL\.md \(opencode project skill/);
-            assert.match(first, /skills\/kanbn\/SKILL\.md \(committed skill/);
+            // the default writes the one universal file - no per-host dot-directories
+            assert.doesNotMatch(first, /SKILL\.md/);
             // no stored-manifest line: the config carries no install state
             assert.doesNotMatch(first, /Stored manifest:/);
             // second, idempotent run: no writes, files reported as current
@@ -606,13 +600,14 @@ describe("runSetup end to end", () => {
         }
     });
 
-    test("--yes run writes every envelope + global config; re-run is idempotent", async () => {
+    test("--yes run writes only the universal AGENTS.md - no dot-directories for agents not in use", async () => {
         const dir = makeTempDir();
         const home = makeTempDir();
         try {
             await runSetup(["setup", dir, "--yes"], { home });
-            const expected = [
-                "AGENTS.md",
+            // the regression this pins: a default setup must NOT spray per-host
+            // project files (.opencode/, .windsurf/, .roo/, ...) into the repo
+            const forbidden = [
                 ".opencode/skills/kanbn/SKILL.md",
                 "CLAUDE.md",
                 ".windsurf/rules/kanbn.md",
@@ -628,16 +623,13 @@ describe("runSetup end to end", () => {
                 ".gemini/rules/kanbn.md",
                 ".codex/rules/kanbn.md",
             ];
-            for (const file of expected) {
-                assert.equal(existsSync(join(dir, file)), true, `${file} should exist`);
+            for (const file of forbidden) {
+                assert.equal(existsSync(join(dir, file)), false, `${file} must not be created by a default run`);
             }
+            assert.equal(existsSync(join(dir, "AGENTS.md")), true);
             const agents = readFileSync(join(dir, "AGENTS.md"), "utf8");
             assert.equal(agents.split(BLOCK_START).length - 1, 1);
             assert.ok(agents.includes("# Kanbn board guidance"));
-
-            const skill = readFileSync(join(dir, ".opencode", "skills", "kanbn", "SKILL.md"), "utf8");
-            assert.ok(skill.startsWith(SKILL_FRONTMATTER));
-            assert.ok(skill.includes("kanbn_create_task"));
 
             const config = readConfig(home);
             assert.ok(config);
@@ -658,14 +650,17 @@ describe("runSetup end to end", () => {
         }
     });
 
-    test("--host=windsurf writes only that envelope", async () => {
+    test("--host=windsurf opts into that host's project file alongside AGENTS.md", async () => {
         const dir = makeTempDir();
         const home = makeTempDir();
         try {
             await runSetup(["setup", dir, "--yes", "--host=windsurf"], { home });
             assert.equal(existsSync(join(dir, ".windsurf", "rules", "kanbn.md")), true);
-            assert.equal(existsSync(join(dir, "AGENTS.md")), false);
+            // AGENTS.md is universal: it rides along for every host
+            assert.equal(existsSync(join(dir, "AGENTS.md")), true);
+            // hosts that were not selected stay absent
             assert.equal(existsSync(join(dir, "CLAUDE.md")), false);
+            assert.equal(existsSync(join(dir, ".roo", "rules", "kanbn.md")), false);
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });
@@ -828,11 +823,19 @@ describe("runSetup end to end", () => {
         }
     });
 
-    test("uninstall still removes generated guidance after the config is deleted", async () => {
+    test("uninstall sweeps a legacy per-host layout even after the config is deleted", async () => {
         const dir = makeTempDir();
         const home = makeTempDir();
         try {
             await runSetup(["setup", dir, "--yes"], { home });
+            // Seed the legacy layout an older version's `setup` sprayed: per-host
+            // project files that today's default run never writes. The full-matrix
+            // sweep must still clean them up, marker-guarded.
+            writeManagedFile(join(dir, ".opencode", "skills", "kanbn", "SKILL.md"), renderSkill(defaultAnswers(dir)));
+            writeManagedFile(join(dir, "skills", "kanbn", "SKILL.md"), renderSkill(defaultAnswers(dir)));
+            upsertBlock(join(dir, "CLAUDE.md"), renderBlock(renderCanonical(defaultAnswers(dir))));
+            // ...and a hand-authored file the sweep must NOT touch
+            writeFileSync(join(dir, "CLAUDE.local.md"), "user notes\n");
             // Simulate state loss: the config is gone, but the generated files remain.
             rmSync(configPath(home), { force: true });
             const output = await captureStdout(() => runUninstall(["uninstall", dir], { home }));
@@ -840,6 +843,8 @@ describe("runSetup end to end", () => {
             assert.equal(existsSync(join(dir, "AGENTS.md")), false);
             assert.equal(existsSync(join(dir, ".opencode", "skills", "kanbn", "SKILL.md")), false);
             assert.equal(existsSync(join(dir, "skills", "kanbn", "SKILL.md")), false);
+            assert.equal(existsSync(join(dir, "CLAUDE.md")), false);
+            assert.equal(existsSync(join(dir, "CLAUDE.local.md")), true);
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });

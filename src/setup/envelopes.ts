@@ -110,12 +110,21 @@ export function writeManagedFile(filePath: string, content: string): boolean {
     return true;
 }
 
-/** Which repo targets each host slug owns. "universal" is AGENTS.md. */
+/**
+ * Which repo targets each host slug owns. "universal" is AGENTS.md - every
+ * known agent reads it, so it is always in every host's set.
+ *
+ * NOTE: the per-host project targets below (CLAUDE.md, .windsurf/, .roo/, ...)
+ * are OPT-IN via an explicit `--host=<slug>`. The default `setup` run writes
+ * only the universal AGENTS.md: a project directory must not sprout dot-config
+ * for agents that may not be in use. Global (per-user) copies live in $HOME,
+ * written by `install` for detected hosts only.
+ */
 const HOST_REPO_TARGETS: Record<HostSlug, string[]> = {
     opencode: ["universal", "opencode"],
-    claude: ["claude"],
-    windsurf: ["windsurf"],
-    cline: ["cline", "cline-skill"],
+    claude: ["universal", "claude"],
+    windsurf: ["universal", "windsurf"],
+    cline: ["universal", "cline", "cline-skill"],
     devin: ["universal", "devin"],
     // GitHub Copilot (VS Code) reads AGENTS.md from the workspace root
     // (universal) plus its workspace skill at .github/skills/kanbn/SKILL.md.
@@ -133,6 +142,22 @@ const HOST_REPO_TARGETS: Record<HostSlug, string[]> = {
     // Codex uses .codex/ for rules
     codex: ["universal", "codex-rule"],
 };
+
+/** Every known host slug - used by uninstall to sweep the full legacy matrix. */
+export const ALL_HOST_SLUGS: HostSlug[] = [
+    "opencode",
+    "claude",
+    "windsurf",
+    "cline",
+    "devin",
+    "copilot",
+    "cursor",
+    "continue",
+    "roo",
+    "aider",
+    "gemini-cli",
+    "codex",
+];
 
 export interface RepoTarget {
     id: string;
@@ -329,20 +354,30 @@ export function resolveHostSlugs(hostFilter: string | undefined): HostSlug[] | n
     return slugs as HostSlug[];
 }
 
+/** The repo targets in scope for a host selection.
+ * @param hostSlugs Explicit host slugs, or null for the DEFAULT scope: the
+ *   universal AGENTS.md only. Per-host project files are opt-in via an
+ *   explicit slug - never the default.
+ */
+function selectedRepoTargets(hostSlugs: HostSlug[] | null): RepoTarget[] {
+    if (hostSlugs === null) {
+        return repoTargets().filter((t) => t.id === "universal");
+    }
+    return repoTargets().filter((t) =>
+        hostSlugs.some((slug) => HOST_REPO_TARGETS[slug]?.includes(t.id) ?? false)
+    );
+}
+
 /**
  * Compute the planned repo-file writes for a root, filtered by host slugs.
  * @param root Board root directory
  * @param answers Setup answers
- * @param hostSlugs Hosts to emit, or null for all
+ * @param hostSlugs Hosts to emit, or null for the default (universal AGENTS.md only)
  * @returns The planned targets (path + host + kind)
  */
 export function planRepoEmit(root: string, answers: SetupAnswers, hostSlugs: HostSlug[] | null): EmitPlan {
     const plan: EmitPlan = { targets: [], errors: [] };
-    for (const target of repoTargets()) {
-        const include = hostSlugs === null || hostSlugs.some((slug) => HOST_REPO_TARGETS[slug]?.includes(target.id) ?? false);
-        if (!include) {
-            continue;
-        }
+    for (const target of selectedRepoTargets(hostSlugs)) {
         plan.targets.push({
             path: path.join(root, target.file),
             host: target.host,
@@ -359,16 +394,12 @@ export function planRepoEmit(root: string, answers: SetupAnswers, hostSlugs: Hos
  * set (needed by uninstall after unchanged re-runs).
  * @param root Board root directory
  * @param answers Setup answers
- * @param hostSlugs Hosts to emit, or null for all
+ * @param hostSlugs Hosts to emit, or null for the default (universal AGENTS.md only)
  * @returns The targets in scope, post-write
  */
 export function applyRepoEmit(root: string, answers: SetupAnswers, hostSlugs: HostSlug[] | null): WrittenTarget[] {
     const written: WrittenTarget[] = [];
-    for (const target of repoTargets()) {
-        const include = hostSlugs === null || hostSlugs.some((slug) => HOST_REPO_TARGETS[slug]?.includes(target.id) ?? false);
-        if (!include) {
-            continue;
-        }
+    for (const target of selectedRepoTargets(hostSlugs)) {
         const changed = target.write(root, answers);
         written.push({
             path: path.join(root, target.file),

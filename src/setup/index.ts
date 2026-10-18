@@ -1,8 +1,11 @@
 /**
  * `kanbn-mcp setup` / `kanbn-mcp install` / `kanbn-mcp uninstall` entry points.
  *
- * - setup: interactive Q&A for board conventions; emits per-client guidance envelopes.
- * - install: per-agent wiring only (MCP registration + global skills). No board Q&A.
+ * - setup: interactive Q&A for board conventions; writes the project's
+ *   AGENTS.md block (the one universal file every agent reads). Per-host
+ *   project files are opt-in via --host=<slug>.
+ * - install: per-agent wiring only (MCP registration + global skills in $HOME,
+ *   for DETECTED hosts only). No board Q&A.
  * - uninstall: reverses everything either command wrote, recomputed from the
  *   board config plus host detection (deterministic, no manifest).
  */
@@ -11,6 +14,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import {
+    ALL_HOST_SLUGS,
     applyRepoEmit,
     BLOCK_END,
     BLOCK_START,
@@ -260,9 +264,11 @@ function listClientsAndTargets(): void {
         out(`  ${host.label.padEnd(16)} ${status.padEnd(10)} ${host.feedback}`);
     }
     out("");
-    out("Guidance targets (from the board root):");
-    out("  AGENTS.md (universal) | .opencode/skills/kanbn/SKILL.md | CLAUDE.md | .windsurf/rules/kanbn.md | .clinerules/kanbn.md | skills/kanbn/SKILL.md | .github/skills/kanbn/SKILL.md");
-    out("  Global skills (--host=opencode / --host=claude / --host=cline / --host=copilot): ~/.config/opencode/skills/kanbn/SKILL.md / ~/.claude/skills/kanbn/SKILL.md / ~/.cline/skills/kanbn/SKILL.md / ~/.copilot/skills/kanbn/SKILL.md");
+    out("Project guidance (setup): AGENTS.md - one universal block, every agent reads it.");
+    out("  Per-host project files (.claude/, .windsurf/, ...) only with `setup --host=<slug>`.");
+    out("Global skills (install, detected hosts only):");
+    out("  ~/.config/opencode/skills/kanbn/SKILL.md (opencode) | ~/.claude/skills/kanbn/SKILL.md (claude)");
+    out("  ~/.cline/skills/kanbn/SKILL.md (cline) | ~/.copilot/skills/kanbn/SKILL.md (copilot)");
     out("");
     out("MCP client registration (--mcp):");
     for (const client of CLIENTS) {
@@ -272,12 +278,12 @@ function listClientsAndTargets(): void {
 
 const ROLE_LABELS: Record<string, string> = {
     universal: "universal guidance - every agent reads AGENTS.md",
-    opencode: "opencode project skill (.opencode/skills/kanbn/SKILL.md)",
-    claude: "Claude Code guidance (CLAUDE.md)",
-    windsurf: "Windsurf rule (.windsurf/rules/kanbn.md)",
-    cline: "Cline rules + project skill (.clinerules/kanbn.md, .cline/skills/kanbn/SKILL.md)",
-    devin: "committed skill (Devin + global skill installs)",
-    copilot: "Copilot project skill (.github/skills/kanbn/SKILL.md)",
+    opencode: "opencode project skill (.opencode/skills/kanbn/SKILL.md, --host=opencode)",
+    claude: "Claude Code guidance (CLAUDE.md, --host=claude)",
+    windsurf: "Windsurf rule (.windsurf/rules/kanbn.md, --host=windsurf)",
+    cline: "Cline rules + project skill (.clinerules/kanbn.md, --host=cline)",
+    devin: "committed skill (Devin, --host=devin)",
+    copilot: "Copilot project skill (.github/skills/kanbn/SKILL.md, --host=copilot)",
 };
 
 const GLOBAL_LABELS: Record<string, string> = {
@@ -683,8 +689,12 @@ export async function runUninstall(argv: string[], options: RunOptions = {}): Pr
     // 1. Repo guidance - recomputed from the merged config (global + this
     //    board's overrides) + host selection. No stored target list: the
     //    marker guard decides what is ours.
+    //
+    //    Uninstall sweeps the FULL host matrix, not the setup default: an
+    //    older run (or an explicit --host) may have left per-host project
+    //    files behind, and the marker guard keeps user-authored files safe.
     const answers = answersFor(root, home);
-    for (const target of planRepoEmit(root, answers, hostSlugs).targets) {
+    for (const target of planRepoEmit(root, answers, hostSlugs ?? ALL_HOST_SLUGS).targets) {
         if (!fs.existsSync(target.path)) {
             continue;
         }

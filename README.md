@@ -138,7 +138,7 @@ Point your MCP client at the `kanbn-mcp` command from the global install. The im
 
 Current Cline (extension, CLI, and SDK) reads one unified config at `~/.cline/data/settings/cline_mcp_settings.json`; the legacy VS Code extension path (`Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`) is migrated to it automatically and kept as a fallback.
 
-Guidance-wise Cline reads project rules from `.clinerules/` at the workspace root, and skills from `.cline/skills/`, `.clinerules/skills/`, `.claude/skills/`, or `.agents/skills/`. `setup` writes both `.clinerules/kanbn.md` (always-injected rules) and `.cline/skills/kanbn/SKILL.md` (auto-triggered project skill), plus the global skill at `~/.cline/skills/kanbn/SKILL.md` via `--host=cline`. Rules only apply to the folder you have open as the Cline workspace root — for guidance on other folders run `setup` in each project or rely on the global skill.
+Guidance-wise Cline reads project rules from `.clinerules/` at the workspace root, and skills from `.cline/skills/`, `.clinerules/skills/`, `.claude/skills/`, or `.agents/skills/`. A default `setup` writes the universal `AGENTS.md` block; if you want Cline's native project files as well, opt in with `setup --host=cline` (writes `.clinerules/kanbn.md` + `.cline/skills/kanbn/SKILL.md`), and `kanbn-mcp install` puts the board-neutral global skill at `~/.cline/skills/kanbn/SKILL.md` for detected hosts. Rules only apply to the folder you have open as the Cline workspace root — for guidance on other folders run `setup` in each project or rely on the global skill.
 
 ```json
 {
@@ -178,7 +178,7 @@ Copilot reads the board guidance the same way it reads everything else in a proj
 
 - **`AGENTS.md`** at the workspace root — always-on, read automatically (the universal envelope, emitted by default).
 - **`.github/skills/kanbn/SKILL.md`** — Copilot's workspace skill (`--host=copilot` emits it alongside `AGENTS.md`).
-- **`~/.copilot/skills/kanbn/SKILL.md`** — Copilot's personal skill, installed globally as part of `--host=copilot`, alongside the same setup's `~/.cline/skills/` / `~/.config/opencode/skills/` global skills for the other clients.
+- **`~/.copilot/skills/kanbn/SKILL.md`** — Copilot's personal skill, installed by `kanbn-mcp install` for detected hosts, alongside the same run's `~/.cline/skills/` / `~/.config/opencode/skills/` global skills for the other clients.
 
 ### Which board does the server use?
 
@@ -212,18 +212,24 @@ The questions (all with defaults — Enter accepts, and re-runs amend rather tha
 - custom fields (`name:type[:required]`, default: none)
 - mirror directed relations on both tasks (depends-on ⇄ blocks, duplicate-of ⇄ duplicated-by; default on)
 
-The answers render into **one canonical guidance body**, written to:
+The answers render into **one canonical guidance body**, written to the project's **`AGENTS.md`** (guarded block) — the one universal file every agent reads. A default `setup` writes nothing else into the project: no dot-directories for agents that may not be in use. Per-host project files are opt-in via `--host=<slug>`:
 
-| File | Readers |
-| --- | --- |
-| `AGENTS.md` (guarded block) | universal — opencode, Devin, most other agents |
-| `.opencode/skills/kanbn/SKILL.md` | opencode project skill |
-| `CLAUDE.md` (guarded block) | Claude Code |
-| `.clinerules/kanbn.md` | Cline rules |
-| `.cline/skills/kanbn/SKILL.md` | Cline project skill |
-| `.windsurf/rules/kanbn.md` | Windsurf |
-| `.github/skills/kanbn/SKILL.md` | GitHub Copilot workspace skill |
-| `skills/kanbn/SKILL.md` | committed copy for global skill installs |
+| File | Readers | Opt-in via |
+| --- | --- | --- |
+| `AGENTS.md` (guarded block) | universal — every agent | default, always |
+| `.opencode/skills/kanbn/SKILL.md` | opencode project skill | `--host=opencode` |
+| `CLAUDE.md` (guarded block) | Claude Code | `--host=claude` |
+| `.clinerules/kanbn.md` + `.cline/skills/kanbn/SKILL.md` | Cline rules + project skill | `--host=cline` |
+| `.windsurf/rules/kanbn.md` | Windsurf | `--host=windsurf` |
+| `.github/skills/kanbn/SKILL.md` | GitHub Copilot workspace skill | `--host=copilot` |
+| `.cursor/rules/kanbn.md` + `.cursor/skills/kanbn/SKILL.md` | Cursor | `--host=cursor` |
+| `.continue/rules/kanbn.md` | Continue | `--host=continue` |
+| `.roo/rules/kanbn.md` | Roo Code | `--host=roo` |
+| `.aider/kanbn.md` | Aider | `--host=aider` |
+| `.gemini/rules/kanbn.md` | Gemini CLI | `--host=gemini-cli` |
+| `.codex/rules/kanbn.md` | Codex | `--host=codex` |
+
+The per-user side lives in `$HOME` and is `install`'s job: board-neutral global skills for **detected hosts only** (`~/.config/opencode/skills/kanbn/SKILL.md`, `~/.claude/skills/kanbn/SKILL.md`, `~/.cline/skills/kanbn/SKILL.md`, `~/.copilot/skills/kanbn/SKILL.md`). Nothing is ever written for an agent that isn't installed.
 
 Answers persist to `$HOME/.kanbn/kanbn-mcp-config.json` as **configuration only** — no install log, and no config file inside the project itself (a board holds only board files). The file carries the global default answers plus per-project overrides keyed by the project root; resolution is per-field (`defaults ← global answers ← project overrides`). Re-runs amend instead of duplicating, and `kanbn-mcp uninstall` recomputes everything it should remove from that config plus host detection (nothing to go stale) while deliberately leaving the config itself behind.
 
@@ -234,7 +240,7 @@ Answers persist to `$HOME/.kanbn/kanbn-mcp-config.json` as **configuration only*
 | `--yes` | non-interactive: accept defaults (or amend persisted answers) |
 | `--json <file>` | import answers from a JSON file (non-interactive) |
 | `--project` | amend this project's overrides in the global config, seeded from the global defaults; the global answers and the project section never write each other |
-| `--host=<slugs>` | guide only `opencode\|claude\|windsurf\|cline\|devin\|copilot` (comma-separated); limits which project-level envelopes are written |
+| `--host=<slugs>` | additionally emit that host's own project file (comma-separated: `opencode\|claude\|windsurf\|cline\|devin\|copilot\|cursor\|continue\|roo\|aider\|gemini-cli\|codex`); `AGENTS.md` is written either way |
 | `--repo-only` | write repo files only (the default) |
 | `--list` | list detected clients and target files; change nothing |
 | `--dry-run` | show what would be written; change nothing |

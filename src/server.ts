@@ -166,7 +166,7 @@ INSTALL
   Targets:
     MCP registration (--mcp): opencode.json, ~/.claude.json, cline_mcp_settings.json,
       ~/.codeium/windsurf/mcp_config.json, VS Code user mcp.json (GitHub Copilot)
-    Global skills (--host): ~/.config/opencode/skills/kanbn/SKILL.md,
+    Global skills (board-neutral, detected hosts only): ~/.config/opencode/skills/kanbn/SKILL.md,
       ~/.claude/skills/kanbn/SKILL.md, ~/.cline/skills/kanbn/SKILL.md,
       ~/.copilot/skills/kanbn/SKILL.md
 
@@ -174,12 +174,10 @@ SETUP
 
   kanbn-mcp setup asks the board conventions once (columns + meanings, type and
   priority tag vocabulary, tag style, WIP limits, custom fields, relation
-  mirroring) and writes them as client-neutral AI guidance into the files each
-  AI client reads - one canonical body, thin per-client envelopes:
+  mirroring) and writes them as client-neutral AI guidance into the project's
+  AGENTS.md - the one universal file every agent reads.
 
-    AGENTS.md (universal)               .opencode/skills/kanbn/SKILL.md
-    CLAUDE.md                           .clinerules/kanbn.md
-    .windsurf/rules/kanbn.md            skills/kanbn/SKILL.md (committed)
+    AGENTS.md                            (per-host project files only via --host=<slug>)
 
   Answers persist to $HOME/.kanbn/kanbn-mcp-config.json as configuration only
   (no install log): global default answers plus per-project overrides keyed by
@@ -195,8 +193,10 @@ SETUP
     --project          amend this project's overrides in the global config,
                        seeded from the global defaults (the global answers are
                        left untouched, and vice versa)
-    --host=<slugs>     emit guidance for one client only: opencode|claude|windsurf|
-                       cline|devin|copilot (comma-separated)
+    --host=<slugs>     additionally emit that client's own project file
+                       (CLAUDE.md, .windsurf/rules/, ...): opencode|claude|
+                       windsurf|cline|devin|copilot|cursor|continue|roo|aider|
+                       gemini-cli|codex (comma-separated)
     --repo-only        write repo files only (the default)
     --list             list detected clients and target files; change nothing
     --dry-run          show what would be written; change nothing
