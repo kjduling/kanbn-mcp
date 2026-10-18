@@ -417,17 +417,59 @@ export async function promptLoop(runner: PromptRunner, answers: SetupAnswers): P
     return answers;
 }
 
-/** Build a stdin prompt runner. */
-export async function promptAnswers(into: SetupAnswers): Promise<SetupAnswers> {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
+/**
+ * Build a stdin prompt runner.
+ *
+ * Input lines are queued, not consumed per-question: readline emits every
+ * 'line' in a data chunk synchronously, but promptLoop only registers its
+ * next read one tick later. With `rl.question` per prompt, a fast second
+ * Enter (or a pasted block of answers) is emitted with no listener attached
+ * and silently dropped - the next prompt then waits forever for input that
+ * already arrived (the interactive freeze). A persistent 'line' handler
+ * buffers those early lines so the queue, not the question call, owns them.
+ * EOF/Ctrl+D settles any pending read with "" so trailing prompts fall back
+ * to their defaults instead of hanging.
+ *
+ * Streams are injectable for tests.
+ */
+export async function promptAnswers(
+    into: SetupAnswers,
+    options: { input?: NodeJS.ReadableStream; output?: NodeJS.WritableStream } = {}
+): Promise<SetupAnswers> {
+    const input = options.input ?? process.stdin;
+    const output = options.output ?? process.stdout;
+    const rl = readline.createInterface({ input, output });
+    const queued: string[] = [];
+    let deliver: (() => void) | null = null;
+    let ended = false;
+    rl.on("line", (line) => {
+        queued.push(line);
+        deliver?.();
+    });
+    rl.on("close", () => {
+        ended = true;
+        deliver?.();
     });
     try {
         const runner: PromptRunner = {
-            ask: (question) => rl.question(question),
-            write: (text) => process.stdout.write(text),
-            note: (text) => process.stdout.write(`${text}\n`),
+            ask: (question) => {
+                if (question) {
+                    output.write(question);
+                }
+                return new Promise<string>((resolve) => {
+                    const settle = (): void => {
+                        deliver = null;
+                        resolve(queued.shift() ?? "");
+                    };
+                    if (queued.length > 0 || ended) {
+                        settle();
+                        return;
+                    }
+                    deliver = settle;
+                });
+            },
+            write: (text) => output.write(text),
+            note: (text) => output.write(`${text}\n`),
         };
         return await promptLoop(runner, into);
     } finally {

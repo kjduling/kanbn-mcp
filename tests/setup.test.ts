@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync, readFileSync
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import test, { describe, mock } from "node:test";
+import { PassThrough } from "node:stream";
 
 import {
     findFirstPositional,
@@ -24,7 +25,7 @@ import {
 } from "../src/setup/envelopes.js";
 import { renderCanonical, renderSkill, SKILL_FRONTMATTER } from "../src/setup/guidance.js";
 import { CLIENTS, registerClient, unregisterClient, readJsonLoose, manualInstallText } from "../src/setup/hosts.js";
-import { collectAnswers, configPath, defaultAnswers, projectOverrides, promptLoop, readConfig, resolveAnswers, skillPlaceholderAnswers, PromptRunner } from "../src/setup/questions.js";
+import { collectAnswers, configPath, defaultAnswers, projectOverrides, promptAnswers, promptLoop, readConfig, resolveAnswers, skillPlaceholderAnswers, PromptRunner } from "../src/setup/questions.js";
 import { SetupConfig } from "../src/setup/types.js";
 
 function makeTempDir(): string {
@@ -1084,6 +1085,56 @@ describe("interactive prompt loop", () => {
         const answered = await promptLoop(custom.runner, defaultAnswers("/tmp/proj"));
         assert.equal(answered.columns.length, 4);
         assert.equal(answered.tagStyle, "plain");
+    });
+});
+
+describe("promptAnswers stream runner", () => {
+    /** Guard against a hung prompt: fail the test instead of the suite stalling. */
+    function withTimeout<T>(promise: Promise<T>, ms = 2000): Promise<T> {
+        return Promise.race([
+            promise,
+            new Promise<T>((_resolve, reject) => {
+                const timer = setTimeout(() => reject(new Error(`prompt hung after ${ms}ms`)), ms);
+                (timer as { unref?: () => void }).unref?.();
+            }),
+        ]);
+    }
+
+    test("fast/pasted answers are queued, never dropped (mash-Enter freeze)", async () => {
+        // Regression: readline emits every 'line' of a data chunk in one tick,
+        // but the loop registered its next rl.question() a tick later - so a
+        // second Enter in the same read had no listener and was silently
+        // dropped, freezing the next prompt on input it had already received.
+        const input = new PassThrough();
+        const output = new PassThrough();
+        output.resume(); // discard the displayed prompt text
+        const answers = defaultAnswers("/tmp/proj");
+
+        const pending = promptAnswers(answers, { input, output });
+        // all eight answers arrive before the loop could possibly ask for them:
+        // blank, blank, blank, "plain" (tag style), then four more blanks
+        input.write("\n\n\nplain\n\n\n\n\n");
+        const result = await withTimeout(pending);
+
+        assert.equal(result.columns.length, 5);
+        assert.equal(result.tagStyle, "plain"); // the queued 4th line lands on the tag-style question
+        assert.equal(result.mirrorRelations, answers.mirrorRelations);
+    });
+
+    test("EOF mid-question settles the pending read so defaults apply instead of hanging", async () => {
+        // Ctrl+D (or a closed pipe) with a question outstanding used to leave
+        // the promise unsettled forever.
+        const input = new PassThrough();
+        const output = new PassThrough();
+        output.resume();
+
+        const pending = promptAnswers(defaultAnswers("/tmp/proj"), { input, output });
+        input.write("\n"); // answer the columns question only
+        input.end(); // ...then EOF
+
+        const result = await withTimeout(pending);
+        assert.equal(result.columns.length, 5);
+        assert.equal(result.tagStyle, "prefixed");
     });
 });
 
