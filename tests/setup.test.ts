@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import test, { describe, mock } from "node:test";
 
@@ -24,7 +24,8 @@ import {
 } from "../src/setup/envelopes.js";
 import { renderCanonical, renderSkill, SKILL_FRONTMATTER } from "../src/setup/guidance.js";
 import { CLIENTS, registerClient, unregisterClient, readJsonLoose, manualInstallText } from "../src/setup/hosts.js";
-import { collectAnswers, defaultAnswers, readConfig, skillPlaceholderAnswers } from "../src/setup/questions.js";
+import { collectAnswers, configPath, defaultAnswers, projectOverrides, promptLoop, readConfig, resolveAnswers, skillPlaceholderAnswers, PromptRunner } from "../src/setup/questions.js";
+import { SetupConfig } from "../src/setup/types.js";
 
 function makeTempDir(): string {
     return mkdtempSync(join(tmpdir(), "kanbn-setup-"));
@@ -69,6 +70,8 @@ describe("setup args parsing", () => {
         assert.equal(parseSetupArgs(["setup", "--print"]).print, true);
         assert.equal(parseSetupArgs(["setup", "--check"]).check, true);
         assert.equal(parseSetupArgs(["setup", "--repo-only"]).repoOnly, true);
+        assert.equal(parseSetupArgs(["setup", "--project"]).project, true);
+        assert.equal(parseSetupArgs(["setup"]).project, false);
         assert.deepEqual(parseSetupArgs(["setup"]).positionals, ["setup"]);
         assert.deepEqual(parseSetupArgs(["setup", "/some/root"]).positionals, ["setup", "/some/root"]);
     });
@@ -512,21 +515,26 @@ describe("MCP client registration", () => {
 describe("runSetup end to end", () => {
     test("--dry-run writes nothing and prints the plan", async () => {
         const dir = makeTempDir();
+        const home = makeTempDir();
         try {
-            const output = await captureStdout(() => runSetup(["setup", dir, "--yes", "--dry-run"]));
+            const output = await captureStdout(() => runSetup(["setup", dir, "--yes", "--dry-run"], { home }));
             assert.match(output, /would write/i);
             assert.match(output, /AGENTS\.md/);
             assert.equal(existsSync(join(dir, "AGENTS.md")), false);
-            assert.equal(existsSync(join(dir, ".kanbn", "setup.json")), false);
+            // no config anywhere: not in the project, not in the global file
+            assert.equal(existsSync(join(dir, ".kanbn", "kanbn-mcp-config.json")), false);
+            assert.equal(existsSync(configPath(home)), false);
         } finally {
             rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
         }
     });
 
     test("a real run reports every stored location with its role, then re-runs show unchanged files", async () => {
         const dir = makeTempDir();
+        const home = makeTempDir();
         try {
-            const first = await captureStdout(() => runSetup(["setup", dir, "--yes"]));
+            const first = await captureStdout(() => runSetup(["setup", dir, "--yes"], { home }));
             assert.match(first, /Wrote:/);
             assert.match(first, /AGENTS\.md \(universal guidance/);
             assert.match(first, /\.opencode\/skills\/kanbn\/SKILL\.md \(opencode project skill/);
@@ -534,31 +542,36 @@ describe("runSetup end to end", () => {
             // no stored-manifest line: the config carries no install state
             assert.doesNotMatch(first, /Stored manifest:/);
             // second, idempotent run: no writes, files reported as current
-            const second = await captureStdout(() => runSetup(["setup", dir, "--yes"]));
+            const second = await captureStdout(() => runSetup(["setup", dir, "--yes"], { home }));
             assert.match(second, /Unchanged \(already current\):/);
             assert.match(second, /AGENTS\.md/);
         } finally {
             rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
         }
     });
 
     test("--print emits the canonical body + manual instructions and writes nothing", async () => {
         const dir = makeTempDir();
+        const home = makeTempDir();
         try {
-            const output = await captureStdout(() => runSetup(["setup", dir, "--print"]));
+            const output = await captureStdout(() => runSetup(["setup", dir, "--print"], { home }));
             assert.match(output, /# Kanbn board guidance/);
             assert.match(output, /Manual install/);
             assert.match(output, /Any other client/);
             assert.equal(existsSync(join(dir, "AGENTS.md")), false);
+            assert.equal(existsSync(configPath(home)), false);
         } finally {
             rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
         }
     });
 
-    test("--yes run writes every envelope + config; re-run is idempotent", async () => {
+    test("--yes run writes every envelope + global config; re-run is idempotent", async () => {
         const dir = makeTempDir();
+        const home = makeTempDir();
         try {
-            await runSetup(["setup", dir, "--yes"]);
+            await runSetup(["setup", dir, "--yes"], { home });
             const expected = [
                 "AGENTS.md",
                 ".opencode/skills/kanbn/SKILL.md",
@@ -587,31 +600,36 @@ describe("runSetup end to end", () => {
             assert.ok(skill.startsWith(SKILL_FRONTMATTER));
             assert.ok(skill.includes("kanbn_create_task"));
 
-            const config = readConfig(dir);
+            const config = readConfig(home);
             assert.ok(config);
-            assert.equal(config.answers.columns.length, 5);
+            // the config lives in $HOME, and the project directory carries none
+            assert.equal(config.answers?.columns.length, 5);
+            assert.equal(existsSync(join(dir, ".kanbn", "kanbn-mcp-config.json")), false);
             // the config carries no install state
             assert.equal("written" in (config as object), false);
             assert.equal("registered" in (config as object), false);
 
             // re-run: answers amend, blocks stay singular
-            await runSetup(["setup", dir, "--yes"]);
+            await runSetup(["setup", dir, "--yes"], { home });
             const agentsAfter = readFileSync(join(dir, "AGENTS.md"), "utf8");
             assert.equal(agentsAfter.split(BLOCK_START).length - 1, 1);
         } finally {
             rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
         }
     });
 
     test("--host=windsurf writes only that envelope", async () => {
         const dir = makeTempDir();
+        const home = makeTempDir();
         try {
-            await runSetup(["setup", dir, "--yes", "--host=windsurf"]);
+            await runSetup(["setup", dir, "--yes", "--host=windsurf"], { home });
             assert.equal(existsSync(join(dir, ".windsurf", "rules", "kanbn.md")), true);
             assert.equal(existsSync(join(dir, "AGENTS.md")), false);
             assert.equal(existsSync(join(dir, "CLAUDE.md")), false);
         } finally {
             rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
         }
     });
 
@@ -651,7 +669,7 @@ describe("runSetup end to end", () => {
             await runSetup(["setup", dir, "--yes"], { home });
             assert.equal(existsSync(join(dir, "opencode.json")), false);
             assert.equal(existsSync(join(home, ".config", "opencode", "opencode.json")), false);
-            assert.ok(readConfig(dir));
+            assert.ok(readConfig(home));
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });
@@ -671,8 +689,9 @@ describe("runSetup end to end", () => {
             // claude: registered in the home config
             const claudeConfig = readJsonLoose(join(home, ".claude.json"));
             assert.deepEqual(claudeConfig.config?.mcpServers, { kanbn: { command: "kanbn-mcp", args: [] } });
-            // both registrations are present; no state file is written
+            // both registrations are present; no config file is written into the project
             assert.equal(existsSync(join(dir, ".kanbn", "setup.json")), false);
+            assert.equal(existsSync(join(dir, ".kanbn", "kanbn-mcp-config.json")), false);
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });
@@ -757,7 +776,10 @@ describe("runSetup end to end", () => {
             assert.equal(existsSync(join(dir, ".opencode", "skills", "kanbn", "SKILL.md")), false);
             assert.equal(existsSync(join(dir, ".clinerules", "kanbn.md")), false);
             assert.equal(existsSync(join(dir, ".cline", "skills", "kanbn", "SKILL.md")), false);
-            assert.equal(existsSync(join(dir, ".kanbn", "setup.json")), false);
+            // no config ever lived in the project; the global config survives uninstall
+            assert.equal(existsSync(join(dir, ".kanbn", "kanbn-mcp-config.json")), false);
+            assert.equal(existsSync(configPath(home)), true);
+            assert.match(output, /Configuration left in place: /);
             // project opencode.json is now empty of mcp
             const config = existsSync(join(dir, "opencode.json")) ? readJsonLoose(join(dir, "opencode.json")) : null;
             assert.equal(config?.config?.mcp, undefined);
@@ -773,7 +795,7 @@ describe("runSetup end to end", () => {
         try {
             await runSetup(["setup", dir, "--yes"], { home });
             // Simulate state loss: the config is gone, but the generated files remain.
-            rmSync(join(dir, ".kanbn", "setup.json"), { force: true });
+            rmSync(configPath(home), { force: true });
             const output = await captureStdout(() => runUninstall(["uninstall", dir], { home }));
             assert.match(output, /Removed:/);
             assert.equal(existsSync(join(dir, "AGENTS.md")), false);
@@ -801,66 +823,267 @@ describe("runSetup end to end", () => {
 
     test("uninstall leaves a hand-edited guidance block in place", async () => {
         const dir = makeTempDir();
+        const home = makeTempDir();
         try {
-            await runSetup(["setup", dir, "--yes"]);
+            await runSetup(["setup", dir, "--yes"], { home });
             const agents = join(dir, "AGENTS.md");
             writeFileSync(agents, readFileSync(agents, "utf8").replace(BLOCK_START, "<!-- tampered -->"));
-            const output = await captureStdout(() => runUninstall(["uninstall", dir]));
+            const output = await captureStdout(() => runUninstall(["uninstall", dir], { home }));
             assert.match(output, /Left in place:/);
             assert.equal(existsSync(agents), true);
         } finally {
             rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
         }
     });
 
     test("--check reports the recomputed guidance targets", async () => {
         const dir = makeTempDir();
+        const home = makeTempDir();
         try {
-            await runSetup(["setup", dir, "--yes"]);
-            const output = await captureStdout(() => runSetup(["setup", dir, "--check"]));
+            await runSetup(["setup", dir, "--yes"], { home });
+            const output = await captureStdout(() => runSetup(["setup", dir, "--check"], { home }));
             assert.match(output, /kanbn-mcp setup state/);
             assert.match(output, /guidance targets \(recomputed from the config\):/);
             assert.match(output, /ok .*AGENTS\.md/);
             assert.doesNotMatch(output, /written:/);
             const empty = makeTempDir();
+            const emptyHome = makeTempDir();
             try {
-                const none = await captureStdout(() => runSetup(["setup", empty, "--check"]));
+                // config is global: a home with no config reports nothing installed
+                const none = await captureStdout(() => runSetup(["setup", empty, "--check"], { home: emptyHome }));
                 assert.match(none, /Nothing installed/);
             } finally {
                 rmSync(empty, { recursive: true, force: true });
+                rmSync(emptyHome, { recursive: true, force: true });
             }
         } finally {
             rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
         }
     });
 
     test("collectAnswers merges a --json import onto defaults", async () => {
         const dir = makeTempDir();
+        const home = makeTempDir();
         try {
             const jsonFile = join(dir, "answers.json");
             writeFileSync(jsonFile, JSON.stringify({ tagStyle: "plain", wipLimits: { "In Progress": 2 } }, null, 2));
-            const answers = await collectAnswers({ root: dir, yes: false, jsonFile, interactive: false });
+            const answers = await collectAnswers({ root: dir, home, yes: false, jsonFile, interactive: false, project: false });
             assert.equal(answers.tagStyle, "plain");
             assert.deepEqual(answers.wipLimits, { "In Progress": 2 });
             assert.equal(answers.columns.length, 5);
         } finally {
             rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
         }
     });
 
     test("runSetup persists answers that a later --yes run reuses", async () => {
         const dir = makeTempDir();
+        const home = makeTempDir();
         try {
             const jsonFile = join(dir, "answers.json");
             writeFileSync(jsonFile, JSON.stringify({ projectName: "My Board", tagStyle: "plain" }, null, 2));
-            await runSetup(["setup", dir, "--json", jsonFile]);
-            await runSetup(["setup", dir, "--yes"]);
-            const config = readConfig(dir);
-            assert.equal(config?.answers.projectName, "My Board");
-            assert.equal(config?.answers.tagStyle, "plain");
+            await runSetup(["setup", dir, "--json", jsonFile], { home });
+            await runSetup(["setup", dir, "--yes"], { home });
+            const config = readConfig(home);
+            assert.equal(config?.answers?.projectName, "My Board");
+            assert.equal(config?.answers?.tagStyle, "plain");
         } finally {
             rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
         }
+    });
+});
+
+describe("global config with per-project overrides", () => {
+    test("resolution is per-field: defaults <- global answers <- project overrides", () => {
+        const config: SetupConfig = {
+            schemaVersion: 1,
+            answers: { ...defaultAnswers("/global"), projectName: "Global Board", tagStyle: "plain" },
+            projects: { "/proj": { tagStyle: "prefixed", enforceTags: true } },
+        };
+        // global view: project overrides ignored
+        const globalView = resolveAnswers("/proj", config);
+        assert.equal(globalView.projectName, "Global Board");
+        assert.equal(globalView.tagStyle, "plain");
+        assert.equal(globalView.enforceTags, false);
+        // project view: override wins per field, unset fields inherit
+        const projectView = resolveAnswers("/proj", config, { project: true });
+        assert.equal(projectView.projectName, "Global Board");
+        assert.equal(projectView.tagStyle, "prefixed");
+        assert.equal(projectView.enforceTags, true);
+        // boardRoot always resolves to the board, never inherited
+        assert.equal(projectView.boardRoot, resolve("/proj"));
+        // a project with no entry falls back to the global answers
+        assert.equal(resolveAnswers("/other", config, { project: true }).tagStyle, "plain");
+        // no config at all: the defaults
+        assert.equal(resolveAnswers("/bare", null, { project: true }).tagStyle, "prefixed");
+    });
+
+    test("projectOverrides stores only differing fields; resetting to the global value clears the override", () => {
+        const global = defaultAnswers("/proj");
+        const final = { ...global, tagStyle: "plain" as const };
+        assert.deepEqual(projectOverrides(global, final), { tagStyle: "plain" });
+        assert.deepEqual(projectOverrides(global, { ...final, tagStyle: global.tagStyle }), {});
+        assert.deepEqual(projectOverrides(global, global), {});
+    });
+
+    test("no-flag setup writes only the global answers; --project writes only its override entry", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            const jsonFile = join(dir, "answers.json");
+            writeFileSync(jsonFile, JSON.stringify({ projectName: "Global Board", tagStyle: "prefixed" }, null, 2));
+            await runSetup(["setup", dir, "--json", jsonFile], { home });
+
+            const projectJson = join(dir, "project.json");
+            writeFileSync(projectJson, JSON.stringify({ tagStyle: "plain" }, null, 2));
+            await runSetup(["setup", dir, "--json", projectJson, "--project"], { home });
+
+            const config = readConfig(home);
+            assert.ok(config);
+            // the --project run did not touch the global answers
+            assert.equal(config.answers?.projectName, "Global Board");
+            assert.equal(config.answers?.tagStyle, "prefixed");
+            // only the differing field became an override, keyed by absolute root
+            assert.deepEqual(config.projects?.[resolve(dir)], { tagStyle: "plain" });
+            // the project directory itself carries no config file
+            assert.equal(existsSync(join(dir, ".kanbn", "kanbn-mcp-config.json")), false);
+
+            // a --project re-run keeps the override (accepting the inherited default)
+            await runSetup(["setup", dir, "--yes", "--project"], { home });
+            assert.deepEqual(readConfig(home)?.projects?.[resolve(dir)], { tagStyle: "plain" });
+
+            // a no-flag re-run leaves the project section untouched
+            await runSetup(["setup", dir, "--yes"], { home });
+            const after = readConfig(home);
+            assert.equal(after?.answers?.tagStyle, "prefixed");
+            assert.deepEqual(after?.projects?.[resolve(dir)], { tagStyle: "plain" });
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
+    test("--project with no existing config creates only the project entry", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            await runSetup(["setup", dir, "--yes", "--project"], { home });
+            const config = readConfig(home);
+            assert.ok(config);
+            // no global answers were implicitly written
+            assert.equal(config.answers, undefined);
+            assert.deepEqual(config.projects?.[resolve(dir)], {});
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
+    test("guidance renders from the merged config: project overrides win in the emitted files", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            const jsonFile = join(dir, "answers.json");
+            writeFileSync(jsonFile, JSON.stringify({ projectName: "Global Board" }, null, 2));
+            await runSetup(["setup", dir, "--json", jsonFile], { home });
+            const projectJson = join(dir, "project.json");
+            writeFileSync(projectJson, JSON.stringify({ projectName: "Project Board" }, null, 2));
+            await runSetup(["setup", dir, "--json", projectJson, "--project"], { home });
+            // a no-flag re-run emits guidance from the MERGED answers
+            await runSetup(["setup", dir, "--yes"], { home });
+            const agents = readFileSync(join(dir, "AGENTS.md"), "utf8");
+            assert.ok(agents.includes("Project: Project Board"));
+            // the global answers stay global
+            assert.equal(readConfig(home)?.answers?.projectName, "Global Board");
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
+    test("a legacy .kanbn/setup.json is ignored (clean break)", async () => {
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            mkdirSync(join(dir, ".kanbn"), { recursive: true });
+            writeFileSync(
+                join(dir, ".kanbn", "setup.json"),
+                JSON.stringify({ schemaVersion: 1, answers: { ...defaultAnswers(dir), tagStyle: "plain" } }, null, 2)
+            );
+            await runSetup(["setup", dir, "--yes"], { home });
+            // not read: guidance renders from the defaults, not the legacy file
+            const agents = readFileSync(join(dir, "AGENTS.md"), "utf8");
+            assert.ok(agents.includes("typ:bug"));
+            // not rewritten or migrated either
+            assert.ok(readFileSync(join(dir, ".kanbn", "setup.json"), "utf8").includes('"plain"'));
+            assert.equal(existsSync(configPath(home)), true);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+});
+
+describe("interactive prompt loop", () => {
+    /** A scripted runner: canned answers in, every interaction recorded. */
+    function scriptedRunner(answers: string[]): { runner: PromptRunner; calls: string[]; display: string[] } {
+        const calls: string[] = [];
+        const display: string[] = [];
+        const queue = [...answers];
+        const runner: PromptRunner = {
+            ask: async (question) => {
+                calls.push(question);
+                return queue.shift() ?? "";
+            },
+            write: (text) => display.push(text),
+            note: (text) => display.push(text + "\n"),
+        };
+        return { runner, calls, display };
+    }
+
+    test("display never registers a read - exactly one bare ask() per question (input-swallowing freeze)", async () => {
+        // 8 questions; answer each with blank (accept default). If display were
+        // routed through ask() (the pre-fix bug) there would be 16 reads, the
+        // second one swallowing the user's line while the first hangs.
+        const { runner, calls } = scriptedRunner(["", "", "", "", "", "", "", ""]);
+        const result = await promptLoop(runner, defaultAnswers("/tmp/proj"));
+        assert.equal(calls.length, 8);
+        for (const question of calls) {
+            assert.equal(question, "", "ask() must only ever read input, never display text");
+        }
+        assert.equal(result.columns.length, 5);
+        assert.equal(result.tagStyle, "prefixed");
+    });
+
+    test("multi-value questions break before the defaults list, one per indented line", async () => {
+        const { runner, display } = scriptedRunner(["", "", "", "", "", "", "", ""]);
+        await promptLoop(runner, defaultAnswers("/tmp/proj"));
+        const shown = display.join("");
+        // the columns question ends with a newline, then each default indented
+        assert.match(shown, /Board columns as Name=meaning, separated by \| \(blank = keep default\):\n {2}Backlog=queued but not started\n {2}Todo=up next/);
+        // no question/default run-on onto one line
+        assert.doesNotMatch(shown, /default\): {2}Backlog/);
+    });
+
+    test("a valid answer is parsed and an invalid one retries, keeping the default after 3 strikes", async () => {
+        const strike = scriptedRunner(["not-a-style", "nope", "still bad", "", "", "", "", ""]);
+        const result = await promptLoop(strike.runner, defaultAnswers("/tmp/proj"));
+        // the columns prompt rejects 3 malformed answers, then keeps the default
+        assert.equal(result.tagStyle, "prefixed");
+        assert.equal(result.columns.length, 5);
+        // 3 rejected attempts on columns + 1 read per question (8 total)
+        assert.equal(strike.calls.length, 8 + 2);
+
+        const custom = scriptedRunner([
+            "Backlog=queued|Todo=ready|Doing=work|Done=done", "", "", "plain", "", "", "", "",
+        ]);
+        const answered = await promptLoop(custom.runner, defaultAnswers("/tmp/proj"));
+        assert.equal(answered.columns.length, 4);
+        assert.equal(answered.tagStyle, "plain");
     });
 });
 
@@ -946,8 +1169,9 @@ describe("install/uninstall --host targeting", () => {
             // global skills removed
             assert.ok(!existsSync(join(home, ".config", "opencode", "skills", "kanbn", "SKILL.md")));
             assert.ok(!existsSync(join(home, ".claude", "skills", "kanbn", "SKILL.md")));
-            // no board config was written by install, and uninstall created none
+            // no config was written into the project by install, and uninstall created none
             assert.ok(!existsSync(join(dir, ".kanbn", "setup.json")));
+            assert.ok(!existsSync(join(dir, ".kanbn", "kanbn-mcp-config.json")));
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });

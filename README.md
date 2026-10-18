@@ -225,7 +225,7 @@ The answers render into **one canonical guidance body**, written to:
 | `.github/skills/kanbn/SKILL.md` | GitHub Copilot workspace skill |
 | `skills/kanbn/SKILL.md` | committed copy for global skill installs |
 
-Answers persist to `.kanbn/setup.json` as board **configuration only** — no install log. Re-runs amend instead of duplicating, and `kanbn-mcp uninstall` recomputes everything it should remove from that config plus host detection (nothing to go stale).
+Answers persist to `$HOME/.kanbn/kanbn-mcp-config.json` as **configuration only** — no install log, and no config file inside the project itself (a board holds only board files). The file carries the global default answers plus per-project overrides keyed by the project root; resolution is per-field (`defaults ← global answers ← project overrides`). Re-runs amend instead of duplicating, and `kanbn-mcp uninstall` recomputes everything it should remove from that config plus host detection (nothing to go stale) while deliberately leaving the config itself behind.
 
 ### Flags for `kanbn-mcp setup`
 
@@ -233,6 +233,7 @@ Answers persist to `.kanbn/setup.json` as board **configuration only** — no in
 | --- | --- |
 | `--yes` | non-interactive: accept defaults (or amend persisted answers) |
 | `--json <file>` | import answers from a JSON file (non-interactive) |
+| `--project` | amend this project's overrides in the global config, seeded from the global defaults; the global answers and the project section never write each other |
 | `--host=<slugs>` | guide only `opencode\|claude\|windsurf\|cline\|devin\|copilot` (comma-separated); limits which project-level envelopes are written |
 | `--repo-only` | write repo files only (the default) |
 | `--list` | list detected clients and target files; change nothing |

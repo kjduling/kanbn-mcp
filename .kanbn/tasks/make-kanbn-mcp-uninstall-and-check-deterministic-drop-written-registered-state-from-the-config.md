@@ -4,7 +4,7 @@ tags:
   - feature
   - high
 created: 2026-10-13T20:01:48.265Z
-updated: 2026-10-15T01:54:29.204Z
+updated: 2026-10-18T18:21:42.806Z
 started: 2026-10-15T01:38:23.846Z
 completed: 2026-10-15T01:54:29.170Z
 ---
@@ -43,14 +43,8 @@ Supersedes part of the split ticket (split-kanbn-mcp-setup-into-install-and-setu
 ## Comments
 
 - author: Kevin J. Duling
-  date: 2026-10-15T01:54:25.690Z
-  Implemented (2026-10-14). The persisted write manifest is gone: `SetupManifest` (written/registered/generatedAt) becomes `SetupConfig` ({ schemaVersion, answers }) - pure configuration. questions.ts: manifestPath/readManifest/writeManifest -> configPath/readConfig/writeConfig.
-  
-  uninstall and setup --check no longer replay a log. They recompute the target set from the board config (or defaults when the config is missing) + host detection: repo guidance via planRepoEmit, global skills via the per-host global skill paths, and MCP registrations across EVERY candidate path per client (so a registration left in a stale layout is still cleaned).
-  
-  Guards kept: the marker guard (managed blocks via BLOCK_START/BLOCK_END, whole files via FILE_MARKER) and the client entry-shape guard still decide what is ours; hand-edited/foreign content is reported under 'Left in place:'. install no longer writes any config/manifest, and cleans stale candidate paths deterministically instead of from the manifest. Dropped the 'Stored manifest:' line from the setup report.
-  
-  Tests: 296/296 pass. New: uninstall still removes generated guidance after the config is deleted (state-loss regression); second uninstall is a clean no-op; hand-edited block is left in place with a note; --check reports the recomputed target set (no 'written:'). Updated existing e2e expectations (no manifest assertions; runUninstall now takes an injected home). Docs: README + HELP_TEXT updated. tsc clean, eslint 0 errors.
+  date: 2026-10-18T12:06:00.000Z
+  FYI (2026-10-18): the config ticket landed and changed the config's shape/location - single global file $HOME/.kanbn/kanbn-mcp-config.json (answers + projects overrides map), no project-level file, and uninstall now LEAVES the global config behind (reports 'Configuration left in place: <path>'). This ticket's deterministic uninstall/--check already derive from that file via readConfig(home)/answersFor(root, home) - no manifest anywhere, so the remaining scope here is unchanged, just re-based on the global config.
 
 ## History
 

@@ -4,29 +4,44 @@
  * Every answer has a default, so `--yes` / `--json <file>` runs are fully
  * non-interactive and CI-able. Prompts are Enter-to-accept-default and
  * tolerant of partial answers; re-runs amend from the persisted config.
+ *
+ * Configuration lives in ONE file: $HOME/.kanbn/kanbn-mcp-config.json. It
+ * carries the global (default) answers plus a per-project overrides map keyed
+ * by absolute project root - the project directory itself holds no config
+ * (a board contains only board files: index.md, tasks/, archive/). Resolution
+ * is per-field: defaults <- global answers <- the project's overrides.
  */
 
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as readline from "node:readline/promises";
+import { isDeepStrictEqual } from "node:util";
 import { PLACEHOLDER_BOARD_ROOT, PLACEHOLDER_PROJECT_NAME } from "./guidance.js";
-import { SetupAnswers, SetupColumn, SetupConfig, SetupCustomField, SetupTagVocab, TagStyle } from "./types.js";
+import {
+    ProjectOverrides,
+    SetupAnswers,
+    SetupColumn,
+    SetupConfig,
+    SetupCustomField,
+    SetupTagVocab,
+    TagStyle,
+} from "./types.js";
 
 /**
- * Path to the board config file. This file carries configuration only (the
- * board conventions); it stores no install state, so uninstall/--check derive
- * their target set from this config plus host detection.
+ * Path to the global config file. This file carries configuration only (the
+ * board conventions + per-project overrides); it stores no install state, so
+ * uninstall/--check derive their target set from it plus host detection.
  */
-export function configPath(root: string): string {
-    return path.join(root, ".kanbn", "setup.json");
+export function configPath(home: string): string {
+    return path.join(home, ".kanbn", "kanbn-mcp-config.json");
 }
 
-/** Load the board config from the board root, or null when absent/unreadable. */
-export function readConfig(root: string): SetupConfig | null {
+/** Load the global config, or null when absent/unreadable. */
+export function readConfig(home: string): SetupConfig | null {
     try {
-        const raw = fs.readFileSync(configPath(root), "utf8");
+        const raw = fs.readFileSync(configPath(home), "utf8");
         const parsed = JSON.parse(raw) as SetupConfig;
-        if (parsed.schemaVersion !== 1 || !parsed.answers) {
+        if (parsed.schemaVersion !== 1) {
             return null;
         }
         return parsed;
@@ -35,10 +50,87 @@ export function readConfig(root: string): SetupConfig | null {
     }
 }
 
-/** Persist the board config. Configuration only - no write/registration log. */
-export function writeConfig(root: string, config: SetupConfig): void {
-    fs.mkdirSync(path.dirname(configPath(root)), { recursive: true });
-    fs.writeFileSync(configPath(root), JSON.stringify(config, null, 2) + "\n");
+/** Persist the global config. Configuration only - no write/registration log. */
+export function writeConfig(home: string, config: SetupConfig): void {
+    fs.mkdirSync(path.dirname(configPath(home)), { recursive: true });
+    fs.writeFileSync(configPath(home), JSON.stringify(config, null, 2) + "\n");
+}
+
+/**
+ * The answer fields that participate in the per-field merge. boardRoot is
+ * excluded: it is derived from the resolved project root, never inherited.
+ * (A project entry may carry unrelated keys - e.g. the per-project boardPath
+ * reserved by the board-path ticket - which this merge ignores.)
+ */
+const MERGEABLE_ANSWER_FIELDS = [
+    "projectName",
+    "columns",
+    "typeTags",
+    "priorityTags",
+    "tagStyle",
+    "enforceTags",
+    "wipLimits",
+    "customFields",
+    "mirrorRelations",
+] as const satisfies readonly (keyof SetupAnswers)[];
+
+/** List fields an empty value means "unset", not "clear" (historic amend semantics). */
+const NON_EMPTY_ARRAY_FIELDS = new Set<string>(["columns", "typeTags", "priorityTags"]);
+
+/** Per-field merge: each field present in `source` wins over `base`. */
+export function mergeAnswers(base: SetupAnswers, source?: Partial<SetupAnswers>): SetupAnswers {
+    const merged: SetupAnswers = { ...base };
+    if (source) {
+        for (const field of MERGEABLE_ANSWER_FIELDS) {
+            const value = source[field];
+            if (value === undefined) {
+                continue;
+            }
+            if (NON_EMPTY_ARRAY_FIELDS.has(field) && Array.isArray(value) && value.length === 0) {
+                continue;
+            }
+            (merged as unknown as Record<string, unknown>)[field] = value;
+        }
+    }
+    return merged;
+}
+
+/**
+ * The answers in force for a board: defaults <- global answers <- the
+ * project's overrides (per field). boardRoot always resolves to `root`.
+ * @param opts.project when true, the project's override entry is applied
+ */
+export function resolveAnswers(
+    root: string,
+    config: SetupConfig | null,
+    opts: { project?: boolean } = {}
+): SetupAnswers {
+    const defaults = defaultAnswers(root);
+    let merged = mergeAnswers(defaults, config?.answers);
+    if (opts.project) {
+        merged = mergeAnswers(merged, config?.projects?.[path.resolve(root)]);
+    }
+    return { ...merged, boardRoot: path.resolve(root) };
+}
+
+/** The answers in force for a board, read from the global config file. */
+export function answersFor(root: string, home: string): SetupAnswers {
+    return resolveAnswers(root, readConfig(home), { project: true });
+}
+
+/**
+ * Field-wise diff of the final answers against the global answers: the fields
+ * a project actually overrides. A field set back to its global value drops out
+ * of the diff - that is how an override is cleared (the field inherits again).
+ */
+export function projectOverrides(global: SetupAnswers, final: SetupAnswers): ProjectOverrides {
+    const overrides: Record<string, unknown> = {};
+    for (const field of MERGEABLE_ANSWER_FIELDS) {
+        if (!isDeepStrictEqual(final[field], global[field])) {
+            overrides[field] = final[field];
+        }
+    }
+    return overrides as ProjectOverrides;
 }
 
 export function defaultAnswers(boardRoot: string): SetupAnswers {
@@ -78,27 +170,6 @@ export function skillPlaceholderAnswers(): SetupAnswers {
     answers.boardRoot = PLACEHOLDER_BOARD_ROOT;
     answers.projectName = PLACEHOLDER_PROJECT_NAME;
     return answers;
-}
-
-function resolveAnswers(root: string, existing?: SetupAnswers): SetupAnswers {
-    const defaults = defaultAnswers(root);
-    if (!existing) {
-        return defaults;
-    }
-    // Amend: governed by the persisted values, falling back to defaults for
-    // fields the persisted config does not carry.
-    return {
-        boardRoot: root,
-        projectName: existing.projectName || defaults.projectName,
-        columns: existing.columns?.length ? existing.columns : defaults.columns,
-        typeTags: existing.typeTags?.length ? existing.typeTags : defaults.typeTags,
-        priorityTags: existing.priorityTags?.length ? existing.priorityTags : defaults.priorityTags,
-        tagStyle: existing.tagStyle || defaults.tagStyle,
-        enforceTags: existing.enforceTags ?? defaults.enforceTags,
-        wipLimits: existing.wipLimits ?? defaults.wipLimits,
-        customFields: existing.customFields ?? defaults.customFields,
-        mirrorRelations: existing.mirrorRelations ?? defaults.mirrorRelations,
-    };
 }
 
 // ---- parsing helpers for prompt answers -------------------------------
@@ -188,12 +259,15 @@ function formatCustomFields(fields: SetupCustomField[]): string {
 
 // ---- the prompt loop ---------------------------------------------------
 
-interface PromptRunner {
+export interface PromptRunner {
     ask: (question: string) => Promise<string>;
+    /** Display text without registering a read (no trailing newline added). */
+    write?: (text: string) => void;
     note?: (text: string) => void;
 }
 
-async function promptLoop(runner: PromptRunner, answers: SetupAnswers): Promise<SetupAnswers> {
+/** Exported for tests: the prompt loop driven by any PromptRunner. */
+export async function promptLoop(runner: PromptRunner, answers: SetupAnswers): Promise<SetupAnswers> {
     const askParsed = async <T>(
         question: string,
         defaultValue: string,
@@ -208,8 +282,9 @@ async function promptLoop(runner: PromptRunner, answers: SetupAnswers): Promise<
         let displayDefaults: string | undefined;
         
         if (hasMultiValueDefault) {
-            // For multi-value defaults: show question on one line, defaults indented below
-            displayQuestion = question + ": ";
+            // For multi-value defaults: question on its own line, one default
+            // per indented line below it.
+            displayQuestion = question + ":\n";
             displayDefaults = defaultLines.map(d => `  ${d}`).join("\n");
         } else {
             // For single-value default: keep inline for cleaner look
@@ -219,12 +294,14 @@ async function promptLoop(runner: PromptRunner, answers: SetupAnswers): Promise<
 
         let attempt = 0;
         do {
-            // Show the question and any multi-line defaults
-            runner.ask(displayQuestion);
+            // Show the question and any multi-line defaults. Display through
+            // write(), NEVER ask(): a second pending rl.question() swallows the
+            // next input line and the awaited read below never settles (the
+            // interactive freeze). The prompt's trailing newline puts the
+            // defaults on their own lines.
+            runner.write?.(displayQuestion);
             if (displayDefaults) {
                 runner.note?.(displayDefaults);
-            } else {
-                runner.note?.("");
             }
 
             const raw = await runner.ask("");
@@ -349,6 +426,7 @@ export async function promptAnswers(into: SetupAnswers): Promise<SetupAnswers> {
     try {
         const runner: PromptRunner = {
             ask: (question) => rl.question(question),
+            write: (text) => process.stdout.write(text),
             note: (text) => process.stdout.write(`${text}\n`),
         };
         return await promptLoop(runner, into);
@@ -359,57 +437,32 @@ export async function promptAnswers(into: SetupAnswers): Promise<SetupAnswers> {
 
 /**
  * Resolve the final answers for a run from the given mode.
- * - --json <file>: answers imported from the file (amended onto defaults).
- * - --yes / no TTY: persisted answers, else defaults.
- * - interactive: prompts with defaults.
+ * - --json <file>: answers imported from the file (amended onto the base).
+ * - --yes / no TTY: the base answers for the mode.
+ * - interactive: prompts with the base answers as defaults.
+ *
+ * The base is mode-scoped: `--project` amends against the project's resolved
+ * answers (global + this project's overrides); a global run amends against the
+ * global answers only - it neither reads nor writes the project section.
  */
 export async function collectAnswers(args: {
     root: string;
+    home: string;
     yes: boolean;
     jsonFile?: string;
     interactive: boolean;
+    project: boolean;
 }): Promise<SetupAnswers> {
-    const persisted = readConfig(args.root)?.answers;
+    const base = resolveAnswers(args.root, readConfig(args.home), { project: args.project });
     if (args.jsonFile) {
         const raw = fs.readFileSync(args.jsonFile, "utf8");
         const imported = JSON.parse(raw) as Partial<SetupAnswers>;
-        return resolveAnswers(args.root, mergeImported(args.root, imported));
+        const merged = mergeAnswers(base, imported);
+        merged.boardRoot = path.resolve(args.root);
+        return merged;
     }
     if (args.yes || !args.interactive) {
-        const base = resolveAnswers(args.root, persisted);
         return base;
     }
-    return promptAnswers(resolveAnswers(args.root, persisted));
-}
-
-function mergeImported(root: string, imported: Partial<SetupAnswers>): SetupAnswers {
-    const merged: SetupAnswers = resolveAnswers(root, undefined);
-    if (imported.projectName) {
-        merged.projectName = imported.projectName;
-    }
-    if (imported.columns?.length) {
-        merged.columns = imported.columns;
-    }
-    if (imported.typeTags?.length) {
-        merged.typeTags = imported.typeTags;
-    }
-    if (imported.priorityTags?.length) {
-        merged.priorityTags = imported.priorityTags;
-    }
-    if (imported.tagStyle) {
-        merged.tagStyle = imported.tagStyle;
-    }
-    if (typeof imported.enforceTags === "boolean") {
-        merged.enforceTags = imported.enforceTags;
-    }
-    if (imported.wipLimits) {
-        merged.wipLimits = imported.wipLimits;
-    }
-    if (imported.customFields) {
-        merged.customFields = imported.customFields;
-    }
-    if (typeof imported.mirrorRelations === "boolean") {
-        merged.mirrorRelations = imported.mirrorRelations;
-    }
-    return merged;
+    return promptAnswers(base);
 }

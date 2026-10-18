@@ -22,8 +22,8 @@ import {
 } from "./envelopes.js";
 import { renderCanonical, renderSkill } from "./guidance.js";
 import { CLIENTS, clientFor, detectHosts, manualInstallText, registerClient, unregisterClient } from "./hosts.js";
-import { collectAnswers, configPath, defaultAnswers, readConfig, writeConfig } from "./questions.js";
-import { HostSlug, RegisteredTarget, SetupAnswers, SetupConfig, WrittenTarget } from "./types.js";
+import { answersFor, collectAnswers, configPath, projectOverrides, readConfig, resolveAnswers, writeConfig } from "./questions.js";
+import { HostSlug, RegisteredTarget, SetupConfig, WrittenTarget } from "./types.js";
 
 export interface SetupArgs {
     yes: boolean;
@@ -35,6 +35,8 @@ export interface SetupArgs {
     dryRun: boolean;
     print: boolean;
     check: boolean;
+    /** Amend this project's overrides in the global config (not the global answers). */
+    project: boolean;
     positionals: string[];
 }
 
@@ -59,6 +61,7 @@ const SETUP_FLAGS = new Set([
     "--host",
     "--ai",
     "--json",
+    "--project",
 ]);
 
 const INSTALL_FLAGS = new Set([
@@ -124,7 +127,7 @@ export function parseSetupArgs(argv: string[]): SetupArgs {
                     ? true
                     : value.split(",").map((s) => s.trim()).filter(Boolean);
             }
-            // --yes / --list / --dry-run / --print / --check / --repo-only carry no values
+            // --yes / --list / --dry-run / --print / --check / --repo-only / --project carry no values
         } else {
             positionals.push(arg);
         }
@@ -139,6 +142,7 @@ export function parseSetupArgs(argv: string[]): SetupArgs {
         dryRun: argv.includes("--dry-run"),
         print: argv.includes("--print"),
         check: argv.includes("--check"),
+        project: argv.includes("--project"),
         positionals,
     };
 }
@@ -359,15 +363,6 @@ function detectedHostSlugs(home: string): HostSlug[] {
     return detectHosts(home).filter((h) => h.detected).map((h) => h.slug as HostSlug);
 }
 
-/**
- * The board answers in force: the persisted config when present, else the
- * defaults. This is what lets uninstall/--check recompute their target set
- * without any stored install state.
- */
-function answersFor(root: string): SetupAnswers {
-    return readConfig(root)?.answers ?? defaultAnswers(root);
-}
-
 /** Global (per-user) skill targets for the given hosts; hosts with no global skill are skipped. */
 function globalSkillTargets(home: string, hostSlugs: HostSlug[] | null, detected: HostSlug[]): { path: string; host: string }[] {
     const targets: { path: string; host: string }[] = [];
@@ -412,16 +407,21 @@ export async function runSetup(argv: string[], options: RunOptions = {}): Promis
     }
 
     if (args.check) {
-        const config = readConfig(root);
+        const config = readConfig(home);
         if (!config) {
             out(`Nothing installed by kanbn-mcp setup in ${root}.`);
             return;
         }
         const hostSlugs = resolveHostSlugs(args.host);
-        const targets = planRepoEmit(root, config.answers, hostSlugs).targets;
+        const answers = resolveAnswers(root, config, { project: true });
+        const targets = planRepoEmit(root, answers, hostSlugs).targets;
         out(`kanbn-mcp setup state for ${root}:`);
-        out(`  config: ${configPath(root)}`);
-        out(`  answers: ${config.answers.columns.length} columns, ${config.answers.typeTags.length} type tags, ${config.answers.priorityTags.length} priority tags, tag style ${config.answers.tagStyle}`);
+        out(`  config: ${configPath(home)}`);
+        out(`  answers: ${answers.columns.length} columns, ${answers.typeTags.length} type tags, ${answers.priorityTags.length} priority tags, tag style ${answers.tagStyle}`);
+        const overrides = config.projects?.[path.resolve(root)];
+        if (overrides) {
+            out(`  project overrides: ${Object.keys(overrides).length} field(s) for ${path.resolve(root)}`);
+        }
         out("  guidance targets (recomputed from the config):");
         for (const target of targets) {
             out(`    - ${isManaged(target) ? "ok" : "MISSING"} ${target.path} (${target.host})`);
@@ -430,10 +430,26 @@ export async function runSetup(argv: string[], options: RunOptions = {}): Promis
     }
 
     const interactive = Boolean(process.stdin.isTTY) && !args.yes && !args.jsonFile && !args.print;
-    const answers = await collectAnswers({ root, yes: args.yes, jsonFile: args.jsonFile, interactive });
+    const collected = await collectAnswers({ root, home, yes: args.yes, jsonFile: args.jsonFile, interactive, project: args.project });
     if (!interactive && !args.print && !args.jsonFile && !args.yes) {
         warn("stdin is not interactive; using default/persisted answers. Pass --yes or --json <file> to run non-interactively.");
     }
+
+    // Build the config view in memory first: this run writes exactly ONE
+    // section - `answers` (global) or `projects[<root>]` (--project) - and the
+    // other section is preserved untouched. Guidance always renders from the
+    // merged result (global <- project overrides per field).
+    const config: SetupConfig = readConfig(home) ?? { schemaVersion: 1 };
+    if (args.project) {
+        const globalAnswers = resolveAnswers(root, config);
+        config.projects = {
+            ...(config.projects ?? {}),
+            [path.resolve(root)]: projectOverrides(globalAnswers, collected),
+        };
+    } else {
+        config.answers = collected;
+    }
+    const answers = resolveAnswers(root, config, { project: true });
 
     const body = renderCanonical(answers);
 
@@ -460,9 +476,9 @@ export async function runSetup(argv: string[], options: RunOptions = {}): Promis
 
     const written = applyRepoEmit(root, answers, hostSlugs);
 
-    // Persist configuration only - no write/registration log.
-    const config: SetupConfig = { schemaVersion: 1, answers };
-    writeConfig(root, config);
+    // Persist configuration only - no write/registration log. The global
+    // answers and the per-project overrides never write each other's section.
+    writeConfig(home, config);
 
     printWriteReport(describeWrites(written, new Set()), [], false);
     out("");
@@ -542,7 +558,7 @@ export async function runInstall(argv: string[], options: RunOptions = {}): Prom
     }
 
     // Board config supplies the answers for global skill rendering (same answers setup uses).
-    const answers = answersFor(root);
+    const answers = answersFor(root, home);
 
     const detected = detectedHostSlugs(home);
     const hostSlugs = resolveHostSlugs(args.host);
@@ -661,9 +677,10 @@ export async function runUninstall(argv: string[], options: RunOptions = {}): Pr
     const removed: string[] = [];
     const left: string[] = [];
 
-    // 1. Repo guidance - recomputed from the board config (or defaults) + host
-    //    selection. No stored target list: the marker guard decides what is ours.
-    const answers = answersFor(root);
+    // 1. Repo guidance - recomputed from the merged config (global + this
+    //    board's overrides) + host selection. No stored target list: the
+    //    marker guard decides what is ours.
+    const answers = answersFor(root, home);
     for (const target of planRepoEmit(root, answers, hostSlugs).targets) {
         if (!fs.existsSync(target.path)) {
             continue;
@@ -725,26 +742,25 @@ export async function runUninstall(argv: string[], options: RunOptions = {}): Pr
         }
     }
 
-    // 4. The board config itself - only when no --host filter narrows the scope
-    //    (a --host run leaves the configuration alone).
-    if (hostSlugs === null && fs.existsSync(configPath(root))) {
-        fs.rmSync(configPath(root), { force: true });
-        removed.push(configPath(root));
-    }
-
     if (removed.length === 0 && left.length === 0) {
         out(`Nothing installed by kanbn-mcp setup in ${root}.`);
-        return;
-    }
-
-    out("Removed:");
-    for (const item of removed) {
-        out(`  - ${item}`);
-    }
-    if (left.length) {
-        out("Left in place:");
-        for (const item of left) {
+    } else {
+        out("Removed:");
+        for (const item of removed) {
             out(`  - ${item}`);
         }
+        if (left.length) {
+            out("Left in place:");
+            for (const item of left) {
+                out(`  - ${item}`);
+            }
+        }
+    }
+
+    // 4. The global config is user-level configuration shared across projects:
+    //    uninstall deliberately leaves it behind (guidance is reversible from
+    //    the marker guards alone; the user's answers are not ours to delete).
+    if (fs.existsSync(configPath(home))) {
+        out(`Configuration left in place: ${configPath(home)}`);
     }
 }

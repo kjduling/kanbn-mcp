@@ -75,7 +75,20 @@ export interface RegisteredTarget {
     message: string;
 }
 
+/**
+ * Per-project answer overrides, stored inside the single global config file
+ * (keyed by absolute project root). Each field present here wins over the
+ * corresponding global answer; absent fields inherit from the global config.
+ */
+export type ProjectOverrides = Partial<SetupAnswers>;
+
 export interface SetupConfig {
     schemaVersion: number;
-    answers: SetupAnswers;
+    /**
+     * The global (default) board answers. Optional: a config created purely by
+     * `setup --project` may carry only the projects map.
+     */
+    answers?: SetupAnswers;
+    /** Per-project answer overrides keyed by absolute project root. */
+    projects?: Record<string, ProjectOverrides>;
 }

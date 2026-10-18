@@ -181,14 +181,20 @@ SETUP
     CLAUDE.md                           .clinerules/kanbn.md
     .windsurf/rules/kanbn.md            skills/kanbn/SKILL.md (committed)
 
-  Answers persist to .kanbn/setup.json as board configuration only (no install
-  log). Re-runs amend the answers; 'kanbn-mcp uninstall' recomputes its target
-  set from that config plus host detection. No MCP registration or global skills
-  here - use 'install'.
+  Answers persist to $HOME/.kanbn/kanbn-mcp-config.json as configuration only
+  (no install log): global default answers plus per-project overrides keyed by
+  the project root. The project directory itself carries no config file - a
+  board holds only board files. Re-runs amend the answers; 'kanbn-mcp
+  uninstall' recomputes its target set from that config plus host detection and
+  always leaves the config behind. No MCP registration or global skills here -
+  use 'install'.
 
   Flags:
     --yes              non-interactive: all defaults (or amend persisted answers)
     --json <file>      import answers from a JSON file (non-interactive)
+    --project          amend this project's overrides in the global config,
+                       seeded from the global defaults (the global answers are
+                       left untouched, and vice versa)
     --host=<slugs>     emit guidance for one client only: opencode|claude|windsurf|
                        cline|devin|copilot (comma-separated)
     --repo-only        write repo files only (the default)

@@ -3,7 +3,8 @@ tags:
   - feature
   - high
 created: 2026-10-13T20:13:53.778Z
-updated: 2026-10-13T22:06:15.678Z
+updated: 2026-10-18T18:21:30.864Z
+progress: 0
 ---
 
 # Add a per-project board path to $HOME/.kanbn/kanbn-mcp-config.json (replaces KANBN_DEFAULT_PATH)
@@ -44,3 +45,9 @@ Depends on the config-file ticket (the global kanbn-mcp-config.json must exist f
 
 - [depends-on move-board-config-to-home-kanbn-kanbn-mcp-config-json-with-per-field-project-override](move-board-config-to-home-kanbn-kanbn-mcp-config-json-with-per-field-project-override.md)
 - [related-to remove-kanbn-default-path-resolve-the-board-from-the-project-directory-only](remove-kanbn-default-path-resolve-the-board-from-the-project-directory-only.md)
+
+## Comments
+
+- author: Kevin J. Duling
+  date: 2026-10-18T12:05:00.000Z
+  Dependency LANDED (2026-10-18): the config ticket shipped, with a revision - there is no project-level config file; everything lives in $HOME/.kanbn/kanbn-mcp-config.json, and per-project overrides now sit INSIDE that file under a `projects` map keyed by absolute project root, exactly the shape this ticket sketched for boardPath. So this ticket is now purely additive: add the `boardPath` key to the existing projects[<root>] entries (and keep it OUT of the answers merge - the merge currently only touches the known SetupAnswers fields, so a sibling `boardPath` key is already ignored by mergeAnswers/resolveAnswers). The resolution-order wiring (per-call path > per-project boardPath > process.cwd()) still needs its own implementation + tests here.
