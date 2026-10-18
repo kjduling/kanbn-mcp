@@ -23,7 +23,7 @@ import {
     upsertBlock,
     writeManagedFile,
 } from "../src/setup/envelopes.js";
-import { renderCanonical, renderSkill, SKILL_FRONTMATTER } from "../src/setup/guidance.js";
+import { renderCanonical, renderGlobalSkill, renderSkill, SKILL_FRONTMATTER } from "../src/setup/guidance.js";
 import { CLIENTS, registerClient, unregisterClient, readJsonLoose, manualInstallText } from "../src/setup/hosts.js";
 import { collectAnswers, configPath, defaultAnswers, projectOverrides, promptAnswers, promptLoop, readConfig, resolveAnswers, skillPlaceholderAnswers, PromptRunner } from "../src/setup/questions.js";
 import { SetupConfig } from "../src/setup/types.js";
@@ -177,6 +177,44 @@ describe("SKILL.md envelope", () => {
     test("repo-shipped SKILL.md matches the renderer output for placeholder answers", () => {
         const committed = readFileSync("skills/kanbn/SKILL.md", "utf8");
         assert.equal(committed, renderSkill(skillPlaceholderAnswers()));
+    });
+});
+
+describe("global skill is board-neutral", () => {
+    test("renderGlobalSkill carries no project name, root, columns, tags, or WIP limits", () => {
+        const skill = renderGlobalSkill();
+        // the same bytes every time - it takes no answers at all
+        assert.equal(skill, renderGlobalSkill());
+        assert.ok(skill.startsWith(SKILL_FRONTMATTER));
+        assert.ok(skill.includes(FILE_MARKER));
+        // mechanics are present
+        assert.match(skill, /kanbn_create_task/);
+        assert.match(skill, /Sub-tasks replace as a whole collection/);
+        // ...and it points at where the board's conventions actually live
+        assert.match(skill, /conventions live in the project/i);
+        assert.match(skill, /AGENTS\.md/);
+        // no board data leaked in
+        for (const forbidden of [
+            "Project:",
+            "Board root:",
+            "Backlog",
+            "In Progress",
+            "typ:bug",
+            "pri:critical",
+            "## WIP limits",
+            "## Custom fields",
+            "/tmp/",
+        ]) {
+            assert.ok(!skill.includes(forbidden), `global skill must not contain ${JSON.stringify(forbidden)}`);
+        }
+    });
+
+    test("the project body still carries the board's own conventions", () => {
+        // the contrast case: renderSkill (project-level) is unchanged
+        const project = renderSkill(defaultAnswers("/tmp/some-board"));
+        assert.match(project, /Project: some-board/);
+        assert.match(project, /Board root: \/tmp\/some-board/);
+        assert.match(project, /typ:bug/);
     });
 });
 
@@ -1155,6 +1193,38 @@ describe("install/uninstall --host targeting", () => {
             // global skills for both
             assert.ok(existsSync(join(home, ".config", "opencode", "skills", "kanbn", "SKILL.md")));
             assert.ok(existsSync(join(home, ".claude", "skills", "kanbn", "SKILL.md")));
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+            rmSync(home, { recursive: true, force: true });
+        }
+    });
+
+    test("install never bakes the board's answers into the global skill", async () => {
+        // Regression: the global skill used to render from answersFor(root),
+        // baking one project's name, board root, columns, and tag vocabulary
+        // into a per-user file shared by every project.
+        const dir = makeTempDir();
+        const home = makeTempDir();
+        try {
+            mkdirSync(join(home, ".config", "opencode"), { recursive: true });
+            mkdirSync(join(home, ".kanbn"), { recursive: true });
+            // this board has its own custom conventions on disk
+            writeFileSync(configPath(home), JSON.stringify({
+                schemaVersion: 1,
+                answers: {
+                    projectName: "secret-project",
+                    boardRoot: dir,
+                    columns: [{ name: "SecretLane", meaning: "custom column" }],
+                    typeTags: [{ name: "secret-type", description: "custom type" }],
+                },
+            }));
+            await runInstall(["install", dir, "--yes", "--host=opencode"], { home });
+
+            const skill = readFileSync(join(home, ".config", "opencode", "skills", "kanbn", "SKILL.md"), "utf8");
+            assert.equal(skill, renderGlobalSkill(), "global skill must be the board-neutral body");
+            for (const forbidden of ["secret-project", "SecretLane", "secret-type", dir]) {
+                assert.ok(!skill.includes(forbidden), `global skill leaked ${JSON.stringify(forbidden)}`);
+            }
         } finally {
             rmSync(dir, { recursive: true, force: true });
             rmSync(home, { recursive: true, force: true });

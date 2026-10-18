@@ -20,7 +20,7 @@ import {
     resolveHostSlugs,
     writeManagedFile,
 } from "./envelopes.js";
-import { renderCanonical, renderSkill } from "./guidance.js";
+import { renderCanonical, renderGlobalSkill } from "./guidance.js";
 import { CLIENTS, clientFor, detectHosts, manualInstallText, registerClient, unregisterClient, choosePath } from "./hosts.js";
 import { answersFor, collectAnswers, configPath, projectOverrides, readConfig, resolveAnswers, writeConfig } from "./questions.js";
 import { HostSlug, RegisteredTarget, SetupConfig, WrittenTarget } from "./types.js";
@@ -560,9 +560,6 @@ export async function runInstall(argv: string[], options: RunOptions = {}): Prom
         return;
     }
 
-    // Board config supplies the answers for global skill rendering (same answers setup uses).
-    const answers = answersFor(root, home);
-
     const detected = detectedHostSlugs(home);
     const hostSlugs = resolveHostSlugs(args.host);
 
@@ -615,9 +612,12 @@ export async function runInstall(argv: string[], options: RunOptions = {}): Prom
     const registered: RegisteredTarget[] = [];
     const written: WrittenTarget[] = [];
 
-    // Install global skills
+    // Install global skills: the board-neutral body. Global skills are
+    // per-user and shared by every project, so they must not carry this
+    // (or any) board's name, root, columns, or tag vocabulary - the project
+    // files written by `setup` are the source of those conventions.
     for (const gs of globalSkills) {
-        const changed = writeManagedFile(gs.path, renderSkill(answers));
+        const changed = writeManagedFile(gs.path, renderGlobalSkill());
         written.push({ path: gs.path, host: gs.host, kind: "file", changed });
     }
 
